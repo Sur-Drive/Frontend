@@ -187,23 +187,7 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                             className="fixed left-4 right-4 top-[80px] z-50 overflow-hidden rounded-2xl border border-purple-700/30 bg-gradient-to-b from-[#1A0033] via-[#2D0057] to-[#1A0033] backdrop-blur-2xl shadow-2xl lg:hidden"
                         >
                             <div className="flex flex-col p-4 gap-2">
-                                {/* Logo in mobile menu */}
-                                <div className="flex items-center justify-center space-x-2 pb-4 border-b border-purple-700/30 mb-2">
-                                    <img
-                                        src="/images/logo.png"
-                                        alt="SUR-DRIVEHT"
-                                        className="h-8 w-auto object-contain"
-                                        onError={(e) => {
-                                            const target =
-                                                e.target as HTMLImageElement;
-                                            target.style.display = "none";
-                                        }}
-                                    />
-                                    <span className="text-lg font-archivo text-white">
-                                        SUR-DRIVE
-                                        <span className="ht-white">HT</span>
-                                    </span>
-                                </div>
+                                {/* Logo removed from mobile menu */}
 
                                 {NAV_ITEMS.map((item) => (
                                     <a

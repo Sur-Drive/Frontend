@@ -60,52 +60,32 @@ export const Fleets: React.FC = () => {
                         whileInView={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6 }}
                         viewport={{ once: true }}
-                        className="bg-purple-100 rounded-3xl p-4 md:p-6 shadow-xl"
+                        className="flex justify-center"
                     >
-                        <div className="bg-white rounded-2xl p-4 md:p-6">
-                            <div className="flex justify-between items-center mb-3 md:mb-4">
-                                <span className="font-bold text-purple-900 text-sm md:text-base">
-                                    Fleet Dashboard
-                                </span>
-                                <span className="text-[10px] md:text-xs font-bold text-green-600">
-                                    ● Active
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3 md:mb-4">
-                                <div className="bg-purple-100 rounded-xl p-2 md:p-3 text-center">
-                                    <span className="text-xl md:text-2xl font-archivo text-purple-900">
-                                        12
-                                    </span>
-                                    <p className="text-[10px] md:text-xs text-gray-600">
-                                        Active Vehicles
-                                    </p>
-                                </div>
-                                <div className="bg-purple-100 rounded-xl p-2 md:p-3 text-center">
-                                    <span className="text-xl md:text-2xl font-archivo text-orange-600">
-                                        3
-                                    </span>
-                                    <p className="text-[10px] md:text-xs text-gray-600">
-                                        Hazards Ahead
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="space-y-1.5 md:space-y-2">
-                                <div className="flex justify-between text-xs md:text-sm">
-                                    <span className="text-gray-600">
-                                        Driver Safety Score
-                                    </span>
-                                    <span className="font-bold text-green-600">
-                                        92%
-                                    </span>
-                                </div>
-                                <div className="w-full h-1.5 md:h-2 bg-gray-200 rounded-full">
-                                    <div
-                                        className="h-1.5 md:h-2 bg-green-600 rounded-full"
-                                        style={{ width: "92%" }}
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
+                        <img
+                            src="/images/mockup2.PNG"
+                            alt="SUR-DRIVEHT Fleet Dashboard"
+                            className="w-full max-w-[320px] sm:max-w-[400px] md:max-w-[480px] lg:max-w-[540px] h-auto rounded-3xl shadow-2xl"
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = "none";
+                                const parent = target.parentElement;
+                                if (parent) {
+                                    const fallback =
+                                        document.createElement("div");
+                                    fallback.className =
+                                        "h-72 md:h-96 bg-gradient-to-b from-purple-50 to-white flex items-center justify-center rounded-3xl shadow-2xl";
+                                    fallback.innerHTML = `
+                                        <div class="text-center px-4">
+                                            <i class="fas fa-truck text-4xl text-purple-700 mb-2"></i>
+                                            <p class="text-gray-600 text-sm font-medium">Fleet Dashboard</p>
+                                            <p class="text-xs text-gray-400 mt-1">Mockup</p>
+                                        </div>
+                                    `;
+                                    parent.appendChild(fallback);
+                                }
+                            }}
+                        />
                     </motion.div>
                 </div>
             </div>

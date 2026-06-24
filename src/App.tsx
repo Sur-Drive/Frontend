@@ -17,6 +17,8 @@ import { EmergencySOS } from "./components/sections/EmergencySOS";
 import { Fleets } from "./components/sections/Fleets";
 import { Partners } from "./components/sections/Partners";
 import { ComingSoon } from "./components/sections/ComingSoon";
+import { PartnersFO } from "./components/sections/PartnersFO";
+import { FullWidthImage } from "./components/sections/FullWidthImage";
 
 function App() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,6 +32,7 @@ function App() {
         <div className="min-h-screen">
             <Header onModalOpen={() => setIsModalOpen(true)} />
             <Hero onModalOpen={() => setIsModalOpen(true)} />
+            <PartnersFO />
             <Features />
             <NavigationSection />
             <HowItWorks />
@@ -42,7 +45,9 @@ function App() {
             <ComingSoon onModalOpen={() => setIsModalOpen(true)} />
             <FAQ />
             <FinalCTA onModalOpen={() => setIsModalOpen(true)} />
+            <FullWidthImage />
             <Contact />
+
             <Footer />
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
