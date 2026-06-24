@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AppButton } from "../ui/AppButton";
 
@@ -7,6 +7,87 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
+    const [displayText, setDisplayText] = useState("");
+    const [isTypingComplete, setIsTypingComplete] = useState(false);
+    const fullText = "Your Road, Your Guide";
+
+    useEffect(() => {
+        let index = 0;
+        const timer = setInterval(() => {
+            if (index < fullText.length) {
+                setDisplayText(fullText.substring(0, index + 1));
+                index++;
+            } else {
+                setIsTypingComplete(true);
+                clearInterval(timer);
+            }
+        }, 80);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    // Split the text for display
+    const splitText = (text: string) => {
+        const parts = text.split(", ");
+        return parts;
+    };
+
+    const textParts = splitText(fullText);
+
+    // Get display with proper colors for desktop
+    const getDesktopDisplay = () => {
+        if (!displayText) return null;
+
+        if (displayText.includes(", ")) {
+            const parts = displayText.split(", ");
+            return (
+                <>
+                    <div className="text-purple-900">{parts[0]},</div>
+                    <div className="text-gold-500">
+                        {parts[1]}
+                        {!isTypingComplete && (
+                            <span className="inline-block w-1 h-6 md:h-8 bg-gold-500 ml-1 animate-pulse"></span>
+                        )}
+                    </div>
+                </>
+            );
+        } else {
+            return (
+                <div className="text-purple-900">
+                    {displayText}
+                    <span className="inline-block w-1 h-6 md:h-8 bg-purple-900 ml-1 animate-pulse"></span>
+                </div>
+            );
+        }
+    };
+
+    // Get display with proper colors for mobile
+    const getMobileDisplay = () => {
+        if (!displayText) return null;
+
+        if (displayText.includes(", ")) {
+            const parts = displayText.split(", ");
+            return (
+                <>
+                    <div className="text-purple-900">{parts[0]},</div>
+                    <div className="text-gold-500">
+                        {parts[1]}
+                        {!isTypingComplete && (
+                            <span className="inline-block w-1 h-6 bg-gold-500 ml-1 animate-pulse"></span>
+                        )}
+                    </div>
+                </>
+            );
+        } else {
+            return (
+                <div className="text-purple-900">
+                    {displayText}
+                    <span className="inline-block w-1 h-6 bg-purple-900 ml-1 animate-pulse"></span>
+                </div>
+            );
+        }
+    };
+
     return (
         <section className="w-full min-h-screen flex items-center bg-gradient-to-br from-purple-100 via-white to-purple-50 pt-20 pb-12 md:pt-24 md:pb-16 overflow-hidden">
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,22 +108,47 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                             <span>Currently in Development</span>
                         </motion.div>
 
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-archivo text-purple-900 leading-tight mb-4"
-                        >
-                            Your Road,
-                            <br />
-                            <span className="text-gold-500">Your Guide</span>
-                        </motion.h1>
+                        {/* Desktop View - Two lines with proper colors */}
+                        <div className="hidden md:block">
+                            {isTypingComplete ? (
+                                <>
+                                    <div className="text-3xl lg:text-4xl font-archivo text-purple-900 leading-tight">
+                                        {textParts[0]},
+                                    </div>
+                                    <div className="text-3xl lg:text-4xl font-archivo text-gold-500 leading-tight">
+                                        {textParts[1]}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-3xl lg:text-4xl font-archivo leading-tight">
+                                    {getDesktopDisplay()}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Mobile View - Two lines with proper colors */}
+                        <div className="block md:hidden">
+                            {isTypingComplete ? (
+                                <>
+                                    <div className="text-2xl sm:text-3xl font-archivo text-purple-900 leading-tight">
+                                        {textParts[0]},
+                                    </div>
+                                    <div className="text-2xl sm:text-3xl font-archivo text-gold-500 leading-tight">
+                                        {textParts[1]}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-2xl sm:text-3xl font-archivo leading-tight">
+                                    {getMobileDisplay()}
+                                </div>
+                            )}
+                        </div>
 
                         <motion.p
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.4 }}
-                            className="text-base sm:text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-lg font-dm-sans"
+                            className="text-base sm:text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-lg font-dm-sans mt-4"
                         >
                             Real-time navigation with hazard intelligence,
                             turn-by-turn guidance, and community-powered road
@@ -102,7 +208,7 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                         </motion.div>
                     </motion.div>
 
-                    {/* Right Content - Larger Phone Mockup */}
+                    {/* Right Content - Phone Mockup */}
                     <motion.div
                         initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}

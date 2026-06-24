@@ -1,5 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix for default marker icons in Leaflet with Vite
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+    iconUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+    shadowUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
 interface ScoutModeProps {
     onModalOpen: () => void;
@@ -7,6 +20,8 @@ interface ScoutModeProps {
 
 export const ScoutMode: React.FC<ScoutModeProps> = ({ onModalOpen }) => {
     const [selectedRoute, setSelectedRoute] = useState("route1");
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<L.Map | null>(null);
 
     const routes = [
         {
@@ -37,6 +52,134 @@ export const ScoutMode: React.FC<ScoutModeProps> = ({ onModalOpen }) => {
             risk: "High",
         },
     ];
+
+    useEffect(() => {
+        if (!mapRef.current || mapInstanceRef.current) return;
+
+        // Initialize map
+        const map = L.map(mapRef.current, {
+            zoomControl: false,
+        }).setView([6.5244, 3.3792], 13);
+
+        // Add tile layer
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Add marker at center
+        L.marker([6.5244, 3.3792]).addTo(map);
+
+        // Add hazard markers
+        const hazardLocations = [
+            { lat: 6.5344, lng: 3.3892, label: "⚠️ Pothole" },
+            { lat: 6.5144, lng: 3.3692, label: "🚧 Road Works" },
+            { lat: 6.5444, lng: 3.3592, label: "🌊 Flood Zone" },
+            { lat: 6.5044, lng: 3.3992, label: "🚨 Accident" },
+        ];
+
+        hazardLocations.forEach((hazard) => {
+            const icon = L.divIcon({
+                className: "custom-div-icon",
+                html: `<div style="background-color: #C62828; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [12, 12],
+                iconAnchor: [6, 6],
+            });
+
+            L.marker([hazard.lat, hazard.lng], { icon })
+                .addTo(map)
+                .bindPopup(hazard.label);
+        });
+
+        // Route 1 - Main Highway (Purple)
+        const route1Points: [number, number][] = [
+            [6.5244, 3.3792],
+            [6.5344, 3.3892],
+            [6.5444, 3.3992],
+            [6.5544, 3.4092],
+        ];
+
+        L.polyline(route1Points, {
+            color: "#4A148C",
+            weight: 4,
+            opacity: 0.8,
+        }).addTo(map);
+
+        // Route 2 - City Streets (Gold)
+        const route2Points: [number, number][] = [
+            [6.5244, 3.3792],
+            [6.5144, 3.3692],
+            [6.5044, 3.3592],
+            [6.4944, 3.3492],
+        ];
+
+        L.polyline(route2Points, {
+            color: "#D4AF37",
+            weight: 3,
+            opacity: 0.6,
+            dashArray: "5, 5",
+        }).addTo(map);
+
+        // Route 3 - Scenic Route (Green)
+        const route3Points: [number, number][] = [
+            [6.5244, 3.3792],
+            [6.5444, 3.3592],
+            [6.5644, 3.3392],
+            [6.5744, 3.3492],
+        ];
+
+        L.polyline(route3Points, {
+            color: "#2E7D32",
+            weight: 3,
+            opacity: 0.6,
+            dashArray: "8, 8",
+        }).addTo(map);
+
+        // Add legend
+        const legend = new L.Control({ position: "bottomright" });
+
+        legend.onAdd = () => {
+            const div = L.DomUtil.create("div", "info legend");
+            div.style.backgroundColor = "white";
+            div.style.padding = "10px";
+            div.style.borderRadius = "8px";
+            div.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+            div.style.fontSize = "12px";
+            div.style.fontFamily = "DM Sans, sans-serif";
+            div.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 6px; color: #1A0033;">Route Options</div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span style="display: inline-block; width: 12px; height: 4px; background: #4A148C; border-radius: 2px;"></span>
+                    <span style="color: #4A148C;">Main Highway</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span style="display: inline-block; width: 12px; height: 4px; background: #D4AF37; border-radius: 2px;"></span>
+                    <span style="color: #D4AF37;">City Streets</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-block; width: 12px; height: 4px; background: #2E7D32; border-radius: 2px;"></span>
+                    <span style="color: #2E7D32;">Scenic Route</span>
+                </div>
+                <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #eee; display: flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-block; width: 10px; height: 10px; background: #C62828; border-radius: 50%;"></span>
+                    <span style="color: #333;">Hazards</span>
+                </div>
+            `;
+            return div;
+        };
+
+        legend.addTo(map);
+
+        mapInstanceRef.current = map;
+
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-purple-100 to-white pt-24 pb-12">
@@ -187,30 +330,25 @@ export const ScoutMode: React.FC<ScoutModeProps> = ({ onModalOpen }) => {
                         ))}
                     </div>
 
-                    {/* Selected Route Details */}
+                    {/* Selected Route Details with Map */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
-                        className="bg-white rounded-2xl p-8 shadow-xl border border-purple-100"
+                        className="bg-white rounded-2xl p-8 shadow-xl border border-purple-100 relative z-0"
                     >
                         <h3 className="text-xl font-archivo text-purple-900 mb-4">
                             Route Analysis
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <div className="bg-gray-100 rounded-xl h-48 flex items-center justify-center">
-                                    <div className="text-center">
-                                        <i className="fas fa-map text-4xl text-purple-700"></i>
-                                        <p className="text-gray-600 text-sm mt-2">
-                                            Interactive Map Preview
-                                        </p>
-                                        <p className="text-xs text-gray-400">
-                                            Hazards • Traffic • Route
-                                        </p>
-                                    </div>
-                                </div>
+                            <div className="relative z-0">
+                                {/* Map Container with z-index fix */}
+                                <div
+                                    ref={mapRef}
+                                    className="rounded-xl h-64 md:h-72 overflow-hidden border-2 border-purple-100 relative z-0"
+                                    style={{ minHeight: "250px" }}
+                                />
                             </div>
 
                             <div className="space-y-4">

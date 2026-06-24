@@ -218,7 +218,7 @@ export const Contact: React.FC = () => {
                                 </div>
                                 <p className="text-xs text-gray-500">Phone</p>
                                 <p className="text-sm font-medium text-purple-900">
-                                    Coming Soon
+                                    +234 807 978 1446
                                 </p>
                             </div>
                             <div className="bg-white rounded-xl p-4 shadow-md border border-purple-100 hover:shadow-lg transition-shadow text-center">
