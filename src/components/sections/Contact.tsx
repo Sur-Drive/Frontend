@@ -9,20 +9,60 @@ export const Contact: React.FC = () => {
         message: "",
     });
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSubmitted(true);
-        console.log("Form submitted:", formData);
-        setTimeout(() => {
-            setIsSubmitted(false);
-            setFormData({
-                name: "",
-                email: "",
-                subject: "General Inquiry",
-                message: "",
+        setIsLoading(true);
+        setErrorMessage("");
+
+        try {
+            const API_URL =
+                import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+            const response = await fetch(`${API_URL}/waitlist/contact`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    subject: formData.subject,
+                    inquiryType: formData.subject,
+                    message: formData.message,
+                }),
             });
-        }, 3000);
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setIsSubmitted(true);
+                console.log("Form submitted successfully:", data);
+                setTimeout(() => {
+                    setIsSubmitted(false);
+                    setFormData({
+                        name: "",
+                        email: "",
+                        subject: "General Inquiry",
+                        message: "",
+                    });
+                    setErrorMessage("");
+                }, 3000);
+            } else {
+                setErrorMessage(
+                    data.message || "Something went wrong. Please try again.",
+                );
+            }
+        } catch (error) {
+            setErrorMessage(
+                "Network error. Please check your connection and try again.",
+            );
+            console.error("Error submitting form:", error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleChange = (
@@ -211,6 +251,14 @@ export const Contact: React.FC = () => {
                                 </h3>
                             </div>
 
+                            {/* Error Message */}
+                            {errorMessage && (
+                                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                    <i className="fas fa-exclamation-circle mr-2"></i>
+                                    {errorMessage}
+                                </div>
+                            )}
+
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5 text-left">
@@ -223,7 +271,8 @@ export const Contact: React.FC = () => {
                                         placeholder="John Doe"
                                         value={formData.name}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm text-left"
+                                        disabled={isLoading}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm text-left disabled:opacity-50 disabled:cursor-not-allowed"
                                         required
                                     />
                                 </div>
@@ -239,7 +288,8 @@ export const Contact: React.FC = () => {
                                         placeholder="john@example.com"
                                         value={formData.email}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm text-left"
+                                        disabled={isLoading}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm text-left disabled:opacity-50 disabled:cursor-not-allowed"
                                         required
                                     />
                                 </div>
@@ -253,7 +303,8 @@ export const Contact: React.FC = () => {
                                         name="subject"
                                         value={formData.subject}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm text-left"
+                                        disabled={isLoading}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm text-left disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <option>General Inquiry</option>
                                         <option>Partnership</option>
@@ -275,18 +326,46 @@ export const Contact: React.FC = () => {
                                         placeholder="Tell us how we can help..."
                                         value={formData.message}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm resize-none text-left"
+                                        disabled={isLoading}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-700 focus:border-transparent outline-none transition-all duration-300 text-sm resize-none text-left disabled:opacity-50 disabled:cursor-not-allowed"
                                         required
                                     />
                                 </div>
 
                                 <motion.button
-                                    whileHover={{ scale: 1.01 }}
-                                    whileTap={{ scale: 0.98 }}
+                                    whileHover={
+                                        !isLoading ? { scale: 1.01 } : {}
+                                    }
+                                    whileTap={!isLoading ? { scale: 0.98 } : {}}
                                     type="submit"
-                                    className="w-full px-6 py-3.5 bg-gradient-to-r from-purple-700 to-purple-800 text-white rounded-xl hover:from-purple-800 hover:to-purple-900 transition-all duration-300 font-medium text-sm shadow-lg shadow-purple-700/30 hover:shadow-xl hover:shadow-purple-700/40 flex items-center justify-center space-x-2"
+                                    disabled={isLoading}
+                                    className="w-full px-6 py-3.5 bg-gradient-to-r from-purple-700 to-purple-800 text-white rounded-xl hover:from-purple-800 hover:to-purple-900 transition-all duration-300 font-medium text-sm shadow-lg shadow-purple-700/30 hover:shadow-xl hover:shadow-purple-700/40 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {isSubmitted ? (
+                                    {isLoading ? (
+                                        <>
+                                            <svg
+                                                className="animate-spin h-4 w-4 text-white"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                ></circle>
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                ></path>
+                                            </svg>
+                                            <span>Sending...</span>
+                                        </>
+                                    ) : isSubmitted ? (
                                         <>
                                             <i className="fas fa-check-circle text-green-400"></i>
                                             <span>Message Sent!</span>
