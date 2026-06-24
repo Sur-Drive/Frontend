@@ -1,0 +1,40 @@
+:root {
+    --purple-900: #1a0033;
+    --purple-800: #2d0057;
+    --purple-700: #4a148c;
+    --purple-600: #6a1bad;
+    --purple-500: #8e24aa;
+    --purple-400: #ab47bc;
+    --purple-300: #ce93d8;
+    --purple-100: #f3e5f5;
+    --gold-600: #b8860b;
+    --gold-500: #d4af37;
+    --gold-400: #f0c040;
+    --gold-100: #fff8e1;
+    --safe-green: #2e7d32;
+    --warning-orange: #e65100;
+    --danger-red: #c62828;
+    --sos-red: #b71c1c;
+    --checkpoint-blue: #1565c0;
+}
+
+.ht {
+    color: var(--gold-500);
+    font-size: 0.55em;
+    vertical-align: super;
+    font-weight: 700;
+}
+
+.ht-lg {
+    color: var(--gold-500);
+    font-size: 0.45em;
+    vertical-align: super;
+    font-weight: 700;
+}
+
+.ht-white {
+    color: var(--gold-500);
+    font-size: 0.55em;
+    vertical-align: super;
+    font-weight: 700;
+}

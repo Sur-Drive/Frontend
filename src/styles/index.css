@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset margins and padding */
+@layer base {
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html,
+    body,
+    #root {
+        width: 100%;
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+
+    #root {
+        display: flex;
+        flex-direction: column;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-family: "DM Sans", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background-color: white;
+    }
+}
+
+/* Brand Colors */
+:root {
+    --purple-900: #1a0033;
+    --purple-800: #2d0057;
+    --purple-700: #4a148c;
+    --purple-600: #6a1bad;
+    --purple-500: #8e24aa;
+    --purple-400: #ab47bc;
+    --purple-300: #ce93d8;
+    --purple-100: #f3e5f5;
+    --gold-600: #b8860b;
+    --gold-500: #d4af37;
+    --gold-400: #f0c040;
+    --gold-100: #fff8e1;
+    --safe-green: #2e7d32;
+    --warning-orange: #e65100;
+    --danger-red: #c62828;
+    --sos-red: #b71c1c;
+    --checkpoint-blue: #1565c0;
+}
+
+/* Base Styles */
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-family: "DM Sans", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+    }
+}
+
+/* Component Styles */
+@layer components {
+    .ht {
+        color: #d4af37;
+        font-size: 0.55em;
+        vertical-align: super;
+        font-weight: 700;
+    }
+
+    .ht-lg {
+        color: #d4af37;
+        font-size: 0.45em;
+        vertical-align: super;
+        font-weight: 700;
+    }
+
+    .ht-white {
+        color: #d4af37;
+        font-size: 0.55em;
+        vertical-align: super;
+        font-weight: 700;
+    }
+
+    .feature-card {
+        @apply bg-white p-6 md:p-7 rounded-2xl border border-purple-100 transition-all duration-300 h-full hover:-translate-y-2 hover:shadow-2xl hover:border-purple-700;
+    }
+
+    .feature-card .icon-wrap {
+        @apply w-12 h-12 bg-purple-700/10 rounded-xl flex items-center justify-center mb-4 text-2xl text-purple-700;
+    }
+
+    .stat-number {
+        @apply text-4xl md:text-5xl font-archivo;
+        color: #d4af37;
+    }
+
+    .btn-app-store {
+        @apply inline-flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+    }
+
+    .btn-android {
+        @apply bg-purple-900 text-white border-2 border-gold-500 hover:bg-gold-500 hover:text-purple-900;
+    }
+
+    .btn-ios {
+        @apply bg-gold-500 text-purple-900 border-2 border-gold-500 hover:bg-purple-900 hover:text-white;
+    }
+
+    .hazard-badge {
+        @apply px-3 py-1.5 rounded-full text-xs md:text-sm font-medium shadow-sm text-white;
+    }
+
+    /* Hazard Colors */
+    .hazard-pothole {
+        background-color: #ff8f00;
+    }
+    .hazard-flood {
+        background-color: #1565c0;
+    }
+    .hazard-accident {
+        background-color: #c62828;
+    }
+    .hazard-debris {
+        background-color: #6d4c41;
+    }
+    .hazard-works {
+        background-color: #f57f17;
+    }
+    .hazard-checkpoint {
+        background-color: #6a1b9a;
+    }
+    .hazard-danger {
+        background-color: #d32f2f;
+    }
+    .hazard-sos {
+        background-color: #b71c1c;
+    }
+}
+
+/* Custom Animations */
+@layer utilities {
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    .animate-float-delayed {
+        animation: float 6s ease-in-out infinite 1s;
+    }
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a0033;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d4af37;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #f0c040;
+}
+
+@media (max-width: 768px) {
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(
+            180deg,
+            #d4af37 0%,
+            #f0c040 50%,
+            #d4af37 100%
+        );
+        border-radius: 8px;
+        border: 1px solid #1a0033;
+    }
+}
