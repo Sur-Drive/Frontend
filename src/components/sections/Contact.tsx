@@ -19,7 +19,7 @@ export const Contact: React.FC = () => {
 
         try {
             const API_URL =
-                import.meta.env.VITE_API_URL || "http://localhost:3000";
+                import.meta.env.VITE_API_URL || "http://localhost:3001";
 
             const response = await fetch(`${API_URL}/waitlist/contact`, {
                 method: "POST",
