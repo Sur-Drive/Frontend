@@ -165,7 +165,6 @@ export const Contact: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-
                             {/* Social Links - Centered */}
                             <div className="mt-6 pt-6 border-t border-white/10">
                                 <p className="text-sm text-purple-300 text-center mb-3">
@@ -174,29 +173,31 @@ export const Contact: React.FC = () => {
                                 <div className="flex justify-center space-x-3">
                                     {[
                                         {
-                                            icon: "fa-facebook-f",
-                                            color: "hover:bg-[#1877f2]",
+                                            icon: "fa-twitter",
+                                            url: "https://x.com/surdriveht",
+                                            color: "hover:bg-[#000000]",
                                         },
                                         {
                                             icon: "fa-instagram",
+                                            url: "https://www.instagram.com/surdriveht",
                                             color: "hover:bg-gradient-to-br hover:from-[#f09433] hover:to-[#bc1888]",
                                         },
                                         {
                                             icon: "fa-linkedin-in",
+                                            url: "#",
                                             color: "hover:bg-[#0a66c2]",
                                         },
                                         {
-                                            icon: "fa-twitter",
-                                            color: "hover:bg-[#000000]",
-                                        },
-                                        {
                                             icon: "fa-youtube",
+                                            url: "#",
                                             color: "hover:bg-[#ff0000]",
                                         },
                                     ].map((social, index) => (
                                         <motion.a
                                             key={index}
-                                            href="#"
+                                            href={social.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             whileHover={{ scale: 1.1, y: -2 }}
                                             whileTap={{ scale: 0.9 }}
                                             className={`w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center text-white hover:text-white transition-all duration-300 ${social.color}`}
