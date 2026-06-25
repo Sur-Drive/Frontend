@@ -116,9 +116,18 @@ export const Footer: React.FC = () => {
                                     </span>
                                 </a>
                             </li>
-                            <li className="text-purple-300 flex items-center justify-center space-x-2">
-                                <i className="fas fa-clock text-gold-500 text-xs"></i>
-                                <span>Coming Soon</span>
+                            <li>
+                                <a
+                                    href="https://wa.me/2348079781446"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-300 hover:text-gold-500 transition-all duration-300 flex items-center justify-center space-x-2 group"
+                                >
+                                    <i className="fab fa-whatsapp text-gold-500 text-xs"></i>
+                                    <span className="group-hover:underline">
+                                        +234 807 978 1446
+                                    </span>
+                                </a>
                             </li>
                         </ul>
                     </div>
