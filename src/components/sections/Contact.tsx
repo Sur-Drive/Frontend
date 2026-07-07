@@ -213,15 +213,20 @@ export const Contact: React.FC = () => {
 
                         {/* Quick Info Cards */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white rounded-xl p-4 shadow-md border border-purple-100 hover:shadow-lg transition-shadow text-center">
-                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <i className="fas fa-phone text-purple-700"></i>
+                            <a
+                                href="https://wa.me/2348079781446"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-white rounded-xl p-4 shadow-md border border-purple-100 hover:shadow-lg hover:border-gold-500/50 transition-all duration-300 text-center group"
+                            >
+                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2 group-hover:bg-gold-500/20 transition-colors">
+                                    <i className="fas fa-phone text-purple-700 group-hover:text-gold-500 transition-colors"></i>
                                 </div>
                                 <p className="text-xs text-gray-500">Phone</p>
-                                <p className="text-sm font-medium text-purple-900">
+                                <p className="text-sm font-medium text-purple-900 group-hover:text-gold-500 transition-colors">
                                     +234 807 978 1446
                                 </p>
-                            </div>
+                            </a>
                             <div className="bg-white rounded-xl p-4 shadow-md border border-purple-100 hover:shadow-lg transition-shadow text-center">
                                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
                                     <i className="fas fa-map-marker-alt text-purple-700"></i>
@@ -229,8 +234,9 @@ export const Contact: React.FC = () => {
                                 <p className="text-xs text-gray-500">
                                     Location
                                 </p>
-                                <p className="text-sm font-medium text-purple-900">
-                                    Global
+                                <p className="text-xs font-medium text-purple-900 leading-relaxed">
+                                    9A Bankole Street, Magodo Phase 1,
+                                    Berger/Isheri, Lagos.
                                 </p>
                             </div>
                         </div>
