@@ -151,11 +151,7 @@ export const Footer: React.FC = () => {
                 </div>
 
                 <div className="border-t border-purple-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-purple-300">
-                    <p>
-                        &copy; 2026 SUR-DRIVE
-                        <span className="ht-white">HT</span>. All rights
-                        reserved.
-                    </p>
+                    <p>&copy; Powered by Honeytreat Global Services Ltd</p>
                     <div className="flex space-x-6 mt-4 md:mt-0">
                         <a
                             href="#"
