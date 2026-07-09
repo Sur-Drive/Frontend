@@ -1,12 +1,11 @@
-
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Home, Copy, FileText, User, Route } from 'lucide-react'
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Home' },
-  { to: '/trips', icon: Copy, label: '' },
-  { to: '/documents', icon: FileText, label: '' },
-  { to: '/profile', icon: User, label: '' },
+  { to: '/home', icon: Home, label: 'Home' },
+  { to: '/feed', icon: Copy, label: 'Feed' },
+  { to: '/report', icon: FileText, label: 'Report' },
+  { to: '/profile', icon: User, label: 'Profile' },
 ]
 
 export default function BottomNav() {

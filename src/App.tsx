@@ -1,37 +1,38 @@
 
+
+
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import LandingPage from './pages/LandingPage'
 import SplashScreen from './pages/SplashScreen'
+import FeedPage from './pages/FeedPage'
+import ReportPage from './pages/ReportPage'
+import ProfilePage from './pages/ProfilePage'
+import BottomNav from './components/BottomNav'
 import './styles/index.css'
 
-function TripsPage() {
-  return <div className="p-6 max-w-[430px] mx-auto pb-24">Trips page</div>
-}
 
-function DocumentsPage() {
-  return <div className="p-6 max-w-[430px] mx-auto pb-24">Documents page</div>
-}
 
-function ProfilePage() {
-  return <div className="p-6 max-w-[430px] mx-auto pb-24">Profile page</div>
-}
+
 
 function PlanRoutePage() {
-  return <div className="p-6 max-w-[430px] mx-auto pb-24">Plan a route</div>
+  return (
+    <div className="p-6 max-w-[430px] mx-auto pb-24">
+      <h1 className="mb-4 text-2xl font-bold text-gray-900">Plan a Route</h1>
+      <p className="text-gray-600">Route planning goes here.</p>
+    </div>
+  )
 }
 
-// ✅ Extracted into its own component so it can use useLocation
 function AppRoutes() {
   const location = useLocation()
-  const isAppRoute = location.pathname === '/app'
+  const isAppRoute = location.pathname === '/home'
 
   const [showSplash, setShowSplash] = useState(isAppRoute)
   const [fadeOut, setFadeOut] = useState(false)
 
   useEffect(() => {
-    // Only run splash timer on /app
     if (!isAppRoute) {
       setShowSplash(false)
       return
@@ -47,18 +48,24 @@ function AppRoutes() {
       clearTimeout(fadeTimer)
       clearTimeout(removeTimer)
     }
-  }, [isAppRoute]) // Re-run when route changes
+  }, [isAppRoute])
+
+  const showNav = location.pathname !== '/'
 
   return (
     <>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/app" element={<HomePage />} />
-        <Route path="/trips" element={<TripsPage />} />
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/plan-route" element={<PlanRoutePage />} />
-      </Routes>
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/feed" element={<FeedPage />} />
+          <Route path="/report" element={<ReportPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/plan-route" element={<PlanRoutePage />} />
+        </Routes>
+      </div>
+
+      {showNav && <BottomNav />}
 
       {showSplash && (
         <div
