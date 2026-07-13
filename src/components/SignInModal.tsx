@@ -1,9 +1,11 @@
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useLogin } from '../hooks/useAuth'
 
 interface SignInModalProps {
   onClose: () => void
-  onSignIn?: (phone: string, password: string) => void
+  onSignInSuccess?: (user: any) => void
   onGoogleSignIn?: () => void
   onForgotPassword?: () => void
   onSignUp?: () => void
@@ -12,7 +14,7 @@ interface SignInModalProps {
 
 export default function SignInModal({
   onClose,
-  onSignIn,
+  onSignInSuccess,
   onGoogleSignIn,
   onForgotPassword,
   onSignUp,
@@ -22,7 +24,8 @@ export default function SignInModal({
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+
+  const login = useLogin()
 
   const formatPhone = (value: string): string => {
     const digits = value.replace(/\D/g, '')
@@ -34,7 +37,7 @@ export default function SignInModal({
   const digitsOnly = phone.replace(/\D/g, '')
   const isPhoneValid = digitsOnly.length >= 7
   const isPasswordValid = password.length >= 1
-  const isFormValid = isPhoneValid && isPasswordValid && !isLoading
+  const isFormValid = isPhoneValid && isPasswordValid && !login.isPending
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '')
@@ -48,18 +51,59 @@ export default function SignInModal({
     if (error) setError('')
   }
 
-  const handleSubmit = async () => {
-    if (!isFormValid) return
-    setIsLoading(true)
-    setError('')
-    try {
-      await onSignIn?.(`${countryCode}${digitsOnly}`, password)
-    } catch (err) {
-      setError('Incorrect email or password')
-    } finally {
-      setIsLoading(false)
-    }
+ 
+
+
+//   const handleSubmit = async () => {
+//   if (!isFormValid) return
+//   setError('')
+
+//   // Convert to international format: 08060452832 → +2348060452832
+//   const phoneNumber = digitsOnly.startsWith('0')
+//     ? `+234${digitsOnly.slice(1)}`   // strips leading 0, adds +234
+//     : `+234${digitsOnly}`
+
+//   const payload = {
+//     phoneNumber,  // "+2348060452832"
+//     password,
+//   }
+//   console.log('🚀 LOGIN PAYLOAD:', payload)
+
+//   try {
+//     const result = await login.mutateAsync(payload)
+//     onSignInSuccess?.(result.user)
+//     onClose()
+//   } catch (err: any) {
+//     console.log('❌ LOGIN ERROR:', err.message)
+//     setError(err.message || 'Incorrect phone or password')
+//   }
+// }
+
+
+const handleSubmit = async () => {
+  if (!isFormValid) return
+  setError('')
+
+  const phoneNumber = digitsOnly.startsWith('0')
+    ? `+234${digitsOnly.slice(1)}`
+    : `+234${digitsOnly}`
+
+  const payload = { phoneNumber, password }
+  
+  // DEBUG: Verify exactly what's being sent
+  console.log('Payload:', JSON.stringify(payload))
+  console.log('Password length:', password.length)
+  console.log('Password chars:', [...password].map(c => c.charCodeAt(0)))
+
+  try {
+    const result = await login.mutateAsync(payload)
+    onSignInSuccess?.(result.user)
+    onClose()
+  } catch (err: any) {
+    console.log('Login error:', err.message, err.response?.data)
+    setError(err.message || 'Incorrect phone or password')
   }
+}
 
   return (
     <AnimatePresence>
@@ -129,7 +173,6 @@ export default function SignInModal({
             Sign in to access real-time road alerts, safer routes, and your personalised driving experience.
           </motion.p>
 
-          {/* Phone Number - mt-10 for spacing, focus-within ring like CreateAccountModal */}
           <motion.div
             className="mt-6"
             initial={{ opacity: 0, y: 30 }}
@@ -155,7 +198,6 @@ export default function SignInModal({
             </div>
           </motion.div>
 
-          {/* Password - mt-6 (not mt-8), label row same as screenshot */}
           <motion.div
             className="mt-6"
             initial={{ opacity: 0, y: 30 }}
@@ -215,7 +257,7 @@ export default function SignInModal({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.56, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {login.isPending ? 'Signing in...' : 'Sign in'}
           </motion.button>
 
           <motion.div

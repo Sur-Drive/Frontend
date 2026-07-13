@@ -1,5 +1,8 @@
+
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSendOtp } from '../hooks/useSendOtp'
 
 interface CreateAccountModalProps {
   onClose: () => void
@@ -19,35 +22,71 @@ export default function CreateAccountModal({
   countryCode = '+234',
 }: CreateAccountModalProps) {
   const [phone, setPhone] = useState('')
+  
+  const sendOtpMutation = useSendOtp()
 
   const digitsOnly = phone.replace(/\D/g, '')
-  const isValid = digitsOnly.length >= 7
+  const isValid = digitsOnly.length === 10 || digitsOnly.length === 11
   const hasInput = digitsOnly.length > 0
-
-  const formatPhone = (value: string) => {
-    const cleaned = value.replace(/\D/g, '')
-    const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,4})/)
-    if (!match) return cleaned
-    const [, g1, g2, g3] = match
-    let formatted = ''
-    if (g3) formatted = `${g1}-${g2}-${g3}`
-    else if (g2) formatted = `${g1}-${g2}`
-    else formatted = g1
-    return formatted
-  }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '')
-    const limited = raw.slice(0, 10)
-    setPhone(formatPhone(limited))
+    const limited = raw.slice(0, 11)
+    setPhone(limited)
   }
 
+  // const handleSendCode = () => {
+  //   if (!isValid || sendOtpMutation.isPending) return
+
+  //   // Format: +2348060452832 (most common for APIs)
+  //   const fullPhone = `${countryCode}${digitsOnly}`
+
+  //   sendOtpMutation.mutate(
+  //     {
+  //       phoneNumber: fullPhone,
+  //       role: 'driver',
+  //     },
+  //     {
+  //       onSuccess: (data) => {
+  //         onSendCode?.(fullPhone)
+  //         onSendCodeSuccess?.(fullPhone)
+  //         console.log('OTP sent:', data)
+  //       },
+  //       onError: (error) => {
+  //         console.error('Failed:', error.message)
+  //       },
+  //     }
+  //   )
+  // }
+
+
+
   const handleSendCode = () => {
-    if (!isValid) return
-    const fullPhone = `${countryCode}${digitsOnly}`
-    onSendCode?.(fullPhone)
-    onSendCodeSuccess?.(fullPhone)
-  }
+  if (!isValid || sendOtpMutation.isPending) return
+
+  // Exact format from Postman: +2347031078790
+  const fullPhone = `${countryCode}${digitsOnly}`
+
+  console.log('Digits entered:', digitsOnly)
+  console.log('Full phone sent:', fullPhone)
+
+  sendOtpMutation.mutate(
+    {
+      phoneNumber: fullPhone,
+      role: 'driver',
+    },
+    {
+      onSuccess: (data) => {
+        onSendCode?.(fullPhone)
+        onSendCodeSuccess?.(fullPhone)
+        console.log('✅ Success:', data)
+      },
+      onError: (error) => {
+        console.error('❌ Error:', error.message)
+      },
+    }
+  )
+}
 
   return (
     <AnimatePresence>
@@ -135,27 +174,35 @@ export default function CreateAccountModal({
                 inputMode="numeric"
                 value={phone}
                 onChange={handlePhoneChange}
-                placeholder="Input your phone"
+                placeholder="8060452832"
                 className="flex-1 px-4 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
               />
               <div className="flex items-center pr-4 shrink-0">
                 <NigeriaFlagIcon />
               </div>
             </div>
+            
+            {sendOtpMutation.isError && (
+              <p className="mt-2 text-sm text-red-500">
+                {sendOtpMutation.error.message}
+              </p>
+            )}
           </motion.div>
 
           <motion.button
             onClick={handleSendCode}
-            disabled={!isValid}
-            className={`mt-6 h-14 rounded-xl font-semibold text-white ${
-              isValid ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
+            disabled={!isValid || sendOtpMutation.isPending}
+            className={`mt-6 h-14 rounded-xl font-semibold text-white transition-colors ${
+              isValid && !sendOtpMutation.isPending
+                ? 'bg-[#6E43A3]'
+                : 'bg-purple-300 cursor-not-allowed'
             }`}
-            whileTap={isValid ? { scale: 0.97 } : {}}
+            whileTap={isValid && !sendOtpMutation.isPending ? { scale: 0.97 } : {}}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.48, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            Send code
+            {sendOtpMutation.isPending ? 'Sending...' : 'Send code'}
           </motion.button>
 
           <motion.div

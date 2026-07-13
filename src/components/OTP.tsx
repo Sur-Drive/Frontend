@@ -1,11 +1,12 @@
 
+
 // import { useState, useRef, useEffect, useCallback } from 'react'
 // import { motion, AnimatePresence } from 'framer-motion'
 
 // interface OTPProps {
 //   phoneNumber: string
 //   onBack: () => void
-//   onVerify: (code: string) => Promise<void>  // Now async
+//   onVerify: (code: string) => Promise<void>
 //   onResend: () => void
 //   onEditPhone: () => void
 //   countdownSeconds?: number
@@ -70,7 +71,6 @@
 //           setToastMessage('Verification complete')
 //           setShowToast(true)
 //         } catch (err) {
-//           // Reset on error so user can retry
 //           setCode(new Array(6).fill(''))
 //           setActiveIndex(0)
 //           inputRefs.current[0]?.focus()
@@ -154,14 +154,15 @@
 //   return (
 //     <AnimatePresence>
 //       <motion.div
-//         className="fixed inset-0 z-40 flex items-end justify-center"
+//         className="fixed inset-0 z-40 flex items-end justify-center sm:items-center"
 //         initial={{ opacity: 0 }}
 //         animate={{ opacity: 1 }}
 //         exit={{ opacity: 0 }}
 //         transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
 //       >
+//         {/* Backdrop */}
 //         <motion.div
-//           className="absolute inset-0 bg-black/40"
+//           className="absolute inset-0 bg-black/40 sm:bg-black/50"
 //           initial={{ opacity: 0 }}
 //           animate={{ opacity: 1 }}
 //           exit={{ opacity: 0 }}
@@ -169,8 +170,13 @@
 //           onClick={onBack}
 //         />
 
+//         {/* Sheet / Modal */}
 //         <motion.div
-//           className="relative w-full max-w-[430px] h-[92dvh] bg-white rounded-t-[40px] px-6 pt-8 pb-10 flex flex-col overflow-hidden"
+//           className="relative w-full sm:w-auto sm:min-w-[420px] sm:max-w-[480px] 
+//                      h-[92dvh] sm:h-auto sm:max-h-[90vh]
+//                      bg-white rounded-t-[40px] sm:rounded-[32px] 
+//                      px-5 sm:px-8 pt-8 pb-8 sm:pb-10 
+//                      flex flex-col overflow-hidden shadow-2xl"
 //           initial={{ y: '110%' }}
 //           animate={{ y: 0 }}
 //           exit={{ y: '110%' }}
@@ -180,23 +186,26 @@
 //           dragElastic={0.15}
 //           onDragEnd={(_, info) => { if (info.offset.y > 150) onBack() }}
 //         >
-//           <div className="flex justify-center mb-2 -mt-2">
+//           {/* Drag handle - mobile only */}
+//           <div className="flex justify-center mb-2 -mt-2 sm:hidden">
 //             <div className="w-10 h-1 bg-gray-300 rounded-full" />
 //           </div>
 
+//           {/* Back button */}
 //           <motion.button
 //             onClick={onBack}
 //             aria-label="Go back"
-//             className="absolute top-6 left-6 w-10 h-10 rounded-full bg-[#1a0a2e] flex items-center justify-center text-white"
+//             className="absolute top-6 left-5 sm:left-6 w-10 h-10 rounded-full bg-[#1a0a2e] flex items-center justify-center text-white z-10"
 //             whileTap={{ scale: 0.92 }}
 //             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
 //           >
 //             <BackIcon />
 //           </motion.button>
 
-//           <div className="mt-14">
+//           {/* Content */}
+//           <div className="mt-12 sm:mt-14">
 //             <motion.h1
-//               className="text-2xl sm:text-[32px] font-extrabold text-gray-900 leading-tight"
+//               className="text-[22px] sm:text-[28px] lg:text-[32px] font-extrabold text-gray-900 leading-tight"
 //               initial={{ opacity: 0, y: 30 }}
 //               animate={{ opacity: 1, y: 0 }}
 //               transition={{ delay: 0.25, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -210,14 +219,14 @@
 //               animate={{ opacity: 1, y: 0 }}
 //               transition={{ delay: 0.32, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
 //             >
-//               <p className="text-base leading-relaxed text-gray-600">
+//               <p className="text-sm leading-relaxed text-gray-600 sm:text-base">
 //                 Enter the security code we sent to
 //               </p>
 //               <div className="flex items-center justify-between mt-1">
-//                 <span className="text-base font-medium text-gray-900">{formatPhone(phoneNumber)}</span>
+//                 <span className="text-sm font-medium text-gray-900 sm:text-base">{formatPhone(phoneNumber)}</span>
 //                 <button
 //                   onClick={onEditPhone}
-//                   className="text-[#6E43A3] font-semibold text-sm shrink-0 ml-3"
+//                   className="text-[#6E43A3] font-semibold text-sm shrink-0 ml-3 hover:text-purple-800 transition-colors"
 //                 >
 //                   Edit
 //                 </button>
@@ -227,7 +236,7 @@
 
 //           {/* OTP Inputs */}
 //           <motion.div
-//             className="relative flex items-center justify-between gap-2 mt-8"
+//             className="relative flex items-center justify-between gap-1.5 sm:gap-2.5 mt-6 sm:mt-8"
 //             initial={{ opacity: 0, y: 30 }}
 //             animate={{ opacity: 1, y: 0 }}
 //             transition={{ delay: 0.4, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -245,30 +254,36 @@
 //                 onKeyDown={(e) => handleKeyDown(index, e)}
 //                 onPaste={index === 0 ? handlePaste : undefined}
 //                 onFocus={() => setActiveIndex(index)}
-//                 className={`w-12 h-14 sm:w-14 sm:h-16 rounded-xl text-center text-xl font-bold text-gray-900 outline-none transition-all duration-200 disabled:opacity-50 ${
-//                   activeIndex === index && !isVerifying && !isSuccess
+//                 className={`
+//                   w-10 h-12 
+//                   sm:w-12 sm:h-14 
+//                   md:w-14 md:h-16 
+//                   rounded-xl text-center text-lg sm:text-xl font-bold text-gray-900 
+//                   outline-none transition-all duration-200 disabled:opacity-50
+//                   ${activeIndex === index && !isVerifying && !isSuccess
 //                     ? 'border-2 border-[#6E43A3] shadow-[0_0_0_3px_rgba(110,67,163,0.15)]'
 //                     : digit ? 'border-2 border-gray-300' : 'border-2 border-gray-200'
-//                 }`}
+//                   }
+//                 `}
 //               />
 //             ))}
 
 //             {/* Loading spinner overlay */}
 //             {isVerifying && (
 //               <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
-//                 <div className="w-10 h-10 border-4 border-gray-200 border-t-[#6E43A3] rounded-full animate-spin" />
+//                 <div className="w-8 h-8 sm:w-10 sm:h-10 border-4 border-gray-200 border-t-[#6E43A3] rounded-full animate-spin" />
 //               </div>
 //             )}
 //           </motion.div>
 
 //           {/* Resend section */}
 //           <motion.div
-//             className="flex items-center justify-between mt-8"
+//             className="flex items-center justify-between mt-6 sm:mt-8"
 //             initial={{ opacity: 0, y: 30 }}
 //             animate={{ opacity: 1, y: 0 }}
 //             transition={{ delay: 0.48, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
 //           >
-//             <p className="text-base text-gray-900">
+//             <p className="text-sm text-gray-900 sm:text-base">
 //               Didn't get the code?{' '}
 //               <button
 //                 onClick={handleResendClick}
@@ -283,33 +298,33 @@
 //               </button>
 //             </p>
 
-//             {/* Timer badge — hidden when timer is 0 */}
+//             {/* Timer badge */}
 //             {timer > 0 && (
 //               <div className="flex items-center gap-2">
-//                 <div className="w-7 h-7 rounded-full bg-[#6E43A3] flex items-center justify-center">
+//                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#6E43A3] flex items-center justify-center">
 //                   <ClockIcon />
 //                 </div>
-//                 <span className="text-base font-semibold text-gray-900">{timer}s</span>
+//                 <span className="text-sm font-semibold text-gray-900 sm:text-base">{timer}s</span>
 //               </div>
 //             )}
 //           </motion.div>
 
-//           <div className="flex-1" />
+//           <div className="flex-1 sm:flex-initial sm:mt-6" />
 
 //           {/* Toast notification */}
 //           <AnimatePresence>
 //             {showToast && (
 //               <motion.div
-//                 className="flex items-center gap-3 px-5 py-4 mb-4 bg-purple-50 rounded-2xl"
+//                 className="flex items-center gap-3 px-4 py-3 mb-3 sm:px-5 sm:py-4 sm:mb-4 bg-purple-50 rounded-2xl"
 //                 initial={{ opacity: 0, y: 20 }}
 //                 animate={{ opacity: 1, y: 0 }}
 //                 exit={{ opacity: 0, y: 20 }}
 //                 transition={{ duration: 0.3 }}
 //               >
-//                 <div className="w-6 h-6 rounded-full bg-[#1a0a2e] flex items-center justify-center shrink-0">
+//                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1a0a2e] flex items-center justify-center shrink-0">
 //                   <CheckIcon />
 //                 </div>
-//                 <span className="text-base font-medium text-gray-900">{toastMessage}</span>
+//                 <span className="text-sm font-medium text-gray-900 sm:text-base">{toastMessage}</span>
 //               </motion.div>
 //             )}
 //           </AnimatePresence>
@@ -329,7 +344,7 @@
 
 // function ClockIcon() {
 //   return (
-//     <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+//     <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
 //       <circle cx="12" cy="12" r="10" />
 //       <path d="M12 6v6l4 2" />
 //     </svg>
@@ -338,7 +353,7 @@
 
 // function CheckIcon() {
 //   return (
-//     <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+//     <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
 //       <path d="M5 13l4 4L19 7" />
 //     </svg>
 //   )
@@ -354,15 +369,14 @@
 
 
 
-
-
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useVerifyOtp } from '../hooks/useAuth'
 
 interface OTPProps {
   phoneNumber: string
   onBack: () => void
-  onVerify: (code: string) => Promise<void>
+  onVerifySuccess: (data: { token: string; user: any }) => void
   onResend: () => void
   onEditPhone: () => void
   countdownSeconds?: number
@@ -371,7 +385,7 @@ interface OTPProps {
 export default function OTP({
   phoneNumber,
   onBack,
-  onVerify,
+  onVerifySuccess,
   onResend,
   onEditPhone,
   countdownSeconds = 45,
@@ -382,9 +396,9 @@ export default function OTP({
   const [canResend, setCanResend] = useState(false)
   const [showToast, setShowToast] = useState(true)
   const [toastMessage, setToastMessage] = useState('Verification code sent')
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const verifyOtpMutation = useVerifyOtp()
 
   useEffect(() => {
     if (timer > 0) {
@@ -407,8 +421,34 @@ export default function OTP({
     inputRefs.current[0]?.focus()
   }, [])
 
-  const handleChange = useCallback(async (index: number, value: string) => {
-    if (isVerifying || isSuccess) return
+  const submitCode = useCallback(async (fullCode: string) => {
+    verifyOtpMutation.mutate(
+      {
+        phoneNumber: phoneNumber,
+        otp: fullCode,
+      },
+      {
+        onSuccess: (data) => {
+          setToastMessage('Verification complete')
+          setShowToast(true)
+          if (data.token) {
+            localStorage.setItem('token', data.token)
+          }
+          onVerifySuccess({ token: data.token!, user: data.user })
+        },
+        onError: () => {
+          setCode(new Array(6).fill(''))
+          setActiveIndex(0)
+          inputRefs.current[0]?.focus()
+          setToastMessage('Invalid code. Try again.')
+          setShowToast(true)
+        },
+      }
+    )
+  }, [phoneNumber, verifyOtpMutation, onVerifySuccess])
+
+  const handleChange = useCallback((index: number, value: string) => {
+    if (verifyOtpMutation.isPending) return
     const digit = value.replace(/\D/g, '').slice(-1)
     if (!digit) return
     const newCode = [...code]
@@ -420,30 +460,20 @@ export default function OTP({
     } else {
       const fullCode = newCode.join('')
       if (fullCode.length === 6) {
-        setIsVerifying(true)
-        try {
-          await onVerify(fullCode)
-          setIsSuccess(true)
-          setToastMessage('Verification complete')
-          setShowToast(true)
-        } catch (err) {
-          setCode(new Array(6).fill(''))
-          setActiveIndex(0)
-          inputRefs.current[0]?.focus()
-        } finally {
-          setIsVerifying(false)
-        }
+        submitCode(fullCode)
       }
     }
-  }, [code, onVerify, isVerifying, isSuccess])
+  }, [code, verifyOtpMutation.isPending, submitCode])
 
   const handleKeyDown = useCallback((index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (isVerifying || isSuccess) return
+    if (verifyOtpMutation.isPending) return
     if (e.key === 'Backspace') {
       e.preventDefault()
       const newCode = [...code]
-      if (code[index]) { newCode[index] = ''; setCode(newCode) }
-      else if (index > 0) {
+      if (code[index]) {
+        newCode[index] = ''
+        setCode(newCode)
+      } else if (index > 0) {
         newCode[index - 1] = ''
         setCode(newCode)
         setActiveIndex(index - 1)
@@ -456,10 +486,10 @@ export default function OTP({
       setActiveIndex(index + 1)
       inputRefs.current[index + 1]?.focus()
     }
-  }, [code, isVerifying, isSuccess])
+  }, [code, verifyOtpMutation.isPending])
 
-  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    if (isVerifying || isSuccess) return
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    if (verifyOtpMutation.isPending) return
     e.preventDefault()
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
     if (!pasted) return
@@ -470,24 +500,12 @@ export default function OTP({
     setActiveIndex(nextIndex)
     inputRefs.current[nextIndex]?.focus()
     if (pasted.length === 6) {
-      setIsVerifying(true)
-      try {
-        await onVerify(pasted)
-        setIsSuccess(true)
-        setToastMessage('Verification complete')
-        setShowToast(true)
-      } catch (err) {
-        setCode(new Array(6).fill(''))
-        setActiveIndex(0)
-        inputRefs.current[0]?.focus()
-      } finally {
-        setIsVerifying(false)
-      }
+      submitCode(pasted)
     }
-  }, [code, onVerify, isVerifying, isSuccess])
+  }, [code, verifyOtpMutation.isPending, submitCode])
 
   const handleResendClick = () => {
-    if (!canResend || isVerifying || isSuccess) return
+    if (!canResend || verifyOtpMutation.isPending) return
     setTimer(countdownSeconds)
     setCanResend(false)
     setCode(new Array(6).fill(''))
@@ -502,9 +520,9 @@ export default function OTP({
     const cleaned = phone.replace(/\D/g, '')
     if (cleaned.startsWith('234') && cleaned.length >= 13) {
       const rest = cleaned.slice(3)
-      return `234 ${rest.slice(0, 3)}-${rest.slice(3, 6)}-${rest.slice(6, 10)}`
+      return `+234 ${rest.slice(0, 3)}-${rest.slice(3, 6)}-${rest.slice(6, 10)}`
     }
-    return phone.replace(/^\+/, '')
+    return phone
   }
 
   return (
@@ -516,7 +534,6 @@ export default function OTP({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
       >
-        {/* Backdrop */}
         <motion.div
           className="absolute inset-0 bg-black/40 sm:bg-black/50"
           initial={{ opacity: 0 }}
@@ -526,7 +543,6 @@ export default function OTP({
           onClick={onBack}
         />
 
-        {/* Sheet / Modal */}
         <motion.div
           className="relative w-full sm:w-auto sm:min-w-[420px] sm:max-w-[480px] 
                      h-[92dvh] sm:h-auto sm:max-h-[90vh]
@@ -542,12 +558,10 @@ export default function OTP({
           dragElastic={0.15}
           onDragEnd={(_, info) => { if (info.offset.y > 150) onBack() }}
         >
-          {/* Drag handle - mobile only */}
           <div className="flex justify-center mb-2 -mt-2 sm:hidden">
             <div className="w-10 h-1 bg-gray-300 rounded-full" />
           </div>
 
-          {/* Back button */}
           <motion.button
             onClick={onBack}
             aria-label="Go back"
@@ -558,7 +572,6 @@ export default function OTP({
             <BackIcon />
           </motion.button>
 
-          {/* Content */}
           <div className="mt-12 sm:mt-14">
             <motion.h1
               className="text-[22px] sm:text-[28px] lg:text-[32px] font-extrabold text-gray-900 leading-tight"
@@ -590,7 +603,6 @@ export default function OTP({
             </motion.div>
           </div>
 
-          {/* OTP Inputs */}
           <motion.div
             className="relative flex items-center justify-between gap-1.5 sm:gap-2.5 mt-6 sm:mt-8"
             initial={{ opacity: 0, y: 30 }}
@@ -605,7 +617,7 @@ export default function OTP({
                 inputMode="numeric"
                 maxLength={1}
                 value={digit}
-                disabled={isVerifying || isSuccess}
+                disabled={verifyOtpMutation.isPending}
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={index === 0 ? handlePaste : undefined}
@@ -616,7 +628,7 @@ export default function OTP({
                   md:w-14 md:h-16 
                   rounded-xl text-center text-lg sm:text-xl font-bold text-gray-900 
                   outline-none transition-all duration-200 disabled:opacity-50
-                  ${activeIndex === index && !isVerifying && !isSuccess
+                  ${activeIndex === index && !verifyOtpMutation.isPending
                     ? 'border-2 border-[#6E43A3] shadow-[0_0_0_3px_rgba(110,67,163,0.15)]'
                     : digit ? 'border-2 border-gray-300' : 'border-2 border-gray-200'
                   }
@@ -624,15 +636,13 @@ export default function OTP({
               />
             ))}
 
-            {/* Loading spinner overlay */}
-            {isVerifying && (
+            {verifyOtpMutation.isPending && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 border-4 border-gray-200 border-t-[#6E43A3] rounded-full animate-spin" />
               </div>
             )}
           </motion.div>
 
-          {/* Resend section */}
           <motion.div
             className="flex items-center justify-between mt-6 sm:mt-8"
             initial={{ opacity: 0, y: 30 }}
@@ -643,9 +653,9 @@ export default function OTP({
               Didn't get the code?{' '}
               <button
                 onClick={handleResendClick}
-                disabled={!canResend || isVerifying || isSuccess}
+                disabled={!canResend || verifyOtpMutation.isPending}
                 className={`font-semibold transition-colors ${
-                  canResend && !isVerifying && !isSuccess
+                  canResend && !verifyOtpMutation.isPending
                     ? 'text-[#6E43A3] hover:text-purple-800'
                     : 'text-gray-300 cursor-not-allowed'
                 }`}
@@ -654,7 +664,6 @@ export default function OTP({
               </button>
             </p>
 
-            {/* Timer badge */}
             {timer > 0 && (
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#6E43A3] flex items-center justify-center">
@@ -667,7 +676,6 @@ export default function OTP({
 
           <div className="flex-1 sm:flex-initial sm:mt-6" />
 
-          {/* Toast notification */}
           <AnimatePresence>
             {showToast && (
               <motion.div

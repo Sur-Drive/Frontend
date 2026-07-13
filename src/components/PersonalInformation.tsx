@@ -1,11 +1,6 @@
-
-
-
-
-
-
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSendPersonalInfo } from '../hooks/useAuth'
 
 interface PersonalInformationProps {
   onBack?: () => void
@@ -50,6 +45,8 @@ export default function PersonalInformation({
   const [occupation, setOccupation] = useState(initialData.occupation || '')
   const [showOccupationDropdown, setShowOccupationDropdown] = useState(false)
 
+  const personalInfoMutation = useSendPersonalInfo()
+
   const isValid =
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
@@ -57,14 +54,34 @@ export default function PersonalInformation({
     occupation.length > 0
 
   const handleContinue = () => {
-    if (!isValid) return
-    onContinue({
+    if (!isValid || personalInfoMutation.isPending) return
+
+    const data = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       gender,
       dateOfBirth,
       occupation,
-    })
+    }
+
+    personalInfoMutation.mutate(
+      {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        gender: data.gender.charAt(0).toUpperCase() + data.gender.slice(1), // "male" → "Male"
+        dateOfBirth: data.dateOfBirth,
+        occupation: data.occupation,
+      },
+      {
+        onSuccess: (response) => {
+          console.log('Personal info saved:', response)
+          onContinue(data)
+        },
+        onError: (error) => {
+          console.error('Failed to save personal info:', error.message)
+        },
+      }
+    )
   }
 
   return (
@@ -143,8 +160,19 @@ export default function PersonalInformation({
             </motion.p>
           </div>
 
+          {/* Error message */}
+          {personalInfoMutation.isError && (
+            <motion.p
+              className="mt-3 text-sm text-red-500"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              {personalInfoMutation.error.message}
+            </motion.p>
+          )}
+
           {/* Scrollable form */}
-          <div className="mt-6 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-4 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* First Name */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -220,12 +248,9 @@ export default function PersonalInformation({
                   type="text"
                   value={dateOfBirth}
                   onChange={(e) => {
-                    // Allow only digits and slashes, format as dd/mm/yyyy
                     let val = e.target.value.replace(/[^\d/]/g, '')
-                    // Auto-add slashes
                     if (val.length === 2 && !val.includes('/')) val = val + '/'
                     if (val.length === 5 && val.split('/').length === 2) val = val + '/'
-                    // Limit to 10 chars (dd/mm/yyyy)
                     if (val.length <= 10) setDateOfBirth(val)
                   }}
                   placeholder="dd/mm/yyyy"
@@ -288,23 +313,24 @@ export default function PersonalInformation({
               </div>
             </motion.div>
 
-            {/* Spacer for bottom padding */}
             <div className="h-6" />
           </div>
 
           {/* Continue Button */}
           <motion.button
             onClick={handleContinue}
-            disabled={!isValid}
+            disabled={!isValid || personalInfoMutation.isPending}
             className={`mt-4 h-14 rounded-2xl font-semibold text-lg text-white transition-all ${
-              isValid ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
+              isValid && !personalInfoMutation.isPending
+                ? 'bg-[#6E43A3]'
+                : 'bg-purple-300 cursor-not-allowed'
             }`}
-            whileTap={isValid ? { scale: 0.97 } : {}}
+            whileTap={isValid && !personalInfoMutation.isPending ? { scale: 0.97 } : {}}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.65, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            Continue
+            {personalInfoMutation.isPending ? 'Saving...' : 'Continue'}
           </motion.button>
         </motion.div>
       </motion.div>
@@ -337,3 +363,7 @@ function ChevronDownIcon() {
     </svg>
   )
 }
+
+
+
+

@@ -1,4 +1,6 @@
-import { useState } from 'react'
+
+
+import { useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/BottomNav'
 import CreateAccountModal from '../components/CreateAccountModal'
@@ -9,6 +11,10 @@ import PersonalInformation from '../components/PersonalInformation'
 import CreatePassword from '../components/CreatePassword'
 import CreateNewPassword from '../components/Createnewpassword'
 import ResetPasswordSuccess from '../components/Resetpasswordsuccess'
+import PlanRouteModal from '../components/Planroutemodal'
+import TripPanel from '../components/Trippanel'
+import type { RouteInfo } from '../components/Trippanel'
+import SOSActiveModal from '../components/Sosactivemodal'
 
 type ReportType =
   | 'wave'
@@ -41,7 +47,7 @@ const REPORTS: Report[] = [
   { id: 'r3', top: '30.8%', left: '26.5%', color: 'bg-amber-500', type: 'pothole', title: 'Deep pothole', streetLabel: 'Whittier Street', subtitle: 'Deep pothole on 3rd Avenue', distance: '0.4 km', confirmCount: 18, incorrectCount: 1, photos: ['https://picsum.photos/seed/pothole1/400/300', 'https://picsum.photos/seed/pothole2/400/300', 'https://picsum.photos/seed/pothole3/400/300'] },
   { id: 'r4', top: '29.6%', left: '63.6%', color: 'bg-red-500', type: 'hazard', title: 'Road closed', streetLabel: 'Southwood Avenue', subtitle: 'Road works blocking one lane', distance: '1.6 km', confirmCount: 9, incorrectCount: 0, photos: ['https://picsum.photos/seed/hazard1/400/300', 'https://picsum.photos/seed/hazard2/400/300'] },
   { id: 'r5', top: '44%', left: '9.5%', color: 'bg-red-500', type: 'sos', title: 'Emergency reported', streetLabel: 'Dresden Street', subtitle: 'SOS alert near Dresden Street', distance: '0.9 km', confirmCount: 2, incorrectCount: 0, photos: ['https://picsum.photos/seed/sos1/400/300'] },
-  { id: 'r6', top: '49.1%', left: '42%', color: 'bg-blue-600', type: 'sign', title: 'Road works', streetLabel: 'Bretton Place', subtitle: 'Detour sign near Bretton Place', distance: '1.1 km', confirmCount: 5, incorrectCount: 0, photos: ['https://picsum.photos/seed/sign1/400/300', 'https://picsum.photos/seed/sign2/400/300'] },
+  { id: 'r6', top: '49.1%', left: '42%', color: 'bg-blue-600', type: 'sign', title: 'Police checkpoint', streetLabel: 'Old Toll Gate', subtitle: 'Police checkpoint near Old Toll Gate', distance: '3.4 km', confirmCount: 5, incorrectCount: 0, photos: ['https://picsum.photos/seed/sign1/400/300', 'https://picsum.photos/seed/sign2/400/300'] },
   { id: 'r7', top: '44.5%', left: '60.6%', color: 'bg-red-500', type: 'warning', title: 'Hazard reported', streetLabel: 'McDowell Street', subtitle: 'Debris in the road near McDowell Street', distance: '1.3 km', confirmCount: 7, incorrectCount: 2, photos: ['https://picsum.photos/seed/warn1/400/300', 'https://picsum.photos/seed/warn2/400/300'] },
   { id: 'r8', top: '46.2%', left: '87.3%', color: 'bg-amber-500', type: 'tractor', title: 'Farm vehicle crossing', streetLabel: 'Southwood Avenue', subtitle: 'Slow-moving vehicles near Southwood Avenue', distance: '2.3 km', confirmCount: 3, incorrectCount: 0, photos: ['https://picsum.photos/seed/tractor1/400/300', 'https://picsum.photos/seed/tractor2/400/300'] },
   { id: 'r9', top: '55.8%', left: '81.2%', color: 'bg-amber-500', type: 'hill', title: 'Landslide risk', streetLabel: 'McDowell Street', subtitle: 'Unstable ground near McDowell Street', distance: '1.8 km', confirmCount: 4, incorrectCount: 0, photos: ['https://picsum.photos/seed/hill3/400/300'] },
@@ -53,9 +59,23 @@ const REPORTS: Report[] = [
   { id: 'r15', top: '83.6%', left: '47.3%', color: 'bg-red-500', type: 'warning', title: 'Hazard reported', streetLabel: 'Bretton Place', subtitle: 'Debris in the road near Bretton Place', distance: '0.3 km', confirmCount: 5, incorrectCount: 1, photos: ['https://picsum.photos/seed/warn3/400/300'] },
 ]
 
+// Fixed demo "you are here" position used while a route is being planned / driven.
+const ROUTE_PATH = 'M96,690 L96,780 L258,780 L258,972 L358,972'
+const NAV_MARKER = { top: '77.2%', left: '51.6%' }
+
 export default function HomePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [votes, setVotes] = useState<Record<string, { confirm: number; incorrect: number; voted: 'confirm' | 'incorrect' | null }>>({})
+
+  // ===== ROUTE / NAVIGATION / SOS STATE =====
+  const [showPlanRoute, setShowPlanRoute] = useState(false)
+  const [tripPhase, setTripPhase] = useState<'idle' | 'preview' | 'navigating'>('idle')
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null)
+  const [showUpcomingHazard, setShowUpcomingHazard] = useState(false)
+
+  const [sosActive, setSosActive] = useState(false)
+  const [sosProgress, setSosProgress] = useState(0)
+  const sosTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ===== AUTH FLOW STATES =====
   const [showCreateAccount, setShowCreateAccount] = useState(false)
@@ -75,8 +95,6 @@ export default function HomePage() {
     occupation: string
   } | null>(null)
 
-  // Distinguishes which flow the shared OTP screen belongs to, since both
-  // sign-up and forgot-password reuse the same <OTP /> component.
   const [authIntent, setAuthIntent] = useState<'signup' | 'reset' | null>(null)
 
   const isAuthenticated = false
@@ -110,11 +128,62 @@ export default function HomePage() {
     })
   }
 
-  const handleSosPress = () => {
+  // ===== ROUTE PLANNING =====
+
+  const handleScanRoute = (from: string, to: string) => {
+    // Demo hazard scan result — in a real app this would come from the routing API.
+    setRouteInfo({
+      from,
+      to,
+      distanceKm: 9.5,
+      etaMin: 23,
+      safety: 91,
+      hazards: [
+        { id: 'h1', icon: 'pothole', title: 'Deep pothole on 3rd Avenue', subtitle: '3rd Ave & Market St', distance: '0.4 km' },
+        { id: 'h2', icon: 'checkpoint', title: 'Police checkpoint', subtitle: 'Old Toll Gate', distance: '3.4 km' },
+      ],
+    })
+    setShowPlanRoute(false)
+    setTripPhase('preview')
+  }
+
+  const handleStartTrip = () => {
+    setTripPhase('navigating')
+    setShowUpcomingHazard(false)
+    // Surface the next hazard warning a few seconds into the trip, like turn-by-turn nav does.
+    window.setTimeout(() => setShowUpcomingHazard(true), 4000)
+  }
+
+  const handleEndTrip = () => {
+    setTripPhase('idle')
+    setRouteInfo(null)
+    setShowUpcomingHazard(false)
+  }
+
+  // ===== SOS HOLD-TO-ACTIVATE (3 seconds) =====
+
+  const startSosHold = () => {
     if (!isAuthenticated) {
       setShowCreateAccount(true)
       return
     }
+    setSosProgress(0)
+    sosTimerRef.current = setInterval(() => {
+      setSosProgress((p) => {
+        const next = p + 100 / 30 // ~3s at 100ms ticks
+        if (next >= 100) {
+          if (sosTimerRef.current) clearInterval(sosTimerRef.current)
+          setSosActive(true)
+          return 100
+        }
+        return next
+      })
+    }, 100)
+  }
+
+  const cancelSosHold = () => {
+    if (sosTimerRef.current) clearInterval(sosTimerRef.current)
+    setSosProgress(0)
   }
 
   // ===== AUTH HANDLERS (NO API) =====
@@ -128,17 +197,6 @@ export default function HomePage() {
     setAuthIntent('signup')
     setShowCreateAccount(false)
     setShowOTP(true)
-  }
-
-  const handleVerifyOTP = async (code: string) => {
-    console.log('Verifying code:', code, 'for', phoneNumber)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setShowOTP(false)
-    if (authIntent === 'reset') {
-      setShowCreateNewPassword(true)
-    } else {
-      setShowPersonalInfo(true)
-    }
   }
 
   const handleResendOTP = () => {
@@ -158,12 +216,11 @@ export default function HomePage() {
     setShowCreatePassword(true)
   }
 
-  // ✅ WIRED TO SIGN IN AFTER SUCCESS
   const handleCreatePasswordComplete = (password: string) => {
     console.log('Password created:', password)
     console.log('Full signup data:', { phone: phoneNumber, ...profileData, password })
     setShowCreatePassword(false)
-    setShowSignIn(true)  // <-- Opens Sign In modal
+    setShowSignIn(true)
   }
 
   const handleCreateNewPasswordComplete = (password: string) => {
@@ -178,7 +235,6 @@ export default function HomePage() {
     setShowSignIn(true)
   }
 
-  // ===== SIGN IN / SIGN UP / FORGOT PASSWORD SWITCHING =====
   const handleSwitchToSignIn = () => {
     setShowCreateAccount(false)
     setShowForgotPassword(false)
@@ -209,11 +265,12 @@ export default function HomePage() {
 
   const handleSignInSubmit = async (phone: string, password: string) => {
     console.log('Signing in with:', phone, password)
-    // Simulate login success
     await new Promise((resolve) => setTimeout(resolve, 1000))
     console.log('Login successful!')
     setShowSignIn(false)
   }
+
+  const showingRouteOverlay = tripPhase !== 'idle'
 
   return (
     <div className="relative h-[100dvh] w-full max-w-[430px] md:max-w-none mx-auto md:mx-0 bg-[#e4e4e4] overflow-hidden">
@@ -247,6 +304,11 @@ export default function HomePage() {
         <text x="60" y="620" fontSize="24" fill="#4a4a4a" fontWeight="600" transform="rotate(90 60 620)">Dresden Street</text>
         <text x="345" y="590" fontSize="24" fill="#4a4a4a" fontWeight="600">McDowell Street</text>
         <text x="130" y="830" fontSize="24" fill="#4a4a4a" fontWeight="600" transform="rotate(15 130 830)">Bretton Place</text>
+
+        {/* Active route line, shown while previewing or navigating */}
+        {showingRouteOverlay && (
+          <path d={ROUTE_PATH} stroke="#2f7bf6" strokeWidth="10" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        )}
       </svg>
 
       {/* Pins */}
@@ -264,17 +326,93 @@ export default function HomePage() {
         </Pin>
       ))}
 
-      {/* SOS floating button */}
-      <button
-        onClick={handleSosPress}
-        className="absolute z-30 flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-lg bottom-32 right-4 bg-red-500/90 ring-4 ring-red-300/50 active:scale-95"
-      >
-        <span className="text-sm font-bold">SOS</span>
-        <span className="text-[10px] leading-tight">Hold 3 secs</span>
-      </button>
+      {/* Current-position marker while navigating */}
+      {tripPhase === 'navigating' && (
+        <div
+          className="absolute z-[6] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-11 h-11 rounded-full bg-blue-500/25"
+          style={{ top: NAV_MARKER.top, left: NAV_MARKER.left }}
+        >
+          <div className="flex items-center justify-center bg-blue-500 rounded-full shadow w-7 h-7">
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="white">
+              <path d="M12 3 L21 20 L12 16 L3 20 Z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {/* ===== TOP GREETING + SEARCH BAR ===== */}
+      {!showingRouteOverlay && (
+        <div className="absolute top-3 left-0 right-0 z-20 px-4 space-y-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[430px]">
+          <div className="flex items-center justify-between px-4 py-3 bg-white rounded-full shadow-md">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 font-bold text-gray-600 bg-gray-200 rounded-full">
+                AA
+              </div>
+              <div>
+                <div className="text-[15px] font-bold text-gray-900 leading-tight">Good Afternoon 👋</div>
+                <div className="text-[13px] font-semibold text-purple-600 leading-tight">Lagos, Nigeria</div>
+              </div>
+            </div>
+            <button className="relative flex items-center justify-center w-10 h-10 text-gray-700 rounded-full bg-gray-50">
+              <BellIcon />
+              <span className="absolute w-2 h-2 bg-red-500 rounded-full top-2 right-2" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowPlanRoute(true)}
+            className="flex items-center w-full gap-3 px-5 py-4 text-left bg-white rounded-full shadow-md"
+          >
+            <SearchIcon />
+            <span className="text-[15px] text-gray-400">Where are you going?</span>
+          </button>
+        </div>
+      )}
+
+      {/* ===== TRIP PREVIEW / ACTIVE NAVIGATION ===== */}
+      <AnimatePresence>
+        {tripPhase === 'preview' && routeInfo && (
+          <TripPanel
+            phase="preview"
+            route={routeInfo}
+            onStartTrip={handleStartTrip}
+            onClose={handleEndTrip}
+          />
+        )}
+        {tripPhase === 'navigating' && routeInfo && (
+          <TripPanel
+            phase="navigating"
+            route={routeInfo}
+            remainingKm={7.1}
+            etaMin={17}
+            hazardsAhead={2}
+            upcomingHazard={showUpcomingHazard ? { emoji: '🚧', label: 'Road Works ahead — Independence', distanceKm: 0.9 } : null}
+            onEndTrip={handleEndTrip}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* SOS floating button — hold 3 seconds to trigger */}
+      {!showingRouteOverlay && (
+        <button
+          onPointerDown={startSosHold}
+          onPointerUp={cancelSosHold}
+          onPointerLeave={cancelSosHold}
+          className="absolute z-30 flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-lg select-none bottom-32 right-4 bg-red-500/90 ring-4 ring-red-300/50 active:scale-95"
+          style={{
+            backgroundImage:
+              sosProgress > 0
+                ? `conic-gradient(rgba(255,255,255,0.55) ${sosProgress * 3.6}deg, transparent 0deg)`
+                : undefined,
+          }}
+        >
+          <span className="text-sm font-bold">SOS</span>
+          <span className="text-[10px] leading-tight">Hold 3 secs</span>
+        </button>
+      )}
 
       {/* Report bottom sheet */}
-      {selected && (
+      {selected && !showingRouteOverlay && (
         <div className="absolute bottom-16 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[430px] bg-white rounded-t-2xl shadow-2xl z-20 max-h-[60%] flex flex-col">
           <div className="flex justify-center pt-2.5 pb-1">
             <div className="w-10 h-1 bg-gray-300 rounded-full" />
@@ -330,6 +468,26 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* ===== ROUTE PLANNING MODAL ===== */}
+      <AnimatePresence>
+        {showPlanRoute && (
+          <PlanRouteModal onClose={() => setShowPlanRoute(false)} onScanRoute={handleScanRoute} />
+        )}
+      </AnimatePresence>
+
+      {/* ===== SOS ACTIVE SCREEN ===== */}
+      <AnimatePresence>
+        {sosActive && (
+          <SOSActiveModal
+            onCancel={() => {
+              setSosActive(false)
+              setSosProgress(0)
+            }}
+            onCall={() => console.log('Calling 112...')}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ===== AUTH MODALS (NO API) ===== */}
       <AnimatePresence>
         {showCreateAccount && (
@@ -366,31 +524,41 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showOTP && (
-          <OTP
-            phoneNumber={phoneNumber}
-            onBack={() => {
-              setShowOTP(false)
-              if (authIntent === 'reset') {
-                setShowForgotPassword(true)
-              } else {
-                setShowCreateAccount(true)
-              }
-            }}
-            onVerify={handleVerifyOTP}
-            onResend={handleResendOTP}
-            onEditPhone={() => {
-              setShowOTP(false)
-              if (authIntent === 'reset') {
-                setShowForgotPassword(true)
-              } else {
-                setShowCreateAccount(true)
-              }
-            }}
-          />
-        )}
-      </AnimatePresence>
+     <AnimatePresence>
+  {showOTP && (
+    <OTP
+      phoneNumber={phoneNumber}
+      onBack={() => {
+        setShowOTP(false)
+        if (authIntent === 'reset') {
+          setShowForgotPassword(true)
+        } else {
+          setShowCreateAccount(true)
+        }
+      }}
+      onVerifySuccess={({ token, user }) => {
+        // Store token
+        if (token) localStorage.setItem('token', token)
+        // Continue flow
+        setShowOTP(false)
+        if (authIntent === 'reset') {
+          setShowCreateNewPassword(true)
+        } else {
+          setShowPersonalInfo(true)
+        }
+      }}
+      onResend={handleResendOTP}
+      onEditPhone={() => {
+        setShowOTP(false)
+        if (authIntent === 'reset') {
+          setShowForgotPassword(true)
+        } else {
+          setShowCreateAccount(true)
+        }
+      }}
+    />
+  )}
+</AnimatePresence>
 
       <AnimatePresence>
         {showPersonalInfo && (
@@ -416,14 +584,12 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      {/* Forgot-password flow: new step 1 of 2 — set the new password */}
       <AnimatePresence>
         {showCreateNewPassword && (
           <CreateNewPassword onComplete={handleCreateNewPasswordComplete} />
         )}
       </AnimatePresence>
 
-      {/* Forgot-password flow: new step 2 of 2 — confirmation screen */}
       <AnimatePresence>
         {showResetSuccess && (
           <ResetPasswordSuccess onSignIn={handleResetSuccessSignIn} />
@@ -599,3 +765,36 @@ function ThumbDownIcon() {
     </svg>
   )
 }
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.35-4.35" />
+    </svg>
+  )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

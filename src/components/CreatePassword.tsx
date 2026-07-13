@@ -1,8 +1,6 @@
-
-
-
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSetPassword } from '../hooks/useAuth'
 
 interface CreatePasswordProps {
   onBack?: () => void
@@ -21,18 +19,21 @@ export default function CreatePassword({
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [step, setStep] = useState<Step>('form')
+  const [error, setError] = useState<string | null>(null)
+
+  const setPasswordMutation = useSetPassword()
 
   const strength: Strength = useMemo(() => {
     if (password.length === 0) return null
     if (password.length < 8) return 'weak'
-    if (password.length < 11) return 'strong' === undefined ? null : password.length < 11 ? 'medium' : null
+    if (password.length < 12) return 'medium'
     return 'strong'
   }, [password])
 
   const strengthMeta = {
-    weak: { width: '33%', color: 'bg-red-500' },
-    medium: { width: '66%', color: 'bg-yellow-400' },
-    strong: { width: '100%', color: 'bg-emerald-500' },
+    weak: { width: '33%', color: 'bg-red-500', label: 'Weak' },
+    medium: { width: '66%', color: 'bg-yellow-400', label: 'Medium' },
+    strong: { width: '100%', color: 'bg-emerald-500', label: 'Strong' },
   }
 
   const bothFilled = password.length > 0 && confirmPassword.length > 0
@@ -47,12 +48,22 @@ export default function CreatePassword({
     ? 'border-purple-300 focus:ring-purple-200 focus:border-[#6E43A3]'
     : 'border-gray-200 focus:ring-purple-300 focus:border-[#6E43A3]'
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!isValid) return
+    setError(null)
     setStep('loading')
-    setTimeout(() => {
+
+    try {
+      await setPasswordMutation.mutateAsync({
+        password,
+        confirmPassword,
+      })
       setStep('success')
-    }, 1600)
+    } catch (err: any) {
+      console.error('Failed to set password:', err)
+      setError(err.message || 'Failed to set password. Please try again.')
+      setStep('form')
+    }
   }
 
   const handleStartExploring = () => {
@@ -144,6 +155,20 @@ export default function CreatePassword({
               </motion.p>
             </div>
 
+            {/* Error message */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-3 mt-4 border border-red-200 bg-red-50 rounded-xl"
+                >
+                  <p className="text-sm font-medium text-red-600">{error}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Form (dims + freezes during loading) */}
             <div className="relative flex-1">
               <div
@@ -162,7 +187,10 @@ export default function CreatePassword({
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value)
+                        setError(null)
+                      }}
                       placeholder="Enter password"
                       disabled={step === 'loading'}
                       className={`w-full rounded-2xl bg-gray-50 border px-5 py-4 pr-14 text-lg text-gray-900 outline-none focus:ring-2 placeholder:text-gray-400 transition-colors ${
@@ -179,13 +207,21 @@ export default function CreatePassword({
                   </div>
 
                   {strength && (
-                    <div className="mt-2 h-1.5 w-full rounded-full bg-purple-50 overflow-hidden">
-                      <motion.div
-                        className={`h-full rounded-full ${strengthMeta[strength].color}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: strengthMeta[strength].width }}
-                        transition={{ duration: 0.3, ease: 'easeOut' }}
-                      />
+                    <div className="mt-3">
+                      <div className="h-1.5 w-full rounded-full bg-purple-50 overflow-hidden">
+                        <motion.div
+                          className={`h-full rounded-full ${strengthMeta[strength].color}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: strengthMeta[strength].width }}
+                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                        />
+                      </div>
+                      <p className={`mt-1 text-xs font-medium ${
+                        strength === 'weak' ? 'text-red-500' :
+                        strength === 'medium' ? 'text-yellow-600' : 'text-emerald-600'
+                      }`}>
+                        {strengthMeta[strength].label}
+                      </p>
                     </div>
                   )}
                 </motion.div>
@@ -202,7 +238,10 @@ export default function CreatePassword({
                     <input
                       type={showConfirm ? 'text' : 'password'}
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value)
+                        setError(null)
+                      }}
                       placeholder="Re-type password"
                       disabled={step === 'loading'}
                       className={`w-full rounded-2xl bg-gray-50 border px-5 py-4 pr-14 text-lg text-gray-900 outline-none focus:ring-2 placeholder:text-gray-400 transition-colors ${confirmBorderClass}`}
@@ -222,7 +261,17 @@ export default function CreatePassword({
                       animate={{ opacity: 1, y: 0 }}
                       className="mt-2 text-sm font-medium text-red-500"
                     >
-                      Password does not match?
+                      Password does not match
+                    </motion.p>
+                  )}
+
+                  {isMatch && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-2 text-sm font-medium text-emerald-600"
+                    >
+                      Passwords match
                     </motion.p>
                   )}
                 </motion.div>
@@ -256,7 +305,7 @@ export default function CreatePassword({
             </motion.button>
           </motion.div>
         </motion.div>
-     ) : (
+      ) : (
         <motion.div
           key="success-screen"
           className="fixed inset-0 z-40 flex items-end justify-center"
@@ -278,7 +327,7 @@ export default function CreatePassword({
             animate={{ y: 0 }}
             transition={{ type: 'spring', damping: 30, stiffness: 220, mass: 1.2 }}
           >
-            {/* Drag Handle — same as other sheets */}
+            {/* Drag Handle */}
             <div className="flex justify-center mb-2 -mt-2">
               <div className="w-10 h-1 rounded-full bg-white/40" />
             </div>
@@ -349,8 +398,8 @@ function EyeIcon() {
 function EyeOffIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12c3-3.5 6.5-5 10-5s7 1.5 10 5" />
-      <path d="M2 12c3 3.5 6.5 5 10 5s7-1.5 10-5" />
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
   )
 }
@@ -385,3 +434,5 @@ function CheckBadgeIcon() {
     </svg>
   )
 }
+
+
