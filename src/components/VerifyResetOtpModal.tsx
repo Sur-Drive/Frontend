@@ -1,53 +1,75 @@
-
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useForgotPassword } from '../hooks/useAuth'
+import { useVerifyResetOtp } from '../hooks/useAuth'
 
-interface ForgotPasswordModalProps {
+interface VerifyResetOtpModalProps {
+  phoneNumber: string
   onClose: () => void
   onBack: () => void
-  onSendCode: (fullPhone: string) => void
-  onSendCodeSuccess: (fullPhone: string) => void
+  onVerifySuccess: () => void
 }
 
-export default function ForgotPasswordModal({
+export default function VerifyResetOtpModal({
+  phoneNumber,
   onClose,
   onBack,
-  onSendCode,
-  onSendCodeSuccess,
-}: ForgotPasswordModalProps) {
-  const [phone, setPhone] = useState('')
-  const [localError, setLocalError] = useState('')
-  const forgotPassword = useForgotPassword()
+  onVerifySuccess,
+}: VerifyResetOtpModalProps) {
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const verifyResetOtp = useVerifyResetOtp()
 
-  const isValid = phone.trim().length >= 10
+  const isComplete = otp.every((d) => d !== '')
+  const maskedPhone = phoneNumber?.replace(/(\+\d{3})(\d{3})(\d{4})/, '$1 *** $3') || 'your phone'
+
+  useEffect(() => {
+    inputRefs.current[0]?.focus()
+  }, [])
+
+  const handleChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return
+
+    const newOtp = [...otp]
+    newOtp[index] = value.slice(-1)
+    setOtp(newOtp)
+
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!pasted) return
+
+    const newOtp = [...otp]
+    pasted.split('').forEach((digit, i) => {
+      if (i < 6) newOtp[i] = digit
+    })
+    setOtp(newOtp)
+
+    const focusIndex = Math.min(pasted.length, 5)
+    inputRefs.current[focusIndex]?.focus()
+  }
 
   const handleSubmit = async () => {
-    if (!isValid || forgotPassword.isPending) return
+    if (!isComplete || verifyResetOtp.isPending) return
 
-    const fullPhone = `+234${phone.trim()}`
-    onSendCode(fullPhone)
-    setLocalError('')
-
+    const otpString = otp.join('')
     try {
-      await forgotPassword.mutateAsync({ phoneNumber: fullPhone })
-      onSendCodeSuccess(fullPhone)
+      await verifyResetOtp.mutateAsync({ phoneNumber, otp: otpString })
+      onVerifySuccess()
     } catch (err: any) {
-      console.error('Forgot password failed:', err)
-      
-      const message = err.message || ''
-      
-      // Check for specific backend errors
-      if (message.includes('not found') || message.includes('not registered') || message.includes('does not exist')) {
-        setLocalError('This phone number is not registered. Please check and try again.')
-      } else if (message.includes('valid phone number')) {
-        setLocalError('Invalid phone number format. Please use a valid Nigerian number.')
-      } else if (message.includes('Failed to send') || message.includes('try again')) {
-        // This is likely SMS provider failure OR user not found (backend hides it)
-        setLocalError('Unable to send reset code. Please try again later or contact support.')
-      } else {
-        setLocalError(message || 'Something went wrong. Please try again.')
-      }
+      console.error('Verify reset OTP failed:', err)
+      setOtp(['', '', '', '', '', ''])
+      inputRefs.current[0]?.focus()
     }
   }
 
@@ -123,7 +145,7 @@ export default function ForgotPasswordModal({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              Password Recovery
+              Verify Code
             </motion.h1>
 
             <motion.p
@@ -132,75 +154,81 @@ export default function ForgotPasswordModal({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.32, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              Don&apos;t worry! It happens. Please enter the phone number associated with your
-              account, and we&apos;ll send you a verification code to reset your password. 🔒
+              We sent a verification code to <span className="font-semibold text-gray-900">{maskedPhone}</span>.
+              Enter the 6-digit code below to continue.
             </motion.p>
           </div>
 
-          {/* Scrollable form */}
-          <div className="mt-6 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* OTP Inputs */}
+          <div className="mt-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <motion.div
+              className="flex justify-center gap-3"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+              onPaste={handlePaste}
             >
-              <label className="text-lg font-medium text-gray-900">Phone Number</label>
-              <div className="mt-3 flex items-center rounded-2xl bg-gray-50 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3] px-5 py-4">
-                <span className="text-lg font-medium text-gray-700">+234</span>
-                <div className="w-px h-6 mx-3 bg-gray-300" />
+              {otp.map((digit, index) => (
                 <input
-                  type="tel"
+                  key={index}
+                  ref={(el) => { inputRefs.current[index] = el }}
+                  type="text"
                   inputMode="numeric"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value.replace(/[^0-9-]/g, ''))
-                    setLocalError('')
-                  }}
-                  placeholder="Input your phone"
-                  className="flex-1 text-lg text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  className={`w-12 h-14 text-2xl font-bold text-center rounded-2xl border-2 outline-none transition-all ${
+                    digit
+                      ? 'border-[#6E43A3] bg-purple-50 text-[#6E43A3]'
+                      : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-[#6E43A3] focus:ring-2 focus:ring-purple-300'
+                  }`}
                 />
-                <NigeriaFlagIcon />
-              </div>
-
-              {/* Error messages */}
-              {(localError || forgotPassword.isError) && (
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-3 text-sm text-red-500"
-                >
-                  {localError || (forgotPassword.error as Error)?.message || 'Something went wrong. Please try again.'}
-                </motion.p>
-              )}
+              ))}
             </motion.div>
+
+            {verifyResetOtp.isError && (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 text-sm text-center text-red-500"
+              >
+                {(verifyResetOtp.error as Error)?.message || 'Invalid code. Please try again.'}
+              </motion.p>
+            )}
+
+            <motion.p
+              className="mt-6 text-center text-gray-600"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              Didn&apos;t receive it?{' '}
+              <button
+                onClick={() => {
+                  // Resend logic
+                }}
+                className="text-[#6E43A3] font-semibold"
+              >
+                Resend code
+              </button>
+            </motion.p>
           </div>
 
-          {/* Send code button */}
+          {/* Verify button */}
           <motion.button
             onClick={handleSubmit}
-            disabled={!isValid || forgotPassword.isPending}
+            disabled={!isComplete || verifyResetOtp.isPending}
             className={`mt-4 h-14 rounded-2xl font-semibold text-lg text-white transition-all flex items-center justify-center ${
-              isValid && !forgotPassword.isPending ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
+              isComplete && !verifyResetOtp.isPending ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
             }`}
-            whileTap={isValid && !forgotPassword.isPending ? { scale: 0.97 } : {}}
+            whileTap={isComplete && !verifyResetOtp.isPending ? { scale: 0.97 } : {}}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.65, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            {forgotPassword.isPending ? <Spinner /> : 'Send code'}
+            {verifyResetOtp.isPending ? <Spinner /> : 'Verify'}
           </motion.button>
-
-          <motion.p
-            className="mt-5 text-center text-gray-900"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            Remember password?{' '}
-            <button onClick={onBack} className="text-[#6E43A3] font-semibold">
-              Sign in
-            </button>
-          </motion.p>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -219,16 +247,6 @@ function CloseIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
       <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  )
-}
-
-function NigeriaFlagIcon() {
-  return (
-    <svg viewBox="0 0 24 16" className="flex-shrink-0 w-6 h-4 overflow-hidden rounded-sm">
-      <rect x="0" y="0" width="8" height="16" fill="#008751" />
-      <rect x="8" y="0" width="8" height="16" fill="#ffffff" />
-      <rect x="16" y="0" width="8" height="16" fill="#008751" />
     </svg>
   )
 }
