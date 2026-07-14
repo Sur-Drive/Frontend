@@ -38,13 +38,9 @@
         margin: 0;
         padding: 0;
         overflow-x: hidden;
-        overscroll-behavior-y: contain;
     }
 
-    #root {
-        display: flex;
-        flex-direction: column;
-    }
+    /* REMOVED: #root display: flex - was breaking scroll with fragment layout */
 
     html {
         scroll-behavior: smooth;
@@ -58,6 +54,7 @@
         padding-bottom: env(safe-area-inset-bottom);
         -webkit-user-select: none;
         user-select: none;
+        overscroll-behavior-y: auto;  /* FIXED: was 'contain' - blocked scroll */
     }
 
     input,

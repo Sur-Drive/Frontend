@@ -54,7 +54,13 @@ function AppRoutes() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50">
+      {/* 
+        FIXED STRUCTURE:
+        - Single wrapper div with min-h-screen (allows content to grow)
+        - pb-24 (padding-bottom) prevents BottomNav from covering content
+        - BottomNav is fixed but content has space for it
+      */}
+      <div className="min-h-screen pb-24 bg-gray-50">
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/home" element={<HomePage />} />
@@ -65,8 +71,10 @@ function AppRoutes() {
         </Routes>
       </div>
 
+      {/* BottomNav fixed at bottom - pb-24 above ensures content isn't hidden */}
       {showNav && <BottomNav />}
 
+      {/* Splash screen overlay */}
       {showSplash && (
         <div
           className={`fixed inset-0 z-50 transition-opacity duration-500 ease-out ${
@@ -92,5 +100,3 @@ function App() {
 }
 
 export default App
-
-
