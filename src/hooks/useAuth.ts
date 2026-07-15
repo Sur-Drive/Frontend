@@ -1,39 +1,3 @@
-// import { useMutation } from '@tanstack/react-query'
-// import { sendOtp, verifyOtp, sendPersonalInfo, setPassword, login } from '../api/auth'
-
-// export function useSendOtp() {
-//   return useMutation({
-//     mutationFn: sendOtp,
-//   })
-// }
-
-// export function useVerifyOtp() {
-//   return useMutation({
-//     mutationFn: verifyOtp,
-//   })
-// }
-
-// export function useSendPersonalInfo() {
-//   return useMutation({
-//     mutationFn: sendPersonalInfo,
-//   })
-// }
-
-// export function useSetPassword() {
-//   return useMutation({
-//     mutationFn: setPassword,
-//   })
-// }
-
-// export function useLogin() {
-//   return useMutation({
-//     mutationFn: login,
-//   })
-// }
-
-
-
-
 import { useMutation } from '@tanstack/react-query'
 import {
   sendOtp,
@@ -42,6 +6,7 @@ import {
   setPassword,
   login,
   refreshToken,
+  logout,
   forgotPassword,
   verifyResetOtp,
   resetPassword,
@@ -69,6 +34,10 @@ export function useLogin() {
 
 export function useRefreshToken() {
   return useMutation({ mutationFn: refreshToken })
+}
+
+export function useLogout() {
+  return useMutation({ mutationFn: logout })
 }
 
 export function useForgotPassword() {

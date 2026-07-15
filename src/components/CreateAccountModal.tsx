@@ -1,13 +1,13 @@
-
-
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useSendOtp } from '../hooks/useSendOtp'
+import { useSendOtp } from '../hooks/useAuth'
+
+type InputMode = 'phone' | 'email'
 
 interface CreateAccountModalProps {
   onClose: () => void
-  onSendCode?: (fullPhoneNumber: string) => void
-  onSendCodeSuccess?: (fullPhoneNumber: string) => void
+  onSendCode?: (identifier: string) => void
+  onSendCodeSuccess?: (identifier: string) => void
   onGoogleSignIn?: () => void
   onSignIn?: () => void
   countryCode?: string
@@ -21,13 +21,18 @@ export default function CreateAccountModal({
   onSignIn,
   countryCode = '+234',
 }: CreateAccountModalProps) {
+  const [inputMode, setInputMode] = useState<InputMode>('phone')
   const [phone, setPhone] = useState('')
-  
+  const [email, setEmail] = useState('')
+
   const sendOtpMutation = useSendOtp()
 
   const digitsOnly = phone.replace(/\D/g, '')
-  const isValid = digitsOnly.length === 10 || digitsOnly.length === 11
-  const hasInput = digitsOnly.length > 0
+  const isPhoneValid = digitsOnly.length === 10 || digitsOnly.length === 11
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+
+  const isValid = inputMode === 'phone' ? isPhoneValid : isEmailValid
+  const hasInput = inputMode === 'phone' ? digitsOnly.length > 0 : email.trim().length > 0
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, '')
@@ -35,63 +40,48 @@ export default function CreateAccountModal({
     setPhone(limited)
   }
 
-  // const handleSendCode = () => {
-  //   if (!isValid || sendOtpMutation.isPending) return
-
-  //   // Format: +2348060452832 (most common for APIs)
-  //   const fullPhone = `${countryCode}${digitsOnly}`
-
-  //   sendOtpMutation.mutate(
-  //     {
-  //       phoneNumber: fullPhone,
-  //       role: 'driver',
-  //     },
-  //     {
-  //       onSuccess: (data) => {
-  //         onSendCode?.(fullPhone)
-  //         onSendCodeSuccess?.(fullPhone)
-  //         console.log('OTP sent:', data)
-  //       },
-  //       onError: (error) => {
-  //         console.error('Failed:', error.message)
-  //       },
-  //     }
-  //   )
-  // }
-
-
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value)
+  }
 
   const handleSendCode = () => {
-  if (!isValid || sendOtpMutation.isPending) return
+    if (!isValid || sendOtpMutation.isPending) return
 
-  // Exact format from Postman: +2347031078790
-  const fullPhone = `${countryCode}${digitsOnly}`
+    const identifier = inputMode === 'phone'
+      ? `${countryCode}${digitsOnly}`
+      : email.trim().toLowerCase()
 
-  console.log('Digits entered:', digitsOnly)
-  console.log('Full phone sent:', fullPhone)
+    console.log('Mode:', inputMode)
+    console.log('Identifier sent:', identifier)
 
-  sendOtpMutation.mutate(
-    {
-      phoneNumber: fullPhone,
-      role: 'driver',
-    },
-    {
-      onSuccess: (data) => {
-        onSendCode?.(fullPhone)
-        onSendCodeSuccess?.(fullPhone)
-        console.log('✅ Success:', data)
+    sendOtpMutation.mutate(
+      {
+        identifier,
+        role: 'driver',
       },
-      onError: (error) => {
-        console.error('❌ Error:', error.message)
-      },
-    }
-  )
-}
+      {
+        onSuccess: (data) => {
+          onSendCode?.(identifier)
+          onSendCodeSuccess?.(identifier)
+          console.log('✅ Success:', data)
+        },
+        onError: (error) => {
+          console.error('❌ Error:', error.message)
+        },
+      }
+    )
+  }
+
+  const switchMode = (mode: InputMode) => {
+    setInputMode(mode)
+    setPhone('')
+    setEmail('')
+  }
 
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-40 flex items-end justify-center"
+        className="fixed inset-0 flex items-end justify-center z-60"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -154,34 +144,105 @@ export default function CreateAccountModal({
                 </button>
               </>
             ) : (
-              'Enter your phone number to get started.'
+              'Enter your details to get started.'
             )}
           </motion.p>
 
+          {/* ─── Toggle: Phone / Email ─── */}
           <motion.div
-            className="mt-6"
+            className="flex p-1 mt-6 bg-gray-100 rounded-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.38, duration: 0.4 }}
+          >
+            <button
+              onClick={() => switchMode('phone')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                inputMode === 'phone'
+                  ? 'bg-white text-[#6E43A3] shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <PhoneIcon />
+                Phone Number
+              </span>
+            </button>
+            <button
+              onClick={() => switchMode('email')}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                inputMode === 'email'
+                  ? 'bg-white text-[#6E43A3] shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <EmailIcon />
+                Email Address
+              </span>
+            </button>
+          </motion.div>
+
+          {/* ─── Input Field ─── */}
+          <motion.div
+            className="mt-4"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{ delay: 0.45, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <label className="text-sm font-semibold text-gray-900">Phone Number</label>
-            <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
-              <div className="flex items-center px-4 text-gray-600 border-r border-gray-200 shrink-0">
-                {countryCode}
-              </div>
-              <input
-                type="tel"
-                inputMode="numeric"
-                value={phone}
-                onChange={handlePhoneChange}
-                placeholder="8060452832"
-                className="flex-1 px-4 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
-              />
-              <div className="flex items-center pr-4 shrink-0">
-                <NigeriaFlagIcon />
-              </div>
-            </div>
-            
+            <AnimatePresence mode="wait">
+              {inputMode === 'phone' ? (
+                <motion.div
+                  key="phone-input"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <label className="text-sm font-semibold text-gray-900">Phone Number</label>
+                  <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+                    <div className="flex items-center px-4 text-gray-600 border-r border-gray-200 shrink-0">
+                      {countryCode}
+                    </div>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={phone}
+                      onChange={handlePhoneChange}
+                      placeholder="8060452832"
+                      className="flex-1 px-4 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                    />
+                    <div className="flex items-center pr-4 shrink-0">
+                      <NigeriaFlagIcon />
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="email-input"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <label className="text-sm font-semibold text-gray-900">Email Address</label>
+                  <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+                    <div className="flex items-center pl-4 pr-3 text-gray-400 shrink-0">
+                      <EmailIcon />
+                    </div>
+                    <input
+                      type="email"
+                      inputMode="email"
+                      value={email}
+                      onChange={handleEmailChange}
+                      placeholder="you@example.com"
+                      className="flex-1 px-0 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {sendOtpMutation.isError && (
               <p className="mt-2 text-sm text-red-500">
                 {sendOtpMutation.error.message}
@@ -200,7 +261,7 @@ export default function CreateAccountModal({
             whileTap={isValid && !sendOtpMutation.isPending ? { scale: 0.97 } : {}}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.48, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{ delay: 0.52, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             {sendOtpMutation.isPending ? 'Sending...' : 'Send code'}
           </motion.button>
@@ -209,7 +270,7 @@ export default function CreateAccountModal({
             className="flex items-center gap-3 mt-6 text-sm font-medium text-gray-400"
             initial={{ opacity: 0, scaleX: 0.8 }}
             animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ delay: 0.55, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{ delay: 0.58, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             <div className="flex-1 h-px bg-gray-200" />
             <span>OR</span>
@@ -222,7 +283,7 @@ export default function CreateAccountModal({
             whileTap={{ scale: 0.97 }}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.62, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{ delay: 0.64, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             <GoogleIcon />
             Continue with Google
@@ -247,10 +308,29 @@ export default function CreateAccountModal({
   )
 }
 
+// ─── Icons ─────────────────────────────────────────────────────────
+
 function CloseIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
       <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}
+
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  )
+}
+
+function EmailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
     </svg>
   )
 }

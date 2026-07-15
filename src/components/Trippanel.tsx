@@ -1,6 +1,4 @@
 
-
-
 import { motion } from 'framer-motion'
 
 export interface RouteHazard {

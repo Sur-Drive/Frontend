@@ -8,14 +8,14 @@ export default function ResetPasswordSuccess({ onSignIn }: ResetPasswordSuccessP
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-40 flex items-end justify-center"
+        className="fixed inset-0 flex items-end justify-center z-60"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
       >
         <motion.div
-          className="relative w-full max-w-[430px] h-[92dvh] bg-emerald-700 rounded-t-[40px] px-8 pt-20 pb-10 flex flex-col items-center overflow-hidden"
+          className="relative w-full max-w-[430px] h-[100dvh] bg-emerald-700 rounded-t-[40px] px-8 pt-20 pb-10 flex flex-col items-center overflow-hidden"
           initial={{ y: '110%' }}
           animate={{ y: 0 }}
           exit={{ y: '110%' }}
