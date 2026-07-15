@@ -161,7 +161,7 @@ export const WaitlistPage: React.FC = () => {
                     <i className="fas fa-road text-4xl text-purple-700"></i>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-archivo text-purple-900">
-                    Join the Waitlist
+                    Join the Early Access List
                 </h1>
                 <p className="text-gray-500 text-sm mt-2">
                     Be the first to know when we launch

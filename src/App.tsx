@@ -74,7 +74,7 @@ function AppRoutes() {
             >
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
-                    <Route path="/waitlist" element={<WaitlistPage />} />
+                    <Route path="/access-list" element={<WaitlistPage />} />
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/feed" element={<FeedPage />} />
                     <Route path="/report" element={<ReportPage />} />
