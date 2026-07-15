@@ -181,7 +181,7 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => navigate("/waitlist")}
+                                onClick={() => navigate("/access-list")}
                                 className="px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-400 text-purple-900 rounded-xl hover:from-gold-400 hover:to-gold-300 transition-all duration-300 font-medium shadow-lg shadow-gold-500/30 flex items-center space-x-2"
                             >
                                 <i className="fas fa-rocket"></i>

@@ -107,7 +107,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onModalOpen }) => {
                     <motion.button
                         whileHover={{ scale: 1.05, y: -3 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate("/waitlist")}
+                        onClick={() => navigate("/access-list")}
                         className="mt-6 px-8 py-4 bg-gradient-to-r from-purple-700 to-purple-800 text-white rounded-xl hover:from-purple-800 hover:to-purple-900 transition-all duration-300 font-medium text-base md:text-lg shadow-lg shadow-purple-700/30 hover:shadow-xl hover:shadow-purple-700/40 flex items-center justify-center space-x-3 mx-auto group"
                         animate={{
                             y: [0, -5, 0],
