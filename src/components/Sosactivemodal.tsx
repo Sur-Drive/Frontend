@@ -8,7 +8,7 @@ interface SOSActiveModalProps {
 export default function SOSActiveModal({ onCancel, onCall }: SOSActiveModalProps) {
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col bg-red-500 md:left-1/2 md:right-auto md:w-[430px] md:mx-auto"
+      className="fixed inset-0 z-60 flex flex-col bg-red-500 md:left-1/2 md:right-auto md:w-[430px] md:mx-auto"
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}

@@ -92,7 +92,7 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+    <div className="fixed inset-0 flex items-end justify-center z-60 bg-black/40">
       <div className="relative flex h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl">
         {step === 'form' ? (
           <>
