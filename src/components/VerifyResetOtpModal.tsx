@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useMutation } from '@tanstack/react-query'
 import { useVerifyResetOtp } from '../hooks/useAuth'
+
 
 interface VerifyResetOtpModalProps {
   phoneNumber: string
@@ -64,7 +66,7 @@ export default function VerifyResetOtpModal({
 
     const otpString = otp.join('')
     try {
-      await verifyResetOtp.mutateAsync({ phoneNumber, otp: otpString })
+     await verifyResetOtp.mutateAsync({ identifier: phoneNumber, otp: otpString })
       onVerifySuccess()
     } catch (err: any) {
       console.error('Verify reset OTP failed:', err)

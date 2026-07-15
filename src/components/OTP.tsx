@@ -1,5 +1,4 @@
 
-
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useVerifyOtp } from '../hooks/useAuth'
@@ -53,11 +52,7 @@ export default function OTP({
   }, [])
 
   const submitCode = useCallback(async (fullCode: string) => {
-    verifyOtpMutation.mutate(
-      {
-        phoneNumber: phoneNumber,
-        otp: fullCode,
-      },
+    verifyOtpMutation.mutate({ identifier: phoneNumber, otp: fullCode },
       {
         onSuccess: (data) => {
           setToastMessage('Verification complete')

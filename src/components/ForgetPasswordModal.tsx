@@ -30,7 +30,7 @@ export default function ForgotPasswordModal({
     setLocalError('')
 
     try {
-      await forgotPassword.mutateAsync({ phoneNumber: fullPhone })
+      await forgotPassword.mutateAsync({ identifier: fullPhone })
       onSendCodeSuccess(fullPhone)
     } catch (err: any) {
       console.error('Forgot password failed:', err)

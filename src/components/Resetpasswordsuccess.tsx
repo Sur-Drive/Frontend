@@ -15,7 +15,7 @@ export default function ResetPasswordSuccess({ onSignIn }: ResetPasswordSuccessP
         transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
       >
         <motion.div
-          className="relative w-full max-w-[430px] h-[92dvh] bg-emerald-700 rounded-t-[40px] px-8 pt-20 pb-10 flex flex-col items-center overflow-hidden"
+          className="relative w-full max-w-[430px] h-[100dvh] bg-emerald-700 rounded-t-[40px] px-8 pt-20 pb-10 flex flex-col items-center overflow-hidden"
           initial={{ y: '110%' }}
           animate={{ y: 0 }}
           exit={{ y: '110%' }}
