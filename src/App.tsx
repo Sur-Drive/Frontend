@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
 });
 
 // Pages that should NOT show the BottomNav
-const NO_NAV_PAGES = ["/", "/waitlist", "/admin/login", "/admin/dashboard"];
+const NO_NAV_PAGES = ["/", "/access-list", "/admin/login", "/admin/dashboard"];
 
 function AppRoutes() {
     const location = useLocation();
