@@ -95,8 +95,9 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onModalOpen }) => {
                         transition={{ duration: 0.6, delay: 0.3 }}
                         viewport={{ once: true }}
                     >
-                        Join the waitlist and be among the first to experience
-                        SUR-DRIVE<span className="ht">HT</span> when we launch.
+                        Join the early access list and be among the first to
+                        experience SUR-DRIVE<span className="ht">HT</span> when
+                        we launch.
                     </motion.p>
 
                     {/* Waitlist CTA Button - Prominent with bounce */}
@@ -126,7 +127,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onModalOpen }) => {
                                 ease: "easeInOut",
                             }}
                         />
-                        <span>Join the Waitlist</span>
+                        <span>Join the Early Access List</span>
                         <motion.i
                             className="fas fa-arrow-right text-sm"
                             animate={{
