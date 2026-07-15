@@ -1,6 +1,9 @@
 
 
 
+
+
+
 import { useState } from 'react'
 
 // ---------- Types ----------
@@ -34,7 +37,7 @@ interface PendingAction {
   action: 'confirm' | 'incorrect'
 }
 
-// ---------- Mock data (swap for your API) ----------
+// ---------- Mock data ----------
 
 const initialReports: HazardReport[] = [
   {
@@ -159,11 +162,11 @@ function ConfirmModal({
         className="w-full max-w-sm px-6 py-8 text-center bg-white shadow-xl rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold text-gray-900">
+        <h2 className="text-base font-bold text-gray-900 sm:text-lg">
           {isConfirm ? 'Confirm this hazard?' : 'Mark as incorrect?'}
         </h2>
 
-        <p className="mt-3 text-[15px] leading-relaxed text-gray-500">
+        <p className="mt-3 text-[13px] sm:text-sm leading-relaxed text-gray-500">
           {isConfirm ? (
             <>
               You're verifying that {report.type.toLowerCase()} at{' '}
@@ -181,14 +184,14 @@ function ConfirmModal({
 
         <button
           onClick={onConfirm}
-          className="mt-6 w-full rounded-2xl bg-purple-700 py-4 text-[15px] font-semibold text-white transition active:scale-[0.98]"
+          className="mt-6 w-full rounded-2xl bg-purple-700 py-3 sm:py-3.5 text-[13px] sm:text-sm font-semibold text-white transition active:scale-[0.98]"
         >
           {isConfirm ? 'Yes, Confirm' : 'Yes, Mark incorrect'}
         </button>
 
         <button
           onClick={onCancel}
-          className="mt-4 text-[15px] font-medium text-purple-700"
+          className="mt-4 text-[13px] sm:text-sm font-medium text-purple-700"
         >
           Cancel
         </button>
@@ -211,7 +214,7 @@ function ReportCard({
   return (
     <div className="w-full overflow-hidden bg-white border border-gray-100 shadow-sm rounded-3xl">
       {/* Map-style header */}
-      <div className="relative flex items-center justify-center h-32 bg-gradient-to-br from-emerald-100 via-teal-50 to-sky-100">
+      <div className="relative flex items-center justify-center h-28 sm:h-32 bg-gradient-to-br from-emerald-100 via-teal-50 to-sky-100">
         <div
           className="absolute inset-0 opacity-40"
           style={{
@@ -219,35 +222,35 @@ function ReportCard({
               'repeating-linear-gradient(115deg, transparent, transparent 38px, rgba(100,130,150,0.35) 38px, rgba(100,130,150,0.35) 40px)',
           }}
         />
-        <span className="relative text-4xl drop-shadow-sm">{report.emoji}</span>
+        <span className="relative text-3xl sm:text-4xl drop-shadow-sm">{report.emoji}</span>
       </div>
 
       {/* Body */}
-      <div className="px-4 pb-4 pt-3.5">
+      <div className="px-3.5 sm:px-4 pb-3.5 sm:pb-4 pt-3 sm:pt-3.5">
         <div className="flex items-center justify-between">
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-[13px] font-medium text-gray-600">
+          <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
             {report.type}
           </span>
-          <span className="text-[13px] text-gray-400">
+          <span className="text-[11px] sm:text-xs text-gray-400">
             🕐 {formatTimeAgo(report.minutesAgo)} · By {report.author}
           </span>
         </div>
 
-        <h3 className="mt-2.5 text-[17px] font-bold leading-snug text-gray-900">
+        <h3 className="mt-2 sm:mt-2.5 text-[15px] sm:text-base font-bold leading-snug text-gray-900">
           {report.title}
         </h3>
 
-        <p className="mt-1 flex items-center gap-1 text-[14px] text-gray-500">
+        <p className="flex items-center gap-1 mt-1 text-[13px] sm:text-sm text-gray-500">
           📍 {report.location} · {report.distanceKm} km away
         </p>
 
         {vote ? (
-          <div className="mt-3.5 flex items-center justify-between rounded-2xl border border-gray-200 pl-4 pr-1.5 py-1.5">
-            <span className="text-[14px] text-gray-500">
+          <div className="mt-3 sm:mt-3.5 flex items-center justify-between rounded-2xl border border-gray-200 pl-4 pr-1.5 py-1.5">
+            <span className="text-[13px] sm:text-sm text-gray-500">
               You voted {vote === 'confirmed' ? 'Confirmed' : 'Incorrect'}
             </span>
             <span
-              className={`rounded-full px-4 py-2 text-[14px] font-semibold text-white ${
+              className={`rounded-full px-3.5 sm:px-4 py-2 text-[13px] sm:text-sm font-semibold text-white ${
                 vote === 'confirmed' ? 'bg-emerald-600' : 'bg-red-600'
               }`}
             >
@@ -255,16 +258,16 @@ function ReportCard({
             </span>
           </div>
         ) : (
-          <div className="mt-3.5 flex items-center gap-3">
+          <div className="mt-3 sm:mt-3.5 flex items-center gap-2.5 sm:gap-3">
             <button
               onClick={() => onRequestVote('confirm')}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-emerald-600 py-3 text-[14px] font-semibold text-white transition active:scale-[0.98]"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-emerald-600 py-2.5 sm:py-3 text-[13px] sm:text-sm font-semibold text-white transition active:scale-[0.98]"
             >
               👍 Confirm ({report.confirmCount})
             </button>
             <button
               onClick={() => onRequestVote('incorrect')}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gray-100 py-3 text-[14px] font-semibold text-red-500 transition active:scale-[0.98]"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl bg-gray-100 py-2.5 sm:py-3 text-[13px] sm:text-sm font-semibold text-red-500 transition active:scale-[0.98]"
             >
               👎 Incorrect
             </button>
@@ -312,33 +315,40 @@ export default function RoadFeed() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-[22px] font-extrabold leading-none text-gray-800">Road Feed</h1>
-        <p className="mt-2 text-[15px] text-gray-400">Live reports from drivers near you.</p>
-      </div>
+      {/* Centered container for web, full width on mobile */}
+      <div className="max-w-xl mx-auto">
+        {/* Header */}
+        <div className="px-4 pt-6 pb-4 sm:px-5">
+          <h1 className="text-[22px] sm:text-[28px] font-extrabold leading-none text-gray-800">
+            Road Feed
+          </h1>
+          <p className="mt-1.5 sm:mt-2 text-[13px] sm:text-[15px] text-gray-400">
+            Live reports from drivers near you.
+          </p>
+        </div>
 
-      {/* Feed */}
-      <div className="flex flex-col gap-4 px-4">
-        {reports.map((report) => (
-          <ReportCard
-            key={report.id}
-            report={report}
-            vote={votes[report.id] ?? null}
-            onRequestVote={(action) => requestVote(report.id, action)}
+        {/* Feed */}
+        <div className="flex flex-col gap-3 px-4 sm:gap-4">
+          {reports.map((report) => (
+            <ReportCard
+              key={report.id}
+              report={report}
+              vote={votes[report.id] ?? null}
+              onRequestVote={(action) => requestVote(report.id, action)}
+            />
+          ))}
+        </div>
+
+        {/* Modal */}
+        {pending && pendingReport && (
+          <ConfirmModal
+            report={pendingReport}
+            action={pending.action}
+            onCancel={cancelVote}
+            onConfirm={applyVote}
           />
-        ))}
+        )}
       </div>
-
-      {/* Modal */}
-      {pending && pendingReport && (
-        <ConfirmModal
-          report={pendingReport}
-          action={pending.action}
-          onCancel={cancelVote}
-          onConfirm={applyVote}
-        />
-      )}
 
       {/* Your existing <BottomNav /> renders below this page */}
     </div>

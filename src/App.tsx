@@ -60,7 +60,7 @@ function AppRoutes() {
         - pb-24 (padding-bottom) prevents BottomNav from covering content
         - BottomNav is fixed but content has space for it
       */}
-      <div className="min-h-screen pb-24 bg-gray-50">
+      <div className="min-h-screen bg-gray-50">
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/home" element={<HomePage />} />
