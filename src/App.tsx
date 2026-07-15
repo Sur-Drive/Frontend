@@ -70,7 +70,7 @@ function AppRoutes() {
     return (
         <>
             <div
-                className={`min-h-screen bg-gray-50 ${showNav ? "pb-24" : ""}`}
+                className={`min-h-screen bg-gray-50 ${showNav ? "" : ""}`}
             >
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
