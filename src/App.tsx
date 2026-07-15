@@ -13,6 +13,7 @@ import BottomNav from "./components/BottomNav";
 import "./styles/index.css";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminLogin } from "./pages/AdminLogin";
+import { WaitlistPage } from "./pages/WaitlistPage";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -27,9 +28,23 @@ const queryClient = new QueryClient({
     },
 });
 
+// Pages that should NOT show the BottomNav
+const NO_NAV_PAGES = ["/", "/waitlist", "/admin/login", "/admin/dashboard"];
+
 function AppRoutes() {
     const location = useLocation();
-    const isAppRoute = location.pathname === "/home";
+    const pathname = location.pathname;
+
+    // Check if current page is an app route (should show splash and nav)
+    const isAppRoute =
+        pathname === "/home" ||
+        pathname === "/feed" ||
+        pathname === "/report" ||
+        pathname === "/profile" ||
+        pathname === "/plan-route";
+
+    // Check if current page should show BottomNav
+    const showNav = !NO_NAV_PAGES.includes(pathname);
 
     const [showSplash, setShowSplash] = useState(isAppRoute);
     const [fadeOut, setFadeOut] = useState(false);
@@ -52,21 +67,14 @@ function AppRoutes() {
         };
     }, [isAppRoute]);
 
-    const showNav = location.pathname !== "/";
-
     return (
         <>
-            {/* 
-        FIXED STRUCTURE:
-        - Single wrapper div with min-h-screen (allows content to grow)
-        - pb-24 (padding-bottom) prevents BottomNav from covering content
-        - BottomNav is fixed but content has space for it
-      */}
             <div
                 className={`min-h-screen bg-gray-50 ${showNav ? "pb-24" : ""}`}
             >
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
+                    <Route path="/waitlist" element={<WaitlistPage />} />
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/feed" element={<FeedPage />} />
                     <Route path="/report" element={<ReportPage />} />
@@ -80,10 +88,10 @@ function AppRoutes() {
                 </Routes>
             </div>
 
-            {/* BottomNav fixed at bottom - pb-24 above ensures content isn't hidden */}
+            {/* BottomNav only shows on app pages */}
             {showNav && <BottomNav />}
 
-            {/* Splash screen overlay */}
+            {/* Splash screen overlay - only on app routes */}
             {showSplash && (
                 <div
                     className={`fixed inset-0 z-50 transition-opacity duration-500 ease-out ${

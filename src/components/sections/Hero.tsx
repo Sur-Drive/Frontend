@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { AppButton } from "../ui/AppButton";
+import { useNavigate } from "react-router-dom";
 
 interface HeroProps {
     onModalOpen: () => void;
@@ -9,6 +9,7 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
     const [displayText, setDisplayText] = useState("");
     const fullText = "Your Road, Your Guide";
+    const navigate = useNavigate();
 
     useEffect(() => {
         let isMounted = true;
@@ -175,8 +176,17 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                             >
                                 Explore Features
                             </motion.a>
-                            <AppButton type="android" onClick={onModalOpen} />
-                            <AppButton type="ios" onClick={onModalOpen} />
+
+                            {/* Join Early Access Button */}
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => navigate("/waitlist")}
+                                className="px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-400 text-purple-900 rounded-xl hover:from-gold-400 hover:to-gold-300 transition-all duration-300 font-medium shadow-lg shadow-gold-500/30 flex items-center space-x-2"
+                            >
+                                <i className="fas fa-rocket"></i>
+                                <span>Join Early Access List</span>
+                            </motion.button>
                         </motion.div>
 
                         {/* Feature Badges */}

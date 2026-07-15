@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { AppButton } from "../ui/AppButton";
 
 interface FinalCTAProps {
@@ -7,6 +8,8 @@ interface FinalCTAProps {
 }
 
 export const FinalCTA: React.FC<FinalCTAProps> = ({ onModalOpen }) => {
+    const navigate = useNavigate();
+
     return (
         <section className="py-16 md:py-24 bg-gradient-to-b from-purple-100/50 via-white to-purple-50/50 w-full relative overflow-hidden">
             {/* Decorative background elements */}
@@ -100,11 +103,11 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onModalOpen }) => {
                         we launch.
                     </motion.p>
 
-                    {/* Waitlist CTA Button - Prominent with bounce */}
+                    {/* Waitlist CTA Button - Navigates to /waitlist */}
                     <motion.button
                         whileHover={{ scale: 1.05, y: -3 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={onModalOpen}
+                        onClick={() => navigate("/waitlist")}
                         className="mt-6 px-8 py-4 bg-gradient-to-r from-purple-700 to-purple-800 text-white rounded-xl hover:from-purple-800 hover:to-purple-900 transition-all duration-300 font-medium text-base md:text-lg shadow-lg shadow-purple-700/30 hover:shadow-xl hover:shadow-purple-700/40 flex items-center justify-center space-x-3 mx-auto group"
                         animate={{
                             y: [0, -5, 0],
@@ -161,7 +164,41 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onModalOpen }) => {
                         viewport={{ once: true }}
                     >
                         <div className="flex-1 h-px bg-gray-200"></div>
-                        <div className="flex items-center space-x-1"></div>
+                        <div className="flex items-center space-x-1">
+                            <motion.span
+                                className="w-1.5 h-1.5 bg-gold-500 rounded-full"
+                                animate={{
+                                    scale: [1, 1.5, 1],
+                                }}
+                                transition={{
+                                    duration: 1.5,
+                                    repeat: Infinity,
+                                    delay: 0,
+                                }}
+                            />
+                            <motion.span
+                                className="w-1.5 h-1.5 bg-purple-500 rounded-full"
+                                animate={{
+                                    scale: [1, 1.5, 1],
+                                }}
+                                transition={{
+                                    duration: 1.5,
+                                    repeat: Infinity,
+                                    delay: 0.3,
+                                }}
+                            />
+                            <motion.span
+                                className="w-1.5 h-1.5 bg-gold-500 rounded-full"
+                                animate={{
+                                    scale: [1, 1.5, 1],
+                                }}
+                                transition={{
+                                    duration: 1.5,
+                                    repeat: Infinity,
+                                    delay: 0.6,
+                                }}
+                            />
+                        </div>
                         <span className="text-xs text-gray-400 uppercase tracking-wider">
                             or
                         </span>
