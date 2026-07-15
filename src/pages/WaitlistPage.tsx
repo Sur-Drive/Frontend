@@ -1,10 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-
-interface ModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-}
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 interface FormData {
     userType: string;
@@ -29,12 +25,12 @@ interface FormData {
     fleetFeatures: string[];
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
+export const WaitlistPage: React.FC = () => {
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
     const [errorMessage, setErrorMessage] = useState("");
-    const modalRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
 
     const [formData, setFormData] = useState<FormData>({
         userType: "driver",
@@ -57,39 +53,6 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
         fleetFeatures: ["fleet_dashboard", "live_tracking"],
     });
 
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = "hidden";
-            setStep(1);
-            setStatus("idle");
-            setErrorMessage("");
-        } else {
-            document.body.style.overflow = "auto";
-        }
-        return () => {
-            document.body.style.overflow = "auto";
-        };
-    }, [isOpen]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                modalRef.current &&
-                !modalRef.current.contains(event.target as Node)
-            ) {
-                onClose();
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [isOpen, onClose]);
-
     const handleChange = (
         e: React.ChangeEvent<
             HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -103,12 +66,6 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                     ? (e.target as HTMLInputElement).checked
                     : value,
         });
-    };
-
-    const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
     };
 
     const handleCheckboxChange = (feature: string, field: string) => {
@@ -136,7 +93,6 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
             const API_URL =
                 import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-            // Build payload based on user type
             const payload: any = {
                 userType: formData.userType,
                 fullName: formData.fullName,
@@ -175,9 +131,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
             if (response.ok) {
                 setStatus("success");
                 setTimeout(() => {
-                    onClose();
-                    setStatus("idle");
-                    setStep(1);
+                    navigate("/");
                 }, 3000);
             } else {
                 setStatus("error");
@@ -196,22 +150,25 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
     };
 
     const renderStep1 = () => (
-        <div className="space-y-4">
-            <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-2xl font-archivo text-purple-700">
-                        <i className="fas fa-road text-3xl text-purple-700"></i>
-                    </span>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="space-y-6 max-w-md mx-auto"
+        >
+            <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i className="fas fa-road text-4xl text-purple-700"></i>
                 </div>
-                <h3 className="text-xl font-archivo text-purple-900">
+                <h1 className="text-3xl md:text-4xl font-archivo text-purple-900">
                     Join the Waitlist
-                </h3>
-                <p className="text-gray-500 text-sm mt-1">
+                </h1>
+                <p className="text-gray-500 text-sm mt-2">
                     Be the first to know when we launch
                 </p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         I am a
@@ -222,13 +179,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                             onClick={() =>
                                 setFormData({ ...formData, userType: "driver" })
                             }
-                            className={`p-3 rounded-xl border-2 transition-all ${
+                            className={`p-4 rounded-xl border-2 transition-all ${
                                 formData.userType === "driver"
                                     ? "border-purple-700 bg-purple-50 text-purple-700"
                                     : "border-gray-200 hover:border-purple-300"
                             }`}
                         >
-                            {/* <i className="fas fa-car text-lg block mb-1"></i> */}
                             <span className="text-sm font-medium">Driver</span>
                         </button>
                         <button
@@ -239,13 +195,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                                     userType: "fleet_owner",
                                 })
                             }
-                            className={`p-3 rounded-xl border-2 transition-all ${
+                            className={`p-4 rounded-xl border-2 transition-all ${
                                 formData.userType === "fleet_owner"
                                     ? "border-purple-700 bg-purple-50 text-purple-700"
                                     : "border-gray-200 hover:border-purple-300"
                             }`}
                         >
-                            {/* <i className="fas fa-truck text-lg block mb-1"></i> */}
                             <span className="text-sm font-medium">
                                 Fleet Owner
                             </span>
@@ -322,36 +277,41 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
             >
                 Continue
             </button>
-        </div>
+        </motion.div>
     );
 
     const renderStep2 = () => {
         const isDriver = formData.userType === "driver";
 
         return (
-            <div className="space-y-4">
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="space-y-6 max-w-md mx-auto"
+            >
                 <div className="flex items-center justify-between mb-4">
                     <button
                         type="button"
                         onClick={() => setStep(1)}
-                        className="text-purple-600 hover:text-purple-800 text-sm"
+                        className="text-purple-600 hover:text-purple-800 text-sm font-medium"
                     >
                         ← Back
                     </button>
                     <span className="text-xs text-gray-400">Step 2 of 2</span>
                 </div>
 
-                <div className="text-center mb-4">
-                    <h3 className="text-lg font-archivo text-purple-900">
+                <div className="text-center mb-6">
+                    <h2 className="text-2xl font-archivo text-purple-900">
                         {isDriver ? "Driver Preferences" : "Fleet Details"}
-                    </h3>
-                    <p className="text-gray-500 text-sm">
+                    </h2>
+                    <p className="text-gray-500 text-sm mt-1">
                         Help us personalize your experience
                     </p>
                 </div>
 
                 {isDriver ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Vehicle Type
@@ -427,7 +387,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                                                     "driverFeatures",
                                                 )
                                             }
-                                            className="w-4 h-4 text-purple-700 rounded focus:ring-purple-700"
+                                            className="w-4 h-4 rounded"
                                             style={{ accentColor: "#4A148C" }}
                                         />
                                         <span className="text-sm text-gray-700">
@@ -439,7 +399,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         <input
                             type="text"
                             name="companyName"
@@ -541,7 +501,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                                                     "fleetFeatures",
                                                 )
                                             }
-                                            className="w-4 h-4 text-purple-700 rounded focus:ring-purple-700"
+                                            className="w-4 h-4 rounded"
                                             style={{ accentColor: "#4A148C" }}
                                         />
                                         <span className="text-sm text-gray-700">
@@ -560,7 +520,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                         name="agreeToUpdates"
                         checked={formData.agreeToUpdates}
                         onChange={handleChange}
-                        className="w-4 h-4 rounded focus:ring-gold-500"
+                        className="w-4 h-4 rounded"
                         style={{ accentColor: "#D4AF37" }}
                         required
                     />
@@ -606,73 +566,66 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                         </>
                     )}
                 </button>
-            </div>
+            </motion.div>
         );
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-900/70 backdrop-blur-sm"
-                    onClick={onClose}
-                >
+        <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
+            <div className="max-w-md mx-auto">
+                {status === "success" ? (
                     <motion.div
-                        ref={modalRef}
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 shadow-2xl border-2 border-gold-500/30"
-                        onClick={(e) => e.stopPropagation()}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center py-12"
                     >
-                        {status === "success" ? (
-                            <div className="text-center py-8">
-                                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i className="fas fa-check-circle text-4xl text-green-600"></i>
-                                </div>
-                                <h3 className="text-2xl font-archivo text-purple-900 mb-2">
-                                    You're In! 🎉
-                                </h3>
-                                <p className="text-gray-600 text-sm leading-relaxed mb-6">
-                                    Thanks for joining the waitlist! We'll
-                                    notify you when SUR-DRIVEHT launches.
-                                </p>
-                                <button
-                                    onClick={onClose}
-                                    className="px-6 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-all text-sm font-medium"
-                                >
-                                    Got it!
-                                </button>
-                            </div>
-                        ) : status === "error" ? (
-                            <div className="text-center py-4">
-                                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i className="fas fa-exclamation-circle text-4xl text-red-600"></i>
-                                </div>
-                                <h3 className="text-xl font-archivo text-purple-900 mb-2">
-                                    Oops!
-                                </h3>
-                                <p className="text-red-600 text-sm mb-4">
-                                    {errorMessage}
-                                </p>
-                                <button
-                                    onClick={() => setStatus("idle")}
-                                    className="px-6 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800 transition-all text-sm font-medium"
-                                >
-                                    Try Again
-                                </button>
-                            </div>
-                        ) : step === 1 ? (
-                            renderStep1()
-                        ) : (
-                            renderStep2()
-                        )}
+                        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i className="fas fa-check-circle text-5xl text-green-600"></i>
+                        </div>
+                        <h2 className="text-3xl font-archivo text-purple-900 mb-3">
+                            You're In! 🎉
+                        </h2>
+                        <p className="text-gray-600 text-base leading-relaxed mb-8 max-w-sm mx-auto">
+                            Thanks for joining the waitlist! We'll notify you
+                            when SUR-DRIVEHT launches.
+                        </p>
+                        <button
+                            onClick={() => navigate("/")}
+                            className="px-8 py-3 bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all text-sm font-medium shadow-lg shadow-purple-700/30"
+                        >
+                            Back to Home
+                        </button>
                     </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                ) : status === "error" ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-center py-12"
+                    >
+                        <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i className="fas fa-exclamation-circle text-5xl text-red-600"></i>
+                        </div>
+                        <h2 className="text-2xl font-archivo text-purple-900 mb-3">
+                            Oops!
+                        </h2>
+                        <p className="text-red-600 text-sm mb-6">
+                            {errorMessage}
+                        </p>
+                        <button
+                            onClick={() => setStatus("idle")}
+                            className="px-8 py-3 bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all text-sm font-medium"
+                        >
+                            Try Again
+                        </button>
+                    </motion.div>
+                ) : step === 1 ? (
+                    renderStep1()
+                ) : (
+                    renderStep2()
+                )}
+            </div>
+        </div>
     );
 };
+
+export default WaitlistPage;
