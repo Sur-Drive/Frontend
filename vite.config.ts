@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -14,6 +13,9 @@ export default defineConfig({
         'favicon-32x32.png',
         'favicon-16x16.png',
         'apple-touch-icon.png',
+        'pwa-192x192.png',
+        'pwa-512x512.png',
+        'pwa-maskable-512x512.png',
       ],
       manifest: {
         name: 'SurDrive',
@@ -37,10 +39,23 @@ export default defineConfig({
             type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'pwa-maskable-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
+          },
+        ],
+        screenshots: [
+          {
+            src: 'screenshots/desktop.png',
+            sizes: '1280x800',
+            type: 'image/png',
+            form_factor: 'wide',
+          },
+          {
+            src: 'screenshots/mobile.png',
+            sizes: '750x1334',
+            type: 'image/png',
           },
         ],
       },
@@ -52,5 +67,8 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+  },
+  build: {
+    chunkSizeWarningLimit: 1000,
   },
 })
