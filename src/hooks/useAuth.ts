@@ -10,6 +10,7 @@ import {
   forgotPassword,
   verifyResetOtp,
   resetPassword,
+  updatePassword,
 } from '../api/auth'
 
 export function useSendOtp() {
@@ -50,4 +51,8 @@ export function useVerifyResetOtp() {
 
 export function useResetPassword() {
   return useMutation({ mutationFn: resetPassword })
+}
+
+export function useUpdatePassword() {
+  return useMutation({ mutationFn: updatePassword })
 }

@@ -107,6 +107,18 @@ export interface ResetPasswordResponse {
   [key: string]: any
 }
 
+// ─── Update Password (Privacy screen — change password while logged in) ──
+
+export interface UpdatePasswordPayload {
+  password: string
+  confirmPassword: string
+}
+
+export interface UpdatePasswordResponse {
+  message: string
+  [key: string]: any
+}
+
 // ─── Shared helpers ─────────────────────────────────────────────────
 
 async function parseResponse(res: Response, fallbackMessage: string) {
@@ -308,8 +320,6 @@ export async function logout(): Promise<LogoutResponse> {
     const data = await parseResponse(res, 'Logout failed')
     return data
   } finally {
-    // Always clear local session, even if the request fails,
-    // so the user isn't stuck "logged in" on the client.
     localStorage.removeItem('token')
     localStorage.removeItem('refreshToken')
     console.log('🔑 Local session cleared')
@@ -371,3 +381,25 @@ export async function resetPassword(payload: ResetPasswordPayload): Promise<Rese
 
   return data
 }
+
+
+
+export async function updatePassword(payload: UpdatePasswordPayload): Promise<UpdatePasswordResponse> {
+  const token = localStorage.getItem('token')
+
+  console.log('📤 Updating password...', payload) // log the actual payload while debugging
+
+  const res = await fetch(`${API_BASE}/auth/set-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(payload),
+  })
+
+  return parseResponse(res, 'Failed to update password')
+}
+
+

@@ -1,3 +1,16 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
 import type { ReactNode } from 'react'
 import { X, ChevronLeft, Check } from 'lucide-react'
 
@@ -6,16 +19,19 @@ import { X, ChevronLeft, Check } from 'lucide-react'
 interface ToggleProps {
   checked: boolean
   onChange: (checked: boolean) => void
+  disabled?: boolean
 }
 
-export function Toggle({ checked, onChange }: ToggleProps) {
+export function Toggle({ checked, onChange, disabled }: ToggleProps) {
   return (
     <button
-      onClick={() => onChange(!checked)}
+      onClick={() => !disabled && onChange(!checked)}
       aria-pressed={checked}
+      aria-disabled={disabled}
+      disabled={disabled}
       className={`relative h-7 w-[52px] shrink-0 rounded-full p-0.5 transition-colors duration-200 ${
         checked ? 'bg-emerald-500' : 'bg-gray-300'
-      }`}
+      } ${disabled ? 'opacity-60' : ''}`}
     >
       <span
         className={`block h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200 ${
@@ -89,6 +105,43 @@ interface SuccessScreenProps {
   onSecondary?: () => void
 }
 
+// export function SuccessScreen({
+//   title,
+//   description,
+//   primaryLabel = 'Done',
+//   onPrimary,
+//   secondaryLabel,
+//   onSecondary,
+// }: SuccessScreenProps) {
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+//       <div className="relative flex h-[92vh] w-full max-w-md flex-col items-center justify-between overflow-hidden rounded-t-3xl bg-emerald-700 px-8 py-14 text-center shadow-2xl">
+//         <div className="flex flex-col items-center justify-center flex-1">
+//           <div className="flex items-center justify-center rounded-full shadow-lg h-28 w-28 bg-emerald-500">
+//             <Check size={56} className="text-white" strokeWidth={3} />
+//           </div>
+//           <h2 className="mt-8 text-3xl font-extrabold text-white">{title}</h2>
+//           <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-emerald-100">{description}</p>
+//         </div>
+
+//         <div className="w-full max-w-md">
+//           <button
+//             onClick={onPrimary}
+//             className="w-full rounded-2xl bg-white py-4 text-[16px] font-semibold text-emerald-700"
+//           >
+//             {primaryLabel}
+//           </button>
+//           {secondaryLabel && onSecondary && (
+//             <button onClick={onSecondary} className="mt-4 text-[15px] font-medium text-emerald-100">
+//               {secondaryLabel}
+//             </button>
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
 export function SuccessScreen({
   title,
   description,
@@ -98,17 +151,17 @@ export function SuccessScreen({
   onSecondary,
 }: SuccessScreenProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-      <div className="relative flex h-[92vh] w-full max-w-md flex-col items-center justify-between overflow-hidden rounded-t-3xl bg-emerald-700 px-8 py-14 text-center shadow-2xl">
-        <div className="flex flex-col items-center justify-center flex-1">
-          <div className="flex items-center justify-center rounded-full shadow-lg h-28 w-28 bg-emerald-500">
+    <div className="fixed inset-0 z-60 flex items-end justify-center bg-black/40">
+      <div className="relative flex h-[92vh] w-full max-w-md flex-col items-center rounded-t-3xl bg-emerald-700 px-8 py-10 text-center shadow-2xl">
+        <div className="flex flex-1 min-h-0 w-full flex-col items-center justify-center overflow-y-auto py-4">
+          <div className="flex items-center justify-center rounded-full shadow-lg h-28 w-28 bg-emerald-500 shrink-0">
             <Check size={56} className="text-white" strokeWidth={3} />
           </div>
           <h2 className="mt-8 text-3xl font-extrabold text-white">{title}</h2>
           <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-emerald-100">{description}</p>
         </div>
 
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md shrink-0 pt-4">
           <button
             onClick={onPrimary}
             className="w-full rounded-2xl bg-white py-4 text-[16px] font-semibold text-emerald-700"
