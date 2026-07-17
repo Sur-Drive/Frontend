@@ -1,19 +1,42 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Award, TrendingUp, ShieldCheck, Star, AlertCircle, LogOut } from 'lucide-react'
 import { useProfile } from '../hooks/useProfile'
 import { useLogout } from '../hooks/useLogout'
+import SignInModal from '../components/SignInModal'
+import CreateAccountModal from '../components/CreateAccountModal'
+import ForgotPasswordModal from '../components/ForgetPasswordModal'
+import VerifyResetOtpModal from '../components/VerifyResetOtpModal'
+import CreateNewPassword from '../components/Createnewpassword'
+import ResetPasswordSuccess from '../components/Resetpasswordsuccess'
 import { NotificationsModal, EmergencyContactModal, PrivacyModal } from '../components/Profilemodals'
 
 type ModalKey = 'notifications' | 'emergency' | 'privacy' | null
+type AuthModal = 'signin' | 'signup' | 'forgotpassword' | 'verifyresetotp' | 'createnewpassword' | 'resetsuccess' | null
 
 export default function Profile() {
   const [openModal, setOpenModal] = useState<ModalKey>(null)
+  const [authModal, setAuthModal] = useState<AuthModal>(null)
+  const [resetPhone, setResetPhone] = useState('')
+  
   const { data: user, isLoading, isError, error } = useProfile()
   const { mutate: logout, isPending: isLoggingOut } = useLogout()
   const navigate = useNavigate()
+
+  // Detect auth errors and auto-show sign-in modal
+  const isAuthError = isError && (
+    error?.message?.includes('No authentication token') ||
+    error?.message?.includes('Session expired') ||
+    error?.message?.includes('401')
+  )
+
+  useEffect(() => {
+    if (isAuthError && authModal === null) {
+      setAuthModal('signin')
+    }
+  }, [isAuthError, authModal])
 
   const displayName = user ? `${user.firstName} ${user.lastName}` : 'Loading…'
   const initials = user
@@ -21,7 +44,7 @@ export default function Profile() {
     : '--'
   const email = user?.driverProfile?.phoneNumber ?? user?.phoneNumber ?? 'No contact info'
 
-  // Placeholder stats — replace when API provides real values
+  // Placeholder stats
   const drivingScore = 75
   const drivingGrade = 'Grade C'
   const trustScore = 50
@@ -31,13 +54,58 @@ export default function Profile() {
   const handleSignOut = () => {
     logout(undefined, {
       onSettled: () => {
-        // TODO: confirm this is the correct login route path in your router
         navigate('/home', { replace: true })
       },
     })
   }
 
-  if (isError) {
+  // ─── Auth Modal Handlers ───
+
+  const handleCloseAuth = () => {
+    setAuthModal(null)
+    navigate('/home', { replace: true })
+  }
+
+  const handleOpenSignUp = () => {
+    setAuthModal('signup')
+  }
+
+  const handleOpenSignIn = () => {
+    setAuthModal('signin')
+  }
+
+  const handleForgotPassword = () => {
+    setAuthModal('forgotpassword')
+  }
+
+  const handleSendCode = (phone: string) => {
+    setResetPhone(phone)
+  }
+
+  const handleSendCodeSuccess = (phone: string) => {
+    setResetPhone(phone)
+    setAuthModal('verifyresetotp')
+  }
+
+  const handleVerifyResetSuccess = () => {
+    setAuthModal('createnewpassword')
+  }
+
+  const handleResetComplete = () => {
+    setAuthModal('resetsuccess')
+  }
+
+  const handleResetSuccessSignIn = () => {
+    setAuthModal('signin')
+  }
+
+  const handleSignInSuccess = () => {
+    setAuthModal(null)
+    window.location.reload()
+  }
+
+  // Non-auth error state
+  if (isError && !isAuthError) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="p-6 text-center">
@@ -164,9 +232,72 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Profile modals */}
       {openModal === 'notifications' && <NotificationsModal onClose={() => setOpenModal(null)} />}
       {openModal === 'emergency' && <EmergencyContactModal onClose={() => setOpenModal(null)} />}
       {openModal === 'privacy' && <PrivacyModal onClose={() => setOpenModal(null)} />}
+
+      {/* ─── Auth Modals ─── */}
+
+      {/* Sign In */}
+      {authModal === 'signin' && (
+        <SignInModal
+          onClose={handleCloseAuth}
+          onSignInSuccess={handleSignInSuccess}
+          onForgotPassword={handleForgotPassword}
+          onSignUp={handleOpenSignUp}
+        />
+      )}
+
+      {/* Sign Up / Create Account */}
+      {authModal === 'signup' && (
+        <CreateAccountModal
+          onClose={handleCloseAuth}
+          onSignIn={handleOpenSignIn}
+          onSendCode={(identifier) => {
+            // TODO: Navigate to OTP verification for signup
+            console.log('Signup OTP sent to:', identifier)
+          }}
+          onSendCodeSuccess={(identifier) => {
+            // TODO: Navigate to OTP verification for signup
+            console.log('Signup OTP success:', identifier)
+          }}
+        />
+      )}
+
+      {/* Forgot Password */}
+      {authModal === 'forgotpassword' && (
+        <ForgotPasswordModal
+          onClose={handleCloseAuth}
+          onBack={handleOpenSignIn}
+          onSendCode={handleSendCode}
+          onSendCodeSuccess={handleSendCodeSuccess}
+        />
+      )}
+
+      {/* Verify Reset OTP */}
+      {authModal === 'verifyresetotp' && (
+        <VerifyResetOtpModal
+          phoneNumber={resetPhone}
+          onClose={handleCloseAuth}
+          onBack={() => setAuthModal('forgotpassword')}
+          onVerifySuccess={handleVerifyResetSuccess}
+        />
+      )}
+
+      {/* Create New Password */}
+      {authModal === 'createnewpassword' && (
+        <CreateNewPassword
+          onComplete={handleResetComplete}
+        />
+      )}
+
+      {/* Reset Password Success */}
+      {authModal === 'resetsuccess' && (
+        <ResetPasswordSuccess
+          onSignIn={handleResetSuccessSignIn}
+        />
+      )}
     </div>
   )
 }
@@ -198,6 +329,3 @@ function MenuRow({
     </button>
   )
 }
-
-
-

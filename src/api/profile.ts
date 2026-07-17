@@ -42,27 +42,18 @@ function isTokenExpired(token: string): boolean {
     if (!exp) return false
     return Date.now() >= exp * 1000
   } catch {
-    return true // Treat malformed tokens as expired
+    return true
   }
 }
-
-function clearAuthAndRedirect() {
-  localStorage.removeItem('token')
-  window.location.href = '/home'
-}
-
-// ── API Call ────────────────────────────────────────────────
 
 export async function getUserProfile(): Promise<UserProfileResponse> {
   const token = getToken()
 
   if (!token) {
-    clearAuthAndRedirect()
     throw new Error('No authentication token found')
   }
 
   if (isTokenExpired(token)) {
-    clearAuthAndRedirect()
     throw new Error('Session expired. Please log in again.')
   }
 
@@ -74,7 +65,6 @@ export async function getUserProfile(): Promise<UserProfileResponse> {
   })
 
   if (res.status === 401) {
-    clearAuthAndRedirect()
     throw new Error('Session expired. Please log in again.')
   }
 

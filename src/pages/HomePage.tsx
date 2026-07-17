@@ -1,5 +1,14 @@
-import { useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+
+
+
+
+
+
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import BottomNav from '../components/BottomNav'
 import CreateAccountModal from '../components/CreateAccountModal'
 import SignInModal from '../components/SignInModal'
@@ -10,6 +19,86 @@ import PersonalInformation from '../components/PersonalInformation'
 import CreatePassword from '../components/CreatePassword'
 import CreateNewPassword from '../components/Createnewpassword'
 import ResetPasswordSuccess from '../components/Resetpasswordsuccess'
+import SOSActiveModal from '../components/Sosactivemodal'
+import ReportDetailModal from '../components/ReportDetailModal'
+
+// Fix Leaflet default icon
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+
+const DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+})
+L.Marker.prototype.options.icon = DefaultIcon
+
+// Create custom report pin icons
+const createReportIcon = (color: string, isSelected: boolean) => {
+  const size = isSelected ? 56 : 36
+  return L.divIcon({
+    className: 'custom-pin',
+    html: `
+      <div style="
+        background:${color};
+        width:${size}px;
+        height:${size}px;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        box-shadow:${isSelected ? '0 4px 16px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.2)'};
+        border:3px solid white;
+        transition:all 0.2s;
+        cursor:pointer;
+      ">
+        <span style="color:white;font-size:${isSelected ? 18 : 12}px;font-weight:bold;">!</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  })
+}
+
+// User location icon (blue dot with pulse)
+const userLocationIcon = L.divIcon({
+  className: 'user-location',
+  html: `
+    <div style="position:relative;width:24px;height:24px;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.3;animation:pulse 1.5s infinite;"></div>
+      <div style="position:absolute;inset:4px;border-radius:50%;background:#3b82f6;border:2px solid white;"></div>
+    </div>
+    <style>
+      @keyframes pulse {
+        0%,100% { transform: scale(1); opacity: 0.3; }
+        50% { transform: scale(2); opacity: 0; }
+      }
+    </style>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+})
+
+// Pan map to location when ready — only re-fires when center/zoom actually change
+function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap()
+  const hasFlownRef = useRef(false)
+
+  useEffect(() => {
+    if (!hasFlownRef.current) {
+      // First mount: snap instantly, no animation needed
+      map.setView(center, zoom)
+      hasFlownRef.current = true
+      return
+    }
+    map.flyTo(center, zoom, { duration: 1 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center[0], center[1], zoom, map])
+
+  return null
+}
 
 type ReportType =
   | 'wave'
@@ -23,8 +112,8 @@ type ReportType =
 
 interface Report {
   id: string
-  top: string
-  left: string
+  lat: number
+  lng: number
   color: string
   type: ReportType
   title: string
@@ -37,26 +126,25 @@ interface Report {
 }
 
 const REPORTS: Report[] = [
-  { id: 'r1', top: '19.5%', left: '8.3%', color: '#3b82f6', type: 'wave', title: 'Flood risk area', streetLabel: 'Chesapeake Avenue', subtitle: 'Flooding reported near Chesapeake Avenue', distance: '1.2 km', confirmCount: 6, incorrectCount: 0, photos: ['https://picsum.photos/seed/flood1/400/300', 'https://picsum.photos/seed/flood2/400/300'] },
-  { id: 'r2', top: '21.7%', left: '81.7%', color: '#f59e0b', type: 'hill', title: 'Landslide risk', streetLabel: 'Southwood Avenue', subtitle: 'Loose slope near Southwood Avenue', distance: '2.0 km', confirmCount: 4, incorrectCount: 1, photos: ['https://picsum.photos/seed/hill1/400/300', 'https://picsum.photos/seed/hill2/400/300'] },
-  { id: 'r3', top: '30.8%', left: '26.5%', color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Whittier Street', subtitle: 'Deep pothole on 3rd Avenue', distance: '0.4 km', confirmCount: 18, incorrectCount: 1, photos: ['https://picsum.photos/seed/pothole1/400/300', 'https://picsum.photos/seed/pothole2/400/300', 'https://picsum.photos/seed/pothole3/400/300'] },
-  { id: 'r4', top: '29.6%', left: '63.6%', color: '#ef4444', type: 'hazard', title: 'Road closed', streetLabel: 'Southwood Avenue', subtitle: 'Road works blocking one lane', distance: '1.6 km', confirmCount: 9, incorrectCount: 0, photos: ['https://picsum.photos/seed/hazard1/400/300', 'https://picsum.photos/seed/hazard2/400/300'] },
-  { id: 'r5', top: '44%', left: '9.5%', color: '#ef4444', type: 'sos', title: 'Emergency reported', streetLabel: 'Dresden Street', subtitle: 'SOS alert near Dresden Street', distance: '0.9 km', confirmCount: 2, incorrectCount: 0, photos: ['https://picsum.photos/seed/sos1/400/300'] },
-  { id: 'r6', top: '49.1%', left: '42%', color: '#2563eb', type: 'sign', title: 'Road works', streetLabel: 'Bretton Place', subtitle: 'Detour sign near Bretton Place', distance: '1.1 km', confirmCount: 5, incorrectCount: 0, photos: ['https://picsum.photos/seed/sign1/400/300', 'https://picsum.photos/seed/sign2/400/300'] },
-  { id: 'r7', top: '44.5%', left: '60.6%', color: '#ef4444', type: 'warning', title: 'Hazard reported', streetLabel: 'McDowell Street', subtitle: 'Debris in the road near McDowell Street', distance: '1.3 km', confirmCount: 7, incorrectCount: 2, photos: ['https://picsum.photos/seed/warn1/400/300', 'https://picsum.photos/seed/warn2/400/300'] },
-  { id: 'r8', top: '46.2%', left: '87.3%', color: '#f59e0b', type: 'tractor', title: 'Farm vehicle crossing', streetLabel: 'Southwood Avenue', subtitle: 'Slow-moving vehicles near Southwood Avenue', distance: '2.3 km', confirmCount: 3, incorrectCount: 0, photos: ['https://picsum.photos/seed/tractor1/400/300', 'https://picsum.photos/seed/tractor2/400/300'] },
-  { id: 'r9', top: '55.8%', left: '81.2%', color: '#f59e0b', type: 'hill', title: 'Landslide risk', streetLabel: 'McDowell Street', subtitle: 'Unstable ground near McDowell Street', distance: '1.8 km', confirmCount: 4, incorrectCount: 0, photos: ['https://picsum.photos/seed/hill3/400/300'] },
-  { id: 'r10', top: '62%', left: '32.8%', color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Dresden Street', subtitle: 'Deep pothole on Dresden Street', distance: '0.7 km', confirmCount: 11, incorrectCount: 0, photos: ['https://picsum.photos/seed/pothole4/400/300', 'https://picsum.photos/seed/pothole5/400/300'] },
-  { id: 'r11', top: '64.3%', left: '63.4%', color: '#ef4444', type: 'hazard', title: 'Road closed', streetLabel: 'McDowell Street', subtitle: 'Road works near McDowell Street', distance: '1.0 km', confirmCount: 8, incorrectCount: 1, photos: ['https://picsum.photos/seed/hazard3/400/300', 'https://picsum.photos/seed/hazard4/400/300'] },
-  { id: 'r12', top: '72.6%', left: '84.7%', color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Bretton Place', subtitle: 'Deep pothole near Bretton Place', distance: '2.1 km', confirmCount: 6, incorrectCount: 0, photos: ['https://picsum.photos/seed/pothole6/400/300'] },
-  { id: 'r13', top: '70.7%', left: '13.5%', color: '#ef4444', type: 'sos', title: 'Emergency reported', streetLabel: 'Bretton Place', subtitle: 'SOS alert near Bretton Place', distance: '1.4 km', confirmCount: 1, incorrectCount: 0, photos: ['https://picsum.photos/seed/sos2/400/300'] },
-  { id: 'r14', top: '75.5%', left: '50.4%', color: '#f59e0b', type: 'tractor', title: 'Farm vehicle crossing', streetLabel: 'Bretton Place', subtitle: 'Slow-moving vehicles near Bretton Place', distance: '0.6 km', confirmCount: 2, incorrectCount: 0, photos: ['https://picsum.photos/seed/tractor2/400/300'] },
-  { id: 'r15', top: '83.6%', left: '47.3%', color: '#ef4444', type: 'warning', title: 'Hazard reported', streetLabel: 'Bretton Place', subtitle: 'Debris in the road near Bretton Place', distance: '0.3 km', confirmCount: 5, incorrectCount: 1, photos: ['https://picsum.photos/seed/warn3/400/300'] },
+  { id: 'r1', lat: 6.5244, lng: 3.3792, color: '#3b82f6', type: 'wave', title: 'Flood risk area', streetLabel: 'Chesapeake Avenue', subtitle: 'Flooding reported near Chesapeake Avenue', distance: '1.2 km', confirmCount: 6, incorrectCount: 0, photos: ['https://picsum.photos/seed/flood1/400/300', 'https://picsum.photos/seed/flood2/400/300'] },
+  { id: 'r2', lat: 6.5350, lng: 3.3680, color: '#f59e0b', type: 'hill', title: 'Landslide risk', streetLabel: 'Southwood Avenue', subtitle: 'Loose slope near Southwood Avenue', distance: '2.0 km', confirmCount: 4, incorrectCount: 1, photos: ['https://picsum.photos/seed/hill1/400/300', 'https://picsum.photos/seed/hill2/400/300'] },
+  { id: 'r3', lat: 6.5180, lng: 3.3910, color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Whittier Street', subtitle: 'Deep pothole on 3rd Avenue', distance: '0.4 km', confirmCount: 18, incorrectCount: 1, photos: ['https://picsum.photos/seed/pothole1/400/300', 'https://picsum.photos/seed/pothole2/400/300', 'https://picsum.photos/seed/pothole3/400/300'] },
+  { id: 'r4', lat: 6.5120, lng: 3.3550, color: '#ef4444', type: 'hazard', title: 'Road closed', streetLabel: 'Southwood Avenue', subtitle: 'Road works blocking one lane', distance: '1.6 km', confirmCount: 9, incorrectCount: 0, photos: ['https://picsum.photos/seed/hazard1/400/300', 'https://picsum.photos/seed/hazard2/400/300'] },
+  { id: 'r5', lat: 6.5400, lng: 3.4000, color: '#ef4444', type: 'sos', title: 'Emergency reported', streetLabel: 'Dresden Street', subtitle: 'SOS alert near Dresden Street', distance: '0.9 km', confirmCount: 2, incorrectCount: 0, photos: ['https://picsum.photos/seed/sos1/400/300'] },
+  { id: 'r6', lat: 6.5000, lng: 3.3800, color: '#2563eb', type: 'sign', title: 'Road works', streetLabel: 'Bretton Place', subtitle: 'Detour sign near Bretton Place', distance: '1.1 km', confirmCount: 5, incorrectCount: 0, photos: ['https://picsum.photos/seed/sign1/400/300', 'https://picsum.photos/seed/sign2/400/300'] },
+  { id: 'r7', lat: 6.5280, lng: 3.3620, color: '#ef4444', type: 'warning', title: 'Hazard reported', streetLabel: 'McDowell Street', subtitle: 'Debris in the road near McDowell Street', distance: '1.3 km', confirmCount: 7, incorrectCount: 2, photos: ['https://picsum.photos/seed/warn1/400/300', 'https://picsum.photos/seed/warn2/400/300'] },
+  { id: 'r8', lat: 6.5150, lng: 3.4100, color: '#f59e0b', type: 'tractor', title: 'Farm vehicle crossing', streetLabel: 'Southwood Avenue', subtitle: 'Slow-moving vehicles near Southwood Avenue', distance: '2.3 km', confirmCount: 3, incorrectCount: 0, photos: ['https://picsum.photos/seed/tractor1/400/300', 'https://picsum.photos/seed/tractor2/400/300'] },
+  { id: 'r9', lat: 6.5480, lng: 3.3720, color: '#f59e0b', type: 'hill', title: 'Landslide risk', streetLabel: 'McDowell Street', subtitle: 'Unstable ground near McDowell Street', distance: '1.8 km', confirmCount: 4, incorrectCount: 0, photos: ['https://picsum.photos/seed/hill3/400/300'] },
+  { id: 'r10', lat: 6.5080, lng: 3.3950, color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Dresden Street', subtitle: 'Deep pothole on Dresden Street', distance: '0.7 km', confirmCount: 11, incorrectCount: 0, photos: ['https://picsum.photos/seed/pothole4/400/300', 'https://picsum.photos/seed/pothole5/400/300'] },
+  { id: 'r11', lat: 6.5320, lng: 3.3480, color: '#ef4444', type: 'hazard', title: 'Road closed', streetLabel: 'McDowell Street', subtitle: 'Road works near McDowell Street', distance: '1.0 km', confirmCount: 8, incorrectCount: 1, photos: ['https://picsum.photos/seed/hazard3/400/300', 'https://picsum.photos/seed/hazard4/400/300'] },
+  { id: 'r12', lat: 6.4950, lng: 3.3850, color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Bretton Place', subtitle: 'Deep pothole near Bretton Place', distance: '2.1 km', confirmCount: 6, incorrectCount: 0, photos: ['https://picsum.photos/seed/pothole6/400/300'] },
+  { id: 'r13', lat: 6.5220, lng: 3.4050, color: '#ef4444', type: 'sos', title: 'Emergency reported', streetLabel: 'Bretton Place', subtitle: 'SOS alert near Bretton Place', distance: '1.4 km', confirmCount: 1, incorrectCount: 0, photos: ['https://picsum.photos/seed/sos2/400/300'] },
+  { id: 'r14', lat: 6.5050, lng: 3.3600, color: '#f59e0b', type: 'tractor', title: 'Farm vehicle crossing', streetLabel: 'Bretton Place', subtitle: 'Slow-moving vehicles near Bretton Place', distance: '0.6 km', confirmCount: 2, incorrectCount: 0, photos: ['https://picsum.photos/seed/tractor2/400/300'] },
+  { id: 'r15', lat: 6.5380, lng: 3.3880, color: '#ef4444', type: 'warning', title: 'Hazard reported', streetLabel: 'Bretton Place', subtitle: 'Debris in the road near Bretton Place', distance: '0.3 km', confirmCount: 5, incorrectCount: 1, photos: ['https://picsum.photos/seed/warn3/400/300'] },
 ]
 
 export default function HomePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [votes, setVotes] = useState<Record<string, { confirm: number; incorrect: number; voted: 'confirm' | 'incorrect' | null }>>({})
 
   const [showCreateAccount, setShowCreateAccount] = useState(false)
   const [showSignIn, setShowSignIn] = useState(false)
@@ -76,42 +164,129 @@ export default function HomePage() {
     occupation: string
   } | null>(null)
 
+  // Location state
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const [mapReady, setMapReady] = useState(false)
+
+  // SOS state
+  const [sosActive, setSosActive] = useState(false)
+  const [sosProgress, setSosProgress] = useState(0)
+  const [isPressing, setIsPressing] = useState(false)
+  const sosTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null)
+  const sosStartTimeRef = useRef<number>(0)
+  const sosCompletedRef = useRef<boolean>(false)
+
   const isAuthenticated = false
 
-  const selected = REPORTS.find((r) => r.id === selectedId) || null
+  const selected = useMemo(
+    () => REPORTS.find((r) => r.id === selectedId) || null,
+    [selectedId]
+  )
 
-  const getCounts = (r: Report) => {
-    const v = votes[r.id]
-    return {
-      confirm: v ? v.confirm : r.confirmCount,
-      incorrect: v ? v.incorrect : r.incorrectCount,
-      voted: v ? v.voted : null,
-    }
-  }
-
-  const vote = (r: Report, choice: 'confirm' | 'incorrect') => {
-    if (!isAuthenticated) {
-      setShowCreateAccount(true)
+  // Get user location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation not supported by your browser')
+      setMapReady(true)
       return
     }
-    setVotes((prev) => {
-      const current = prev[r.id] || { confirm: r.confirmCount, incorrect: r.incorrectCount, voted: null }
-      if (current.voted === choice) return prev
-      const next = { ...current }
-      if (current.voted === 'confirm') next.confirm -= 1
-      if (current.voted === 'incorrect') next.incorrect -= 1
-      if (choice === 'confirm') next.confirm += 1
-      else next.incorrect += 1
-      next.voted = choice
-      return { ...prev, [r.id]: next }
-    })
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation([position.coords.latitude, position.coords.longitude])
+        setMapReady(true)
+      },
+      (error) => {
+        setLocationError(
+          error.code === 1
+            ? 'Location access denied. Please enable location permissions.'
+            : error.code === 2
+            ? 'Location unavailable.'
+            : 'Location request timed out.'
+        )
+        setUserLocation([REPORTS[0].lat, REPORTS[0].lng])
+        setMapReady(true)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
+  }, [])
+
+  // Prevent page-level bounce/rubber-banding on mobile so the map feels stable
+  useEffect(() => {
+    const previousOverscroll = document.body.style.overscrollBehavior
+    document.body.style.overscrollBehavior = 'none'
+    return () => {
+      document.body.style.overscrollBehavior = previousOverscroll
+    }
+  }, [])
+
+  // Clean up any running SOS interval if the component unmounts mid-press
+  useEffect(() => {
+    return () => {
+      if (sosTimerRef.current) {
+        window.clearInterval(sosTimerRef.current)
+        sosTimerRef.current = null
+      }
+    }
+  }, [])
+
+  // ---- SOS press handlers ----
+  const startSosPress = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    sosCompletedRef.current = false
+    setIsPressing(true)
+    sosStartTimeRef.current = Date.now()
+    setSosProgress(0)
+
+    if (sosTimerRef.current) {
+      window.clearInterval(sosTimerRef.current)
+      sosTimerRef.current = null
+    }
+
+    sosTimerRef.current = window.setInterval(() => {
+      const elapsed = Date.now() - sosStartTimeRef.current
+      const progress = Math.min(elapsed / 3000, 1)
+      setSosProgress(progress)
+
+      if (elapsed >= 3000) {
+        if (sosTimerRef.current) {
+          window.clearInterval(sosTimerRef.current)
+          sosTimerRef.current = null
+        }
+        sosCompletedRef.current = true
+        setSosActive(true)
+        setSosProgress(0)
+        setIsPressing(false)
+      }
+    }, 16)
+  }, [])
+
+  const endSosPress = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    e?.preventDefault?.()
+    e?.stopPropagation?.()
+
+    setIsPressing(false)
+    if (sosTimerRef.current) {
+      window.clearInterval(sosTimerRef.current)
+      sosTimerRef.current = null
+    }
+
+    if (!sosCompletedRef.current) {
+      setSosProgress(0)
+      setShowCreateAccount(true)
+    }
+  }, [])
+
+  const handleCancelSOS = () => {
+    setSosActive(false)
+    sosCompletedRef.current = false
   }
 
-  const handleSosPress = () => {
-    if (!isAuthenticated) {
-      setShowCreateAccount(true)
-      return
-    }
+  const handleCallEmergency = () => {
+    window.location.href = 'tel:112'
   }
 
   const handleSendCode = (fullPhone: string) => {
@@ -202,137 +377,151 @@ export default function HomePage() {
     setShowSignIn(false)
   }
 
-  return (
-    <div className="relative h-[100dvh] w-full max-w-[430px] mx-auto bg-[#e4e4e4] overflow-hidden">
-      {/* Map background */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 430 932" preserveAspectRatio="none">
-        <rect x="0" y="0" width="430" height="932" fill="#e4e4e4" />
-        {[54, 124, 194, 264, 334, 404].map((x) => (
-          <rect key={`v${x}`} x={x} y="0" width="10" height="932" fill="#fafafa" />
-        ))}
-        {[114, 234, 354, 474, 594, 714, 834].map((y) => (
-          <rect key={`h${y}`} x="0" y={y} width="430" height="10" fill="#fafafa" />
-        ))}
-        <g stroke="#fafafa" strokeWidth="14" fill="none" strokeLinecap="round">
-          <path d="M0,100 L390,280" />
-          <path d="M290,240 L410,580" />
-          <path d="M0,890 L345,1000" />
-        </g>
-        <rect x="325" y="310" width="32" height="76" rx="8" fill="#bfe3c8" />
-        <rect x="285" y="550" width="80" height="22" rx="8" fill="#bfe3c8" />
-        <rect x="48" y="610" width="16" height="76" rx="8" fill="#bfe3c8" />
-        <rect x="30" y="980" width="58" height="50" rx="10" fill="#bfe3c8" />
-        <path d="M-20,900 C100,870 220,935 430,890 L430,932 L-20,932 Z" fill="#8bd3f0" />
-        <path d="M-20,900 C100,870 220,935 430,890" stroke="#8bd3f0" strokeWidth="22" fill="none" />
-        <text x="168" y="152" fontSize="15" fill="#4a4a4a" fontWeight="600" transform="rotate(-20 168 152)">Chesapeake Avenue</text>
-        <text x="358" y="400" fontSize="15" fill="#4a4a4a" fontWeight="600" transform="rotate(65 358 400)">Southwood Avenue</text>
-        <text x="52" y="570" fontSize="15" fill="#4a4a4a" fontWeight="600" transform="rotate(90 52 570)">Dresden Street</text>
-        <text x="298" y="550" fontSize="15" fill="#4a4a4a" fontWeight="600">McDowell Street</text>
-        <text x="112" y="770" fontSize="15" fill="#4a4a4a" fontWeight="600" transform="rotate(15 112 770)">Bretton Place</text>
-      </svg>
+  // Memoize map center so it only changes reference when userLocation actually
+  // changes — otherwise every unrelated re-render (SOS progress ticking, modal
+  // toggles, marker selection, etc.) created a brand-new array here, which made
+  // MapController think the center changed and re-run flyTo, causing the map
+  // to visibly jump/re-animate on every render.
+  const mapCenter = useMemo<[number, number]>(
+    () => userLocation || [REPORTS[0].lat, REPORTS[0].lng],
+    [userLocation]
+  )
 
-      {/* Pins */}
-      {REPORTS.map((r) => (
-        <button
-          key={r.id}
-          onClick={() => setSelectedId(r.id === selectedId ? null : r.id)}
-          className={`absolute z-[5] flex flex-col items-center cursor-pointer transition-transform active:scale-95 ${r.id === selectedId ? 'z-10' : ''}`}
-          style={{
-            top: r.top,
-            left: r.left,
-            transform: `translate(-50%, ${r.id === selectedId ? '-100%' : '-50%'})`,
-          }}
-        >
-          <div
-            className="flex items-center justify-center transition-all rounded-full shadow-md"
-            style={{
-              backgroundColor: r.color,
-              width: r.id === selectedId ? 56 : 36,
-              height: r.id === selectedId ? 56 : 36,
-              boxShadow: r.id === selectedId ? '0 4px 16px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.2)',
+  if (!mapReady) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-[430px] mx-auto bg-gray-100">
+        <div className="w-12 h-12 mb-4 border-4 border-red-500 rounded-full border-t-transparent animate-spin" />
+        <p className="font-medium text-gray-600">
+          {locationError ? 'Using default location...' : 'Getting your location...'}
+        </p>
+        {locationError && <p className="px-8 mt-2 text-sm text-center text-red-500">{locationError}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="relative h-[100dvh] w-full max-w-[430px] mx-auto overflow-hidden bg-gray-100"
+      style={{ overscrollBehavior: 'none' }}
+    >
+      {/* Leaflet Map */}
+      <MapContainer
+        center={mapCenter}
+        zoom={15}
+        style={{ height: '100%', width: '100%', zIndex: 1 }}
+        zoomControl={false}
+        attributionControl={false}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MapController center={mapCenter} zoom={15} />
+
+        {/* User location marker */}
+        {userLocation && (
+          <Marker position={userLocation} icon={userLocationIcon}>
+            <Popup>You are here</Popup>
+          </Marker>
+        )}
+
+        {/* Report markers */}
+        {REPORTS.map((r) => (
+          <Marker
+            key={r.id}
+            position={[r.lat, r.lng]}
+            icon={createReportIcon(r.color, r.id === selectedId)}
+            eventHandlers={{
+              click: () => setSelectedId(r.id === selectedId ? null : r.id),
             }}
           >
-            <ReportIcon type={r.type} selected={r.id === selectedId} />
-          </div>
-          {r.id === selectedId && (
-            <>
-              <div
-                className="w-3 h-3 -mt-1.5 rotate-45"
-                style={{ backgroundColor: r.color, clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}
-              />
-              <span className="mt-1 text-[13px] font-bold text-gray-900 whitespace-nowrap">{r.streetLabel}</span>
-            </>
-          )}
-        </button>
-      ))}
+            {r.id === selectedId && (
+              <Popup closeButton={false} className="report-popup">
+                <div className="text-center">
+                  <p className="text-sm font-bold">{r.streetLabel}</p>
+                </div>
+              </Popup>
+            )}
+          </Marker>
+        ))}
+      </MapContainer>
 
-      {/* SOS floating button */}
-      <button
-        onClick={handleSosPress}
-        className="absolute z-30 flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] bottom-32 right-4 bg-[#ff4444] active:scale-95"
-      >
-        <span className="absolute inset-[-6px] rounded-full border-[3px] border-red-400/35 animate-ping" />
-        <span className="absolute inset-[-6px] rounded-full border-[3px] border-red-400/35" />
-        <span className="text-[15px] font-bold relative z-10">SOS</span>
-        <span className="text-[10px] opacity-90 relative z-10">Hold 3 secs</span>
-      </button>
-
-      {/* Report bottom sheet */}
-      {selected && (
-        <div className="absolute bottom-16 left-0 right-0 bg-white rounded-t-[20px] shadow-[0_-4px_24px_rgba(0,0,0,0.12)] z-20 max-h-[55%] flex flex-col">
-          <div className="flex justify-center pt-2.5 pb-1">
-            <div className="w-10 h-1 bg-gray-300 rounded-full" />
-          </div>
-
-          <div className="flex items-start justify-between px-5 pt-1 pb-3">
-            <h2 className="text-[22px] font-extrabold text-gray-900">{selected.title}</h2>
-            <div className="flex items-center gap-2">
-              <button className="flex items-center justify-center text-gray-600 bg-gray-100 rounded-full w-9 h-9">
-                <ShareIcon />
-              </button>
-              <button
-                onClick={() => setSelectedId(null)}
-                className="flex items-center justify-center text-gray-600 bg-gray-100 rounded-full w-9 h-9"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 px-5 pb-3 text-sm">
-            <span className="font-medium text-purple-600">{selected.subtitle}</span>
-            <span className="text-gray-400">·</span>
-            <span className="font-semibold text-gray-900">{selected.distance}</span>
-          </div>
-
-          <div className="flex gap-3 px-5 pb-4">
-            <button
-              onClick={() => vote(selected, 'confirm')}
-              className={`flex-1 h-12 rounded-full flex items-center justify-center gap-2 font-semibold text-sm transition ${
-                getCounts(selected).voted === 'confirm' ? 'bg-emerald-700 text-white' : 'bg-emerald-500 text-white'
-              }`}
-            >
-              <ThumbUpIcon />
-              Confirm ({getCounts(selected).confirm})
-            </button>
-            <button
-              onClick={() => vote(selected, 'incorrect')}
-              className={`flex-1 h-12 rounded-full flex items-center justify-center gap-2 font-semibold text-sm transition ${
-                getCounts(selected).voted === 'incorrect' ? 'bg-gray-200 text-red-600' : 'bg-gray-100 text-red-500'
-              }`}
-            >
-              <ThumbDownIcon />
-              Incorrect ({getCounts(selected).incorrect})
-            </button>
-          </div>
-
-          <div className="px-5 pb-5 flex gap-3 overflow-x-auto snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {selected.photos.map((src, i) => (
-              <img key={i} src={src} alt="" className="flex-shrink-0 object-cover w-40 h-32 bg-gray-200 rounded-xl snap-start" />
-            ))}
+      {/* Location error toast */}
+      {locationError && (
+        <div className="absolute top-4 left-4 right-4 z-[500] bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 flex items-start gap-3">
+          <div className="text-yellow-600 mt-0.5">⚠️</div>
+          <div>
+            <p className="text-sm font-medium text-yellow-800">{locationError}</p>
+            <p className="mt-1 text-xs text-yellow-600">Showing default area</p>
           </div>
         </div>
       )}
+
+      {/* SOS floating button */}
+      <button
+        onMouseDown={startSosPress}
+        onMouseUp={endSosPress}
+        onMouseLeave={endSosPress}
+        onTouchStart={startSosPress}
+        onTouchEnd={endSosPress}
+        onContextMenu={(e) => e.preventDefault()}
+        className="absolute z-[999] flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] bottom-32 right-4 bg-[#ff4444] overflow-hidden select-none"
+        style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+      >
+        {/* Progress ring */}
+        <svg
+          className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
+          style={{ opacity: sosProgress > 0 ? 1 : 0, transition: 'opacity 0.15s' }}
+        >
+          <circle
+            cx="40"
+            cy="40"
+            r="36"
+            fill="none"
+            stroke="white"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray={2 * Math.PI * 36}
+            strokeDashoffset={2 * Math.PI * 36 * (1 - sosProgress)}
+            style={{ transition: 'stroke-dashoffset 0.05s linear' }}
+          />
+        </svg>
+
+        {/* Pulse rings when pressing */}
+        {isPressing && (
+          <>
+            <span className="absolute inset-[-4px] rounded-full border-2 border-white/30 animate-ping" />
+            <span className="absolute inset-[-4px] rounded-full border-2 border-white/30" />
+          </>
+        )}
+
+        <span className="text-[15px] font-bold relative z-10 pointer-events-none">SOS</span>
+        <span className="text-[10px] opacity-90 relative z-10 pointer-events-none">
+          {isPressing ? 'Hold...' : 'Hold 3s'}
+        </span>
+      </button>
+
+      {/* ============================================ */}
+      {/* REPORT DETAIL MODAL - Bottom Sheet           */}
+      {/* ============================================ */}
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="absolute bottom-16 left-0 right-0 z-[500] max-h-[70vh] overflow-y-auto"
+          >
+            <ReportDetailModal
+              report={selected}
+              onClose={() => setSelectedId(null)}
+              isAuthenticated={isAuthenticated}
+              onAuthRequired={() => setShowCreateAccount(true)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Auth Modals */}
       <AnimatePresence>
@@ -441,98 +630,19 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      <div className="relative z-30">
+      {/* SOS Active Modal */}
+      <AnimatePresence>
+        {sosActive && (
+          <SOSActiveModal
+            onCancel={handleCancelSOS}
+            onCall={handleCallEmergency}
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="absolute bottom-0 left-0 right-0 z-[500]">
         <BottomNav />
       </div>
     </div>
   )
 }
-
-function ReportIcon({ type, selected }: { type: ReportType; selected?: boolean }) {
-  const s = selected ? 1.25 : 1
-  switch (type) {
-    case 'wave': return (
-      <svg viewBox="0 0 24 24" width={18 * s} height={18 * s} fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-        <path d="M2 10c2-3 4-3 6 0s4 3 6 0 4-3 6 0" />
-        <path d="M2 15c2-3 4-3 6 0s4 3 6 0 4-3 6 0" />
-      </svg>
-    )
-    case 'hill': return (
-      <svg viewBox="0 0 24 24" width={18 * s} height={18 * s} fill="#3a2e1f">
-        <path d="M2 18 L9 8 L13 13 L16 9 L22 18 Z" />
-      </svg>
-    )
-    case 'pothole': return (
-      <svg viewBox="0 0 24 24" width={18 * s} height={18 * s}>
-        <ellipse cx="12" cy="12" rx="8" ry="4.5" fill="#1a1a1a" />
-      </svg>
-    )
-    case 'hazard': return (
-      <div style={{ width: 18 * s, height: 14 * s, borderRadius: 2, backgroundImage: 'repeating-linear-gradient(45deg, #f6c400 0 4px, #1a1a1a 4px 8px)' }} />
-    )
-    case 'sos': return (
-      <div className="bg-white rounded-[3px] px-1 py-0.5 flex items-center justify-center">
-        <span className="text-red-600 font-extrabold text-[7px] leading-none">SOS</span>
-      </div>
-    )
-    case 'sign': return (
-      <svg viewBox="0 0 24 24" width={18 * s} height={18 * s} fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 14 L14 4" /><path d="M9 4 L14 4 L14 9" /><path d="M20 10 L10 20" /><path d="M15 20 L10 20 L10 15" />
-      </svg>
-    )
-    case 'warning': return (
-      <svg viewBox="0 0 24 24" width={18 * s} height={18 * s}>
-        <path d="M12 3 L22 20 L2 20 Z" fill="white" />
-        <rect x="11" y="10" width="2" height="5" fill="#e02424" />
-        <rect x="11" y="16" width="2" height="2" fill="#e02424" />
-      </svg>
-    )
-    case 'tractor': return (
-      <svg viewBox="0 0 24 24" width={18 * s} height={18 * s} fill="#2b2b2b">
-        <rect x="8" y="8" width="7" height="5" rx="1" />
-        <rect x="4" y="12" width="5" height="4" rx="1" />
-        <circle cx="7" cy="18" r="3" fill="none" stroke="#2b2b2b" strokeWidth="2" />
-        <circle cx="17" cy="18" r="4" fill="none" stroke="#2b2b2b" strokeWidth="2" />
-      </svg>
-    )
-    default: return null
-  }
-}
-
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" />
-      <path d="M16 6l-4-4-4 4" />
-      <path d="M12 2v14" />
-    </svg>
-  )
-}
-
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  )
-}
-
-function ThumbUpIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 10v11" />
-      <path d="M7 10l3-8a2 2 0 0 1 2 2v5h6a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 16.6 21H7" />
-    </svg>
-  )
-}
-
-function ThumbDownIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 14V3" />
-      <path d="M17 14l-3 8a2 2 0 0 1-2-2v-5H6a2 2 0 0 1-2-2.3l1.4-7A2 2 0 0 1 7.4 3H17" />
-    </svg>
-  )
-}
-
-
