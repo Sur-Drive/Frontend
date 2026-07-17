@@ -364,6 +364,41 @@ export default function PlanRoutePage() {
     }
   }
 
+  // ── Handle Use My Location ──────────────────────────
+  const handleUseMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation not supported by your browser')
+      return
+    }
+    setIsGettingLocation(true)
+    setLocationError(null)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
+        setUserLocation(loc)
+        reverseGeocode(position.coords.latitude, position.coords.longitude)
+      },
+      (error) => {
+        let message = 'Unable to retrieve your location'
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            message = 'Location permission denied. Please enable it in settings.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            message = 'Location information unavailable.'
+            break
+          case error.TIMEOUT:
+            message = 'Location request timed out.'
+            break
+        }
+        setLocationError(message)
+        setIsGettingLocation(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
+  }, [])
+
   // ── Route Logic ─────────────────────────────────────
   const handleScanRoute = () => {
     if (!startPoint || !destination) return
@@ -660,7 +695,7 @@ export default function PlanRoutePage() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-extrabold text-gray-900">Plan a route</h2>
-                <p className="mt-1 text-sm text-gray-500">We'll scan reported hazards along the way before you drive.</p>
+                <p className="mt-1 text-sm text-gray-500">We&apos;ll scan reported hazards along the way before you drive.</p>
               </div>
               <button
                 onClick={() => setShowPlanModal(false)}
@@ -881,7 +916,6 @@ export default function PlanRoutePage() {
     </div>
   )
 }
-
 
 
 
