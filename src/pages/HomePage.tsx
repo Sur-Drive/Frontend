@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
@@ -21,6 +16,8 @@ import CreateNewPassword from '../components/Createnewpassword'
 import ResetPasswordSuccess from '../components/Resetpasswordsuccess'
 import SOSActiveModal from '../components/Sosactivemodal'
 import ReportDetailModal from '../components/ReportDetailModal'
+import { useHazardFeed, useConfirmHazard } from '../hooks/useHazards'
+import { hazardToReport } from '../lib/hazardToReport'
 
 // Fix Leaflet default icon
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
@@ -33,6 +30,10 @@ const DefaultIcon = L.icon({
   iconAnchor: [12, 41],
 })
 L.Marker.prototype.options.icon = DefaultIcon
+
+// Fallback coords if geolocation is denied/unavailable (Lagos, matches sample data)
+const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792]
+const FEED_RADIUS_KM = 10
 
 // Create custom report pin icons
 const createReportIcon = (color: string, isSelected: boolean) => {
@@ -88,7 +89,6 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 
   useEffect(() => {
     if (!hasFlownRef.current) {
-      // First mount: snap instantly, no animation needed
       map.setView(center, zoom)
       hasFlownRef.current = true
       return
@@ -99,49 +99,6 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 
   return null
 }
-
-type ReportType =
-  | 'wave'
-  | 'hill'
-  | 'pothole'
-  | 'hazard'
-  | 'sos'
-  | 'sign'
-  | 'warning'
-  | 'tractor'
-
-interface Report {
-  id: string
-  lat: number
-  lng: number
-  color: string
-  type: ReportType
-  title: string
-  streetLabel: string
-  subtitle: string
-  distance: string
-  confirmCount: number
-  incorrectCount: number
-  photos: string[]
-}
-
-const REPORTS: Report[] = [
-  { id: 'r1', lat: 6.5244, lng: 3.3792, color: '#3b82f6', type: 'wave', title: 'Flood risk area', streetLabel: 'Chesapeake Avenue', subtitle: 'Flooding reported near Chesapeake Avenue', distance: '1.2 km', confirmCount: 6, incorrectCount: 0, photos: ['https://picsum.photos/seed/flood1/400/300', 'https://picsum.photos/seed/flood2/400/300'] },
-  { id: 'r2', lat: 6.5350, lng: 3.3680, color: '#f59e0b', type: 'hill', title: 'Landslide risk', streetLabel: 'Southwood Avenue', subtitle: 'Loose slope near Southwood Avenue', distance: '2.0 km', confirmCount: 4, incorrectCount: 1, photos: ['https://picsum.photos/seed/hill1/400/300', 'https://picsum.photos/seed/hill2/400/300'] },
-  { id: 'r3', lat: 6.5180, lng: 3.3910, color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Whittier Street', subtitle: 'Deep pothole on 3rd Avenue', distance: '0.4 km', confirmCount: 18, incorrectCount: 1, photos: ['https://picsum.photos/seed/pothole1/400/300', 'https://picsum.photos/seed/pothole2/400/300', 'https://picsum.photos/seed/pothole3/400/300'] },
-  { id: 'r4', lat: 6.5120, lng: 3.3550, color: '#ef4444', type: 'hazard', title: 'Road closed', streetLabel: 'Southwood Avenue', subtitle: 'Road works blocking one lane', distance: '1.6 km', confirmCount: 9, incorrectCount: 0, photos: ['https://picsum.photos/seed/hazard1/400/300', 'https://picsum.photos/seed/hazard2/400/300'] },
-  { id: 'r5', lat: 6.5400, lng: 3.4000, color: '#ef4444', type: 'sos', title: 'Emergency reported', streetLabel: 'Dresden Street', subtitle: 'SOS alert near Dresden Street', distance: '0.9 km', confirmCount: 2, incorrectCount: 0, photos: ['https://picsum.photos/seed/sos1/400/300'] },
-  { id: 'r6', lat: 6.5000, lng: 3.3800, color: '#2563eb', type: 'sign', title: 'Road works', streetLabel: 'Bretton Place', subtitle: 'Detour sign near Bretton Place', distance: '1.1 km', confirmCount: 5, incorrectCount: 0, photos: ['https://picsum.photos/seed/sign1/400/300', 'https://picsum.photos/seed/sign2/400/300'] },
-  { id: 'r7', lat: 6.5280, lng: 3.3620, color: '#ef4444', type: 'warning', title: 'Hazard reported', streetLabel: 'McDowell Street', subtitle: 'Debris in the road near McDowell Street', distance: '1.3 km', confirmCount: 7, incorrectCount: 2, photos: ['https://picsum.photos/seed/warn1/400/300', 'https://picsum.photos/seed/warn2/400/300'] },
-  { id: 'r8', lat: 6.5150, lng: 3.4100, color: '#f59e0b', type: 'tractor', title: 'Farm vehicle crossing', streetLabel: 'Southwood Avenue', subtitle: 'Slow-moving vehicles near Southwood Avenue', distance: '2.3 km', confirmCount: 3, incorrectCount: 0, photos: ['https://picsum.photos/seed/tractor1/400/300', 'https://picsum.photos/seed/tractor2/400/300'] },
-  { id: 'r9', lat: 6.5480, lng: 3.3720, color: '#f59e0b', type: 'hill', title: 'Landslide risk', streetLabel: 'McDowell Street', subtitle: 'Unstable ground near McDowell Street', distance: '1.8 km', confirmCount: 4, incorrectCount: 0, photos: ['https://picsum.photos/seed/hill3/400/300'] },
-  { id: 'r10', lat: 6.5080, lng: 3.3950, color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Dresden Street', subtitle: 'Deep pothole on Dresden Street', distance: '0.7 km', confirmCount: 11, incorrectCount: 0, photos: ['https://picsum.photos/seed/pothole4/400/300', 'https://picsum.photos/seed/pothole5/400/300'] },
-  { id: 'r11', lat: 6.5320, lng: 3.3480, color: '#ef4444', type: 'hazard', title: 'Road closed', streetLabel: 'McDowell Street', subtitle: 'Road works near McDowell Street', distance: '1.0 km', confirmCount: 8, incorrectCount: 1, photos: ['https://picsum.photos/seed/hazard3/400/300', 'https://picsum.photos/seed/hazard4/400/300'] },
-  { id: 'r12', lat: 6.4950, lng: 3.3850, color: '#f59e0b', type: 'pothole', title: 'Deep pothole', streetLabel: 'Bretton Place', subtitle: 'Deep pothole near Bretton Place', distance: '2.1 km', confirmCount: 6, incorrectCount: 0, photos: ['https://picsum.photos/seed/pothole6/400/300'] },
-  { id: 'r13', lat: 6.5220, lng: 3.4050, color: '#ef4444', type: 'sos', title: 'Emergency reported', streetLabel: 'Bretton Place', subtitle: 'SOS alert near Bretton Place', distance: '1.4 km', confirmCount: 1, incorrectCount: 0, photos: ['https://picsum.photos/seed/sos2/400/300'] },
-  { id: 'r14', lat: 6.5050, lng: 3.3600, color: '#f59e0b', type: 'tractor', title: 'Farm vehicle crossing', streetLabel: 'Bretton Place', subtitle: 'Slow-moving vehicles near Bretton Place', distance: '0.6 km', confirmCount: 2, incorrectCount: 0, photos: ['https://picsum.photos/seed/tractor2/400/300'] },
-  { id: 'r15', lat: 6.5380, lng: 3.3880, color: '#ef4444', type: 'warning', title: 'Hazard reported', streetLabel: 'Bretton Place', subtitle: 'Debris in the road near Bretton Place', distance: '0.3 km', confirmCount: 5, incorrectCount: 1, photos: ['https://picsum.photos/seed/warn3/400/300'] },
-]
 
 export default function HomePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -179,9 +136,40 @@ export default function HomePage() {
 
   const isAuthenticated = false
 
+  // ── Fetch hazard feed once we have coordinates (real or fallback) ──
+  const feedParams = mapReady
+    ? {
+        latitude: (userLocation ?? DEFAULT_COORDS)[0],
+        longitude: (userLocation ?? DEFAULT_COORDS)[1],
+        radius: FEED_RADIUS_KM,
+      }
+    : null
+
+  const { data: hazards = [] } = useHazardFeed(feedParams)
+  const confirmMutation = useConfirmHazard()
+
+  const reports = useMemo(
+    () => hazards.map((h) => hazardToReport(h, userLocation)),
+    [hazards, userLocation]
+  )
+
+  // ── Hide BottomNav when any modal/overlay is open ────
+  const isAnyModalOpen =
+    showCreateAccount ||
+    showSignIn ||
+    showForgotPassword ||
+    showOTP ||
+    showVerifyResetOtp ||
+    showPersonalInfo ||
+    showCreatePassword ||
+    showCreateNewPassword ||
+    showResetSuccess ||
+    sosActive ||
+    selectedId !== null
+
   const selected = useMemo(
-    () => REPORTS.find((r) => r.id === selectedId) || null,
-    [selectedId]
+    () => reports.find((r) => r.id === selectedId) || null,
+    [reports, selectedId]
   )
 
   // Get user location on mount
@@ -205,7 +193,7 @@ export default function HomePage() {
             ? 'Location unavailable.'
             : 'Location request timed out.'
         )
-        setUserLocation([REPORTS[0].lat, REPORTS[0].lng])
+        setUserLocation(DEFAULT_COORDS)
         setMapReady(true)
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -233,7 +221,6 @@ export default function HomePage() {
 
   // ---- SOS press handlers ----
   const startSosPress = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault()
     e.stopPropagation()
 
     sosCompletedRef.current = false
@@ -265,7 +252,6 @@ export default function HomePage() {
   }, [])
 
   const endSosPress = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
-    e?.preventDefault?.()
     e?.stopPropagation?.()
 
     setIsPressing(false)
@@ -377,13 +363,33 @@ export default function HomePage() {
     setShowSignIn(false)
   }
 
-  // Memoize map center so it only changes reference when userLocation actually
-  // changes — otherwise every unrelated re-render (SOS progress ticking, modal
-  // toggles, marker selection, etc.) created a brand-new array here, which made
-  // MapController think the center changed and re-run flyTo, causing the map
-  // to visibly jump/re-animate on every render.
+  // ── Confirm / incorrect voting, triggered from ReportDetailModal ──
+  const handleConfirm = async (hazardId: string) => {
+    if (!isAuthenticated) {
+      setShowCreateAccount(true)
+      return
+    }
+    try {
+      await confirmMutation.mutateAsync({ hazardId, type: 'CONFIRM' })
+    } catch (err) {
+      console.error('Failed to confirm hazard', err)
+    }
+  }
+
+  const handleIncorrect = async (hazardId: string) => {
+    if (!isAuthenticated) {
+      setShowCreateAccount(true)
+      return
+    }
+    try {
+      await confirmMutation.mutateAsync({ hazardId, type: 'INCORRECT' })
+    } catch (err) {
+      console.error('Failed to mark hazard incorrect', err)
+    }
+  }
+
   const mapCenter = useMemo<[number, number]>(
-    () => userLocation || [REPORTS[0].lat, REPORTS[0].lng],
+    () => userLocation || DEFAULT_COORDS,
     [userLocation]
   )
 
@@ -426,7 +432,7 @@ export default function HomePage() {
         )}
 
         {/* Report markers */}
-        {REPORTS.map((r) => (
+        {reports.map((r) => (
           <Marker
             key={r.id}
             position={[r.lat, r.lng]}
@@ -468,7 +474,6 @@ export default function HomePage() {
         className="absolute z-[999] flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] bottom-32 right-4 bg-[#ff4444] overflow-hidden select-none"
         style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
       >
-        {/* Progress ring */}
         <svg
           className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
           style={{ opacity: sosProgress > 0 ? 1 : 0, transition: 'opacity 0.15s' }}
@@ -487,7 +492,6 @@ export default function HomePage() {
           />
         </svg>
 
-        {/* Pulse rings when pressing */}
         {isPressing && (
           <>
             <span className="absolute inset-[-4px] rounded-full border-2 border-white/30 animate-ping" />
@@ -501,9 +505,7 @@ export default function HomePage() {
         </span>
       </button>
 
-      {/* ============================================ */}
-      {/* REPORT DETAIL MODAL - Bottom Sheet           */}
-      {/* ============================================ */}
+      {/* REPORT DETAIL MODAL - Bottom Sheet */}
       <AnimatePresence>
         {selected && (
           <motion.div
@@ -518,6 +520,9 @@ export default function HomePage() {
               onClose={() => setSelectedId(null)}
               isAuthenticated={isAuthenticated}
               onAuthRequired={() => setShowCreateAccount(true)}
+              onConfirm={() => handleConfirm(selected.id)}
+              onIncorrect={() => handleIncorrect(selected.id)}
+              isVoting={confirmMutation.isPending}
             />
           </motion.div>
         )}
@@ -640,9 +645,12 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      <div className="absolute bottom-0 left-0 right-0 z-[500]">
-        <BottomNav />
-      </div>
+      {/* BottomNav — hidden when any modal is open */}
+      {!isAnyModalOpen && (
+        <div className="absolute bottom-0 left-0 right-0 z-[500]">
+          <BottomNav />
+        </div>
+      )}
     </div>
   )
 }

@@ -1,86 +1,119 @@
+// import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+// import { createHazard, createHazardWithPhoto, getMyHazards } from '../api/hazards'
+// import type {
+//   CreateHazardPayload,
+//   CreateHazardWithPhotoPayload,
+// } from '../types/hazard'
+
+// export const hazardKeys = {
+//   all: ['hazards'] as const,
+//   my: () => [...hazardKeys.all, 'my'] as const,
+// }
+
+// export function useMyHazards() {
+//   return useQuery({
+//     queryKey: hazardKeys.my(),
+//     queryFn: getMyHazards,
+//   })
+// }
+
+// export function useCreateHazard() {
+//   const queryClient = useQueryClient()
+//   return useMutation({
+//     mutationFn: (payload: CreateHazardPayload) => createHazard(payload),
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({ queryKey: hazardKeys.my() })
+//     },
+//   })
+// }
+
+// export function useCreateHazardWithPhoto() {
+//   const queryClient = useQueryClient()
+//   return useMutation({
+//     mutationFn: (payload: CreateHazardWithPhotoPayload) => createHazardWithPhoto(payload),
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({ queryKey: hazardKeys.my() })
+//     },
+//   })
+// }
+
+
+
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createHazard,
   createHazardWithPhoto,
+  getMyHazards,
+  confirmHazard,
+  getHazardFeed,
   getNearbyHazards,
-  voteHazard,
 } from '../api/hazards'
 import type {
-  CreateHazardInput,
-  CreateHazardWithPhotoInput,
-  NearbyHazardsParams,
-  HazardVoteInput,
-} from '../api/hazards'
+  CreateHazardPayload,
+  CreateHazardWithPhotoPayload,
+  ConfirmHazardPayload,
+  HazardLocationQuery,
+} from '../types/hazard'
 
 export const hazardKeys = {
   all: ['hazards'] as const,
-  nearby: (params: NearbyHazardsParams) => ['hazards', 'nearby', params] as const,
+  my: () => [...hazardKeys.all, 'my'] as const,
+  feed: (params: HazardLocationQuery) => [...hazardKeys.all, 'feed', params] as const,
+  nearby: (params: HazardLocationQuery) => [...hazardKeys.all, 'nearby', params] as const,
 }
 
-// ---------- Fetch nearby hazards ----------
-
-export function useNearbyHazards(params: NearbyHazardsParams | null) {
-  const query = useQuery({
-    queryKey: params ? hazardKeys.nearby(params) : ['hazards', 'nearby', 'disabled'],
-    queryFn: () => getNearbyHazards(params!),
-    enabled: !!params,
-    staleTime: 30_000,
+export function useMyHazards() {
+  return useQuery({
+    queryKey: hazardKeys.my(),
+    queryFn: getMyHazards,
   })
-
-  if (query.data) {
-    console.log('[useNearbyHazards] data:', query.data)
-  }
-  if (query.error) {
-    console.log('[useNearbyHazards] error:', query.error)
-  }
-
-  return query
 }
-
-// ---------- Create hazard (JSON only, no photo) ----------
 
 export function useCreateHazard() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CreateHazardInput) => createHazard(data),
-    onSuccess: (result) => {
-      console.log('[useCreateHazard] success:', result)
+    mutationFn: (payload: CreateHazardPayload) => createHazard(payload),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: hazardKeys.all })
-    },
-    onError: (err) => {
-      console.log('[useCreateHazard] error:', err)
     },
   })
 }
-
-// ---------- Create hazard with photo (multipart) ----------
 
 export function useCreateHazardWithPhoto() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CreateHazardWithPhotoInput) => createHazardWithPhoto(data),
-    onSuccess: (result) => {
-      console.log('[useCreateHazardWithPhoto] success:', result)
+    mutationFn: (payload: CreateHazardWithPhotoPayload) => createHazardWithPhoto(payload),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: hazardKeys.all })
-    },
-    onError: (err) => {
-      console.log('[useCreateHazardWithPhoto] error:', err)
     },
   })
 }
 
-// ---------- Confirm / mark incorrect ----------
+// params is nullable so callers can wait on geolocation before enabling the query
+export function useHazardFeed(params: HazardLocationQuery | null) {
+  return useQuery({
+    queryKey: params ? hazardKeys.feed(params) : hazardKeys.all,
+    queryFn: () => getHazardFeed(params as HazardLocationQuery),
+    enabled: params !== null,
+  })
+}
 
-export function useVoteHazard() {
+export function useNearbyHazards(params: HazardLocationQuery | null) {
+  return useQuery({
+    queryKey: params ? hazardKeys.nearby(params) : hazardKeys.all,
+    queryFn: () => getNearbyHazards(params as HazardLocationQuery),
+    enabled: params !== null,
+  })
+}
+
+export function useConfirmHazard() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: HazardVoteInput) => voteHazard(data),
-    onSuccess: (result) => {
-      console.log('[useVoteHazard] success:', result)
+    mutationFn: (payload: ConfirmHazardPayload) => confirmHazard(payload),
+    onSuccess: () => {
+      // Feed/nearby/my all embed confirmation counts, so just invalidate everything hazard-related
       queryClient.invalidateQueries({ queryKey: hazardKeys.all })
-    },
-    onError: (err) => {
-      console.log('[useVoteHazard] error:', err)
     },
   })
 }

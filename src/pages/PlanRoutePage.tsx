@@ -1,9 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import BottomNav from '../components/BottomNav'
+import AuthFlow from '../components/AuthFlow'
+import { getUserProfile } from '../api/profile'
 
 // Fix Leaflet default icon
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
@@ -34,6 +37,7 @@ const createReportIcon = (color: string, isSelected: boolean) => {
         box-shadow:${isSelected ? '0 4px 16px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.2)'};
         border:3px solid white;
         transition:all 0.2s;
+        cursor:pointer;
       ">
         <span style="color:white;font-size:${isSelected ? 18 : 12}px;font-weight:bold;">!</span>
       </div>
@@ -89,9 +93,18 @@ const navArrowIcon = L.divIcon({
 // Pan map to location when ready
 function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap()
+  const hasFlownRef = useRef(false)
+
   useEffect(() => {
+    if (!hasFlownRef.current) {
+      map.setView(center, zoom)
+      hasFlownRef.current = true
+      return
+    }
     map.flyTo(center, zoom, { duration: 1 })
-  }, [center, zoom, map])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center[0], center[1], zoom, map])
+
   return null
 }
 
@@ -245,6 +258,21 @@ function SpinnerIcon({ className = '' }: { className?: string }) {
 export default function PlanRoutePage() {
   const navigate = useNavigate()
 
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+  const [showAuth, setShowAuth] = useState(false)
+
+  // ── TanStack Query: Profile ─────────────────────────
+  const {
+    data: profile,
+    isLoading: profileLoading,
+  } = useQuery({
+    queryKey: ['userProfile'],
+    queryFn: getUserProfile,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: isLoggedIn,
+  })
+
   // ── State ───────────────────────────────────────────
   const [showPlanModal, setShowPlanModal] = useState(false)
   const [showScanResults, setShowScanResults] = useState(false)
@@ -300,45 +328,8 @@ export default function PlanRoutePage() {
     }
   }, [])
 
-  // ── Geolocation on mount ─────────────────────────────
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation not supported by your browser')
-      setMapReady(true)
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
-        setUserLocation(loc)
-        setMapReady(true)
-        // Auto-fill start point with coordinates initially
-        reverseGeocode(position.coords.latitude, position.coords.longitude)
-      },
-      (error) => {
-        let message = 'Unable to retrieve your location'
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = 'Location permission denied. Please enable it in settings.'
-            break
-          case error.POSITION_UNAVAILABLE:
-            message = 'Location information unavailable.'
-            break
-          case error.TIMEOUT:
-            message = 'Location request timed out.'
-            break
-        }
-        setLocationError(message)
-        setUserLocation([reports[0].lat, reports[0].lng])
-        setMapReady(true)
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    )
-  }, [])
-
   // ── Reverse Geocode (OpenStreetMap Nominatim) ──────
-  const reverseGeocode = async (lat: number, lng: number) => {
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
@@ -362,7 +353,53 @@ export default function PlanRoutePage() {
     } finally {
       setIsGettingLocation(false)
     }
-  }
+  }, [])
+
+  // ── Geolocation on mount ─────────────────────────────
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation not supported by your browser')
+      setMapReady(true)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
+        setUserLocation(loc)
+        setMapReady(true)
+        reverseGeocode(position.coords.latitude, position.coords.longitude)
+      },
+      (error) => {
+        let message = 'Unable to retrieve your location'
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            message = 'Location permission denied. Please enable it in settings.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            message = 'Location information unavailable.'
+            break
+          case error.TIMEOUT:
+            message = 'Location request timed out.'
+            break
+        }
+        setLocationError(message)
+        setUserLocation([reports[0].lat, reports[0].lng])
+        setMapReady(true)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Prevent page-level bounce/rubber-banding on mobile
+  useEffect(() => {
+    const previousOverscroll = document.body.style.overscrollBehavior
+    document.body.style.overscrollBehavior = 'none'
+    return () => {
+      document.body.style.overscrollBehavior = previousOverscroll
+    }
+  }, [])
 
   // ── Handle Use My Location ──────────────────────────
   const handleUseMyLocation = useCallback(() => {
@@ -397,7 +434,7 @@ export default function PlanRoutePage() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
-  }, [])
+  }, [reverseGeocode])
 
   // ── Route Logic ─────────────────────────────────────
   const handleScanRoute = () => {
@@ -427,6 +464,42 @@ export default function PlanRoutePage() {
     distance: '0.9 KM',
   }
 
+  // Memoize map center
+  const mapCenter = useMemo<[number, number]>(
+    () => userLocation || [reports[0].lat, reports[0].lng],
+    [userLocation]
+  )
+
+  // ── Profile Helpers ──────────────────────────────────
+  const avatarInitials = useMemo(() => {
+    if (!isLoggedIn) return '?'
+    if (profileLoading || !profile) return profileLoading ? '...' : '??'
+    return `${profile.firstName[0] ?? ''}${profile.lastName[0] ?? ''}`.toUpperCase()
+  }, [isLoggedIn, profile, profileLoading])
+
+  const displayName = useMemo(() => {
+    if (!isLoggedIn) return 'Welcome 👋'
+    if (profileLoading) return 'Loading...'
+    if (!profile) return 'Welcome 👋'
+    return `Good Afternoon 👋`
+  }, [isLoggedIn, profile, profileLoading])
+
+  const subtitleText = useMemo(() => {
+    if (!isLoggedIn) return 'Tap to sign in'
+    if (profileLoading) return '...'
+    if (!profile) return 'Guest'
+    if (profile.driverProfile?.address) return profile.driverProfile.address
+    return `${profile.firstName} ${profile.lastName}`
+  }, [isLoggedIn, profile, profileLoading])
+
+  const handleProfileBarClick = () => {
+    if (!isLoggedIn) {
+      setShowAuth(true)
+      return
+    }
+    navigate('/profile')
+  }
+
   if (!mapReady) {
     return (
       <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-[430px] mx-auto bg-gray-100">
@@ -437,14 +510,15 @@ export default function PlanRoutePage() {
     )
   }
 
-  const mapCenter = userLocation || [reports[0].lat, reports[0].lng]
-
   return (
-    <div className="relative h-[100dvh] w-full max-w-[430px] mx-auto overflow-hidden bg-gray-100">
+    <div
+      className="relative h-[100dvh] w-full max-w-[430px] mx-auto overflow-hidden bg-gray-100"
+      style={{ overscrollBehavior: 'none' }}
+    >
       {/* Leaflet Map */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-0">
         <MapContainer
-          center={mapCenter as [number, number]}
+          center={mapCenter}
           zoom={15}
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
@@ -454,7 +528,7 @@ export default function PlanRoutePage() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapController center={mapCenter as [number, number]} zoom={15} />
+          <MapController center={mapCenter} zoom={15} />
 
           {/* User location marker */}
           {userLocation && !isNavigating && (
@@ -505,23 +579,28 @@ export default function PlanRoutePage() {
       {!isNavigating && !showScanResults && (
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2">
           {/* Profile bar */}
-          <div className="flex items-center justify-between px-4 py-3 mb-3 bg-white shadow-sm rounded-2xl">
+          <button
+            onClick={handleProfileBarClick}
+            className="flex items-center justify-between w-full px-4 py-3 mb-3 text-left bg-white shadow-sm rounded-2xl"
+          >
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-gray-500 bg-gray-300 rounded-full">
-                AA
+              <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-white bg-purple-600 rounded-full">
+                {avatarInitials}
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Good Afternoon 👋</p>
-                <p className="text-xs text-purple-600">Lagos, Nigeria</p>
+                <p className="text-sm font-semibold text-gray-900">{displayName}</p>
+                <p className="text-xs text-purple-600">{subtitleText}</p>
               </div>
             </div>
-            <button className="relative flex items-center justify-center w-10 h-10">
+            <span className="relative flex items-center justify-center w-10 h-10">
               <svg viewBox="0 0 24 24" className="w-6 h-6 text-gray-700" fill="currentColor">
                 <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
               </svg>
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-            </button>
-          </div>
+              {isLoggedIn && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              )}
+            </span>
+          </button>
 
           {/* Search bar */}
           <button
@@ -544,7 +623,6 @@ export default function PlanRoutePage() {
       {/* Scan Results Header (route info cards) */}
       {showScanResults && (
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2">
-          {/* Route info card */}
           <div className="px-4 py-3 mb-3 bg-white shadow-sm rounded-2xl">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100">
@@ -578,7 +656,6 @@ export default function PlanRoutePage() {
       {isNavigating && (
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2 max-h-[70%] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="space-y-2">
-            {/* Green direction banner */}
             <div className="flex items-center gap-3 px-4 py-3 shadow-sm bg-emerald-500 rounded-2xl">
               <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20">
                 <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -591,7 +668,6 @@ export default function PlanRoutePage() {
               </div>
             </div>
 
-            {/* Upcoming hazard alert */}
             {showUpcomingAlert && (
               <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100">
@@ -607,7 +683,6 @@ export default function PlanRoutePage() {
               </div>
             )}
 
-            {/* Trip stats card */}
             <div className="px-5 py-4 bg-white shadow-sm rounded-2xl">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-center">
@@ -644,11 +719,9 @@ export default function PlanRoutePage() {
           onTouchStart={(e) => { e.stopPropagation(); startSOSHold(); }}
           onTouchEnd={(e) => { e.stopPropagation(); endSOSHold(); }}
         >
-          {/* Outer pulse ring */}
           <span className="absolute inset-[-6px] rounded-full border-[3px] border-red-400/35 animate-ping pointer-events-none" />
           <span className="absolute inset-[-6px] rounded-full border-[3px] border-red-400/35 pointer-events-none" />
 
-          {/* Circular progress ring */}
           {sosHolding && (
             <svg className="absolute inset-[-4px] w-[88px] h-[88px] -rotate-90 pointer-events-none" viewBox="0 0 88 88">
               <circle
@@ -666,7 +739,6 @@ export default function PlanRoutePage() {
             </svg>
           )}
 
-          {/* Button */}
           <button
             className="relative flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full bg-[#ff4444] active:scale-95 overflow-hidden select-none"
             style={{
@@ -690,7 +762,6 @@ export default function PlanRoutePage() {
           ═══════════════════════════════════════════════════════ */}
       {showPlanModal && (
         <div className="fixed inset-0 z-[60] flex flex-col bg-white animate-in slide-in-from-bottom">
-          {/* Header */}
           <div className="flex-shrink-0 px-5 pt-6 pb-4">
             <div className="flex items-start justify-between">
               <div>
@@ -708,9 +779,7 @@ export default function PlanRoutePage() {
             </div>
           </div>
 
-          {/* Scrollable content */}
           <div className="flex-1 px-5 space-y-5 overflow-y-auto min-h-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {/* Point A */}
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <div className="flex items-center justify-center w-5 h-5 border-2 rounded-full border-emerald-500">
@@ -746,7 +815,6 @@ export default function PlanRoutePage() {
               )}
             </div>
 
-            {/* Point B */}
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <svg viewBox="0 0 24 24" className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -769,7 +837,6 @@ export default function PlanRoutePage() {
             <div className="h-4" />
           </div>
 
-          {/* Scan button */}
           <div className="flex-shrink-0 px-5 pt-4 pb-8">
             <button
               onClick={handleScanRoute}
@@ -909,15 +976,26 @@ export default function PlanRoutePage() {
         </div>
       )}
 
+      {/* Auth flow for guests who tap the profile bar */}
+      {showAuth && (
+        <AuthFlow
+          onClose={() => setShowAuth(false)}
+          onAuthSuccess={() => {
+            setShowAuth(false)
+            window.location.reload()
+          }}
+        />
+      )}
+
       {/* BottomNav */}
-      <div className="absolute bottom-0 left-0 right-0 z-[500]">
-        <BottomNav />
-      </div>
+      {!showPlanModal && !showScanResults && !showSOS && (
+        <div className="absolute bottom-0 left-0 right-0 z-[500]">
+          <BottomNav />
+        </div>
+      )}
     </div>
   )
 }
-
-
 
 
 
