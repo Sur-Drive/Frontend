@@ -1,6 +1,6 @@
 export const NAV_ITEMS = [
     { label: "Features", href: "#features" },
-    { label: "Navigation", href: "#navigation" },
+    { label: "Navigation", href: "/home" },
     { label: "How It Works", href: "#how-it-works" },
     { label: "For Fleets", href: "#fleets" },
     { label: "Partners", href: "#partners" },
