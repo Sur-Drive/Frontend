@@ -1,5 +1,14 @@
-import { useQuery, QueryClient } from '@tanstack/react-query'
-import { getUserProfile, type UserProfileResponse } from '../api/profile'
+
+
+
+
+import { useMutation, useQuery, useQueryClient, QueryClient } from '@tanstack/react-query'
+import {
+  getUserProfile,
+  updateUserProfile,
+  type UserProfileResponse,
+  type UpdateProfileInput,
+} from '../api/profile'
 
 export const profileQueryKey = ['userProfile'] as const
 
@@ -17,5 +26,17 @@ export function prefetchProfile(queryClient: QueryClient) {
   return queryClient.prefetchQuery({
     queryKey: profileQueryKey,
     queryFn: getUserProfile,
+  })
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient()
+
+  return useMutation<UserProfileResponse, Error, UpdateProfileInput>({
+    mutationFn: updateUserProfile,
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(profileQueryKey, updatedUser)
+      queryClient.invalidateQueries({ queryKey: profileQueryKey })
+    },
   })
 }

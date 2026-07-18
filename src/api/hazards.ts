@@ -1,149 +1,58 @@
-import { api, ApiError } from '../lib/apiClient'
 
-const API_BASE = 'https://backend-production-01de.up.railway.app'
 
-// ============================================================
-// Types
-// ============================================================
 
-export type HazardType =
-  | 'POTHOLE'
-  | 'ACCIDENT'
-  | 'FLOOD'
-  | 'CONSTRUCTION'
-  | 'ROADBLOCK'
-  | 'DEBRIS'
-  | 'SOS'
-  | 'DANGER_ZONE'
 
-export type HazardSeverity = 'LOW' | 'MEDIUM' | 'HIGH'
-export type HazardVoteType = 'CONFIRMED' | 'INCORRECT'
+import { api } from '../lib/apiClient'
+import type {
+  CreateHazardPayload,
+  CreateHazardWithPhotoPayload,
+  Hazard,
+  ConfirmHazardPayload,
+  HazardLocationQuery,
+} from '../types/hazard'
 
-export interface HazardDto {
-  id: string
-  type: HazardType
-  description: string
-  latitude: number
-  longitude: number
-  locationAddress: string
-  severity: HazardSeverity
-  isAnonymous: boolean
-  createdAt: string
-  reporterName?: string | null
-  confirmCount?: number
-  photoUrl?: string | null
-  distanceKm?: number
+// POST /hazards (application/json)
+export function createHazard(payload: CreateHazardPayload): Promise<Hazard> {
+  return api.post<Hazard>('/hazards', payload)
 }
 
-export interface CreateHazardInput {
-  type: HazardType
-  description: string
-  latitude: number
-  longitude: number
-  locationAddress: string
-  severity: HazardSeverity
-  isAnonymous: boolean
-}
-
-export interface CreateHazardWithPhotoInput extends CreateHazardInput {
-  photo?: File | Blob | null
-}
-
-export interface NearbyHazardsParams {
-  latitude: number
-  longitude: number
-  radius: number
-}
-
-export interface HazardVoteInput {
-  hazardId: string
-  type: HazardVoteType
-}
-
-// ============================================================
-// JSON-only create (no photo)
-// POST /hazards
-// ============================================================
-
-export const createHazard = (data: CreateHazardInput) =>
-  api.post<HazardDto>('/hazards', data)
-
-// ============================================================
-// Multipart create (with photo)
 // POST /hazards (multipart/form-data)
-// ============================================================
-
-export const createHazardWithPhoto = async (
-  data: CreateHazardWithPhotoInput
-): Promise<HazardDto> => {
+export function createHazardWithPhoto(payload: CreateHazardWithPhotoPayload): Promise<Hazard> {
   const formData = new FormData()
-  formData.append('type', data.type)
-  formData.append('description', data.description)
-  formData.append('latitude', String(data.latitude))
-  formData.append('longitude', String(data.longitude))
-  formData.append('locationAddress', data.locationAddress)
-  formData.append('severity', data.severity)
-  formData.append('isAnonymous', String(data.isAnonymous))
-  if (data.photo) {
-    formData.append('photo', data.photo)
+  formData.append('type', payload.type)
+  formData.append('description', payload.description)
+  formData.append('latitude', String(payload.latitude))
+  formData.append('longitude', String(payload.longitude))
+  formData.append('locationAddress', payload.locationAddress)
+  formData.append('severity', payload.severity)
+  formData.append('isAnonymous', String(payload.isAnonymous))
+  if (payload.photo) {
+    formData.append('photo', payload.photo)
   }
 
-  const token = localStorage.getItem('token')
-
-  console.log('[api] -> POST /hazards (multipart)', {
-    type: data.type,
-    description: data.description,
-    latitude: data.latitude,
-    longitude: data.longitude,
-    locationAddress: data.locationAddress,
-    severity: data.severity,
-    isAnonymous: data.isAnonymous,
-    hasPhoto: !!data.photo,
-  })
-
-  const res = await fetch(`${API_BASE}/hazards`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-  })
-
-  const text = await res.text()
-  const body = text ? JSON.parse(text) : null
-
-  if (!res.ok) {
-    console.log(`[api] x POST /hazards (multipart) -> ${res.status}`, body)
-    throw new ApiError(
-      (body && (body.message || body.error)) || `Request failed with status ${res.status}`,
-      res.status,
-      body
-    )
-  }
-
-  console.log(`[api] ok POST /hazards (multipart) -> ${res.status}`, body)
-
-  return body as HazardDto
+  return api.post<Hazard>('/hazards', formData)
 }
 
-// ============================================================
-// Confirm / mark incorrect
-// POST /hazards/confirm
-// ============================================================
+// GET /hazards/my
+export function getMyHazards(): Promise<Hazard[]> {
+  return api.get<Hazard[]>('/hazards/my')
+}
 
-export const voteHazard = (data: HazardVoteInput) =>
-  api.post<HazardDto>('/hazards/confirm', data)
+// POST /hazards/confirm  (also used for "incorrect", via `type`)
+export function confirmHazard(payload: ConfirmHazardPayload): Promise<unknown> {
+  return api.post('/hazards/confirm', payload)
+}
 
-// ============================================================
-// Nearby hazards
-// GET /hazards/nearby?latitude=&longitude=&radius=
-// ============================================================
-
-export const getNearbyHazards = (params: NearbyHazardsParams) =>
-  api.get<HazardDto[]>('/hazards/nearby', {
-    params: {
-      latitude: params.latitude,
-      longitude: params.longitude,
-      radius: params.radius,
-    },
+// GET /hazards/feed?latitude=&longitude=&radius=
+export function getHazardFeed({ latitude, longitude, radius }: HazardLocationQuery): Promise<Hazard[]> {
+  return api.get<Hazard[]>('/hazards/feed', {
+    params: { latitude, longitude, radius },
   })
+}
+
+// GET /hazards/nearby?latitude=&longitude=&radius=
+export function getNearbyHazards({ latitude, longitude, radius }: HazardLocationQuery): Promise<Hazard[]> {
+  return api.get<Hazard[]>('/hazards/nearby', {
+    params: { latitude, longitude, radius },
+  })
+}
