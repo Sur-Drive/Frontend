@@ -65,8 +65,8 @@ const LoginStep: React.FC<LoginStepProps> = ({
             return "/fleet/kyc-pending";
         }
 
-        // Case 4: Company is active/suspended/expired
-        if (isKycCompleted && isVerified) {
+        // Case 4: KYC is completed
+        if (isKycCompleted) {
             // Check subscription status
             if (!subscription) {
                 return "/fleet/kyc";
@@ -86,6 +86,7 @@ const LoginStep: React.FC<LoginStepProps> = ({
             }
 
             // Check if it's a trial or active paid subscription
+            // Allow access even if isVerified is false
             if (
                 subscription.isTrial ||
                 (subscription.status === "active" &&
