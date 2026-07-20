@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
@@ -31,11 +30,9 @@ const DefaultIcon = L.icon({
 })
 L.Marker.prototype.options.icon = DefaultIcon
 
-// Fallback coords if geolocation is denied/unavailable (Lagos, matches sample data)
 const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792]
 const FEED_RADIUS_KM = 10
 
-// Create custom report pin icons
 const createReportIcon = (color: string, isSelected: boolean) => {
   const size = isSelected ? 56 : 36
   return L.divIcon({
@@ -63,7 +60,6 @@ const createReportIcon = (color: string, isSelected: boolean) => {
   })
 }
 
-// User location icon (blue dot with pulse)
 const userLocationIcon = L.divIcon({
   className: 'user-location',
   html: `
@@ -82,7 +78,6 @@ const userLocationIcon = L.divIcon({
   iconAnchor: [12, 12],
 })
 
-// Pan map to location when ready — only re-fires when center/zoom actually change
 function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap()
   const hasFlownRef = useRef(false)
@@ -121,12 +116,10 @@ export default function HomePage() {
     occupation: string
   } | null>(null)
 
-  // Location state
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
 
-  // SOS state
   const [sosActive, setSosActive] = useState(false)
   const [sosProgress, setSosProgress] = useState(0)
   const [isPressing, setIsPressing] = useState(false)
@@ -134,9 +127,12 @@ export default function HomePage() {
   const sosStartTimeRef = useRef<number>(0)
   const sosCompletedRef = useRef<boolean>(false)
 
-  const isAuthenticated = false
+  // FIX: this was hardcoded to `false`, which meant Confirm/Incorrect always
+  // short-circuited into the create-account modal and never reached the
+  // API — regardless of whether the user was actually logged in. Derive it
+  // from the real auth token, same as every other page in the app does.
+  const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token')
 
-  // ── Fetch hazard feed once we have coordinates (real or fallback) ──
   const feedParams = mapReady
     ? {
         latitude: (userLocation ?? DEFAULT_COORDS)[0],
@@ -153,7 +149,6 @@ export default function HomePage() {
     [hazards, userLocation]
   )
 
-  // ── Hide BottomNav when any modal/overlay is open ────
   const isAnyModalOpen =
     showCreateAccount ||
     showSignIn ||
@@ -172,7 +167,6 @@ export default function HomePage() {
     [reports, selectedId]
   )
 
-  // Get user location on mount
   useEffect(() => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation not supported by your browser')
@@ -200,7 +194,6 @@ export default function HomePage() {
     )
   }, [])
 
-  // Prevent page-level bounce/rubber-banding on mobile so the map feels stable
   useEffect(() => {
     const previousOverscroll = document.body.style.overscrollBehavior
     document.body.style.overscrollBehavior = 'none'
@@ -209,7 +202,6 @@ export default function HomePage() {
     }
   }, [])
 
-  // Clean up any running SOS interval if the component unmounts mid-press
   useEffect(() => {
     return () => {
       if (sosTimerRef.current) {
@@ -219,7 +211,6 @@ export default function HomePage() {
     }
   }, [])
 
-  // ---- SOS press handlers ----
   const startSosPress = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation()
 
@@ -363,7 +354,6 @@ export default function HomePage() {
     setShowSignIn(false)
   }
 
-  // ── Confirm / incorrect voting, triggered from ReportDetailModal ──
   const handleConfirm = async (hazardId: string) => {
     if (!isAuthenticated) {
       setShowCreateAccount(true)
@@ -395,22 +385,22 @@ export default function HomePage() {
 
   if (!mapReady) {
     return (
-      <div className="flex flex-col items-center justify-center h-[100dvh] w-full max-w-[430px] mx-auto bg-gray-100">
-        <div className="w-12 h-12 mb-4 border-4 border-red-500 rounded-full border-t-transparent animate-spin" />
-        <p className="font-medium text-gray-600">
+      <div className="flex flex-col items-center justify-center h-[100dvh] w-full bg-gray-100">
+        <div className="w-10 h-10 mb-4 border-4 border-red-500 rounded-full border-t-transparent animate-spin" />
+        <p className="text-[13px] font-medium text-gray-600">
           {locationError ? 'Using default location...' : 'Getting your location...'}
         </p>
-        {locationError && <p className="px-8 mt-2 text-sm text-center text-red-500">{locationError}</p>}
+        {locationError && <p className="px-8 mt-2 text-[12px] text-center text-red-500 max-w-xs">{locationError}</p>}
       </div>
     )
   }
 
   return (
     <div
-      className="relative h-[100dvh] w-full max-w-[430px] mx-auto overflow-hidden bg-gray-100"
+      className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
       style={{ overscrollBehavior: 'none' }}
     >
-      {/* Leaflet Map */}
+      {/* Leaflet Map — fills full viewport on every screen size */}
       <MapContainer
         center={mapCenter}
         zoom={15}
@@ -424,14 +414,12 @@ export default function HomePage() {
         />
         <MapController center={mapCenter} zoom={15} />
 
-        {/* User location marker */}
         {userLocation && (
           <Marker position={userLocation} icon={userLocationIcon}>
             <Popup>You are here</Popup>
           </Marker>
         )}
 
-        {/* Report markers */}
         {reports.map((r) => (
           <Marker
             key={r.id}
@@ -444,7 +432,7 @@ export default function HomePage() {
             {r.id === selectedId && (
               <Popup closeButton={false} className="report-popup">
                 <div className="text-center">
-                  <p className="text-sm font-bold">{r.streetLabel}</p>
+                  <p className="text-[13px] font-bold">{r.streetLabel}</p>
                 </div>
               </Popup>
             )}
@@ -452,18 +440,18 @@ export default function HomePage() {
         ))}
       </MapContainer>
 
-      {/* Location error toast */}
+      {/* Location error toast — capped width so it doesn't stretch full-bleed on desktop */}
       {locationError && (
-        <div className="absolute top-4 left-4 right-4 z-[500] bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 flex items-start gap-3">
-          <div className="text-yellow-600 mt-0.5">⚠️</div>
+        <div className="absolute z-[500] flex items-start gap-3 px-4 py-3 border border-yellow-200 top-4 left-4 right-4 sm:right-auto sm:w-80 lg:top-6 lg:left-6 bg-yellow-50 rounded-xl">
+          <div className="text-yellow-600 mt-0.5 text-sm">⚠️</div>
           <div>
-            <p className="text-sm font-medium text-yellow-800">{locationError}</p>
-            <p className="mt-1 text-xs text-yellow-600">Showing default area</p>
+            <p className="text-[12px] font-medium text-yellow-800">{locationError}</p>
+            <p className="mt-1 text-[11px] text-yellow-600">Showing default area</p>
           </div>
         </div>
       )}
 
-      {/* SOS floating button */}
+      {/* SOS floating button — pulled further from the edge on larger screens */}
       <button
         onMouseDown={startSosPress}
         onMouseUp={endSosPress}
@@ -471,7 +459,7 @@ export default function HomePage() {
         onTouchStart={startSosPress}
         onTouchEnd={endSosPress}
         onContextMenu={(e) => e.preventDefault()}
-        className="absolute z-[999] flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] bottom-32 right-4 bg-[#ff4444] overflow-hidden select-none"
+        className="absolute z-[999] flex flex-col items-center justify-center w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 text-white transition rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] bottom-28 right-4 lg:bottom-10 lg:right-10 bg-[#ff4444] overflow-hidden select-none"
         style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
       >
         <svg
@@ -499,13 +487,13 @@ export default function HomePage() {
           </>
         )}
 
-        <span className="text-[15px] font-bold relative z-10 pointer-events-none">SOS</span>
-        <span className="text-[10px] opacity-90 relative z-10 pointer-events-none">
+        <span className="text-[13px] font-bold relative z-10 pointer-events-none">SOS</span>
+        <span className="text-[9px] opacity-90 relative z-10 pointer-events-none">
           {isPressing ? 'Hold...' : 'Hold 3s'}
         </span>
       </button>
 
-      {/* REPORT DETAIL MODAL - Bottom Sheet */}
+      {/* REPORT DETAIL — bottom sheet on mobile, floating right-side panel on desktop */}
       <AnimatePresence>
         {selected && (
           <motion.div
@@ -513,7 +501,8 @@ export default function HomePage() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute bottom-16 left-0 right-0 z-[500] max-h-[70vh] overflow-y-auto"
+            className="absolute z-[500] bottom-16 left-0 right-0 max-h-[70vh] overflow-y-auto
+                       lg:bottom-auto lg:left-auto lg:top-6 lg:right-6 lg:w-96 lg:max-h-[85vh] lg:rounded-3xl lg:shadow-2xl"
           >
             <ReportDetailModal
               report={selected}
@@ -635,7 +624,6 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      {/* SOS Active Modal */}
       <AnimatePresence>
         {sosActive && (
           <SOSActiveModal
@@ -645,12 +633,16 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      {/* BottomNav — hidden when any modal is open */}
+      {/* BottomNav — mobile-style bar centered/narrowed on desktop instead of full-bleed */}
       {!isAnyModalOpen && (
-        <div className="absolute bottom-0 left-0 right-0 z-[500]">
-          <BottomNav />
+        <div className="absolute bottom-0 left-0 right-0 z-[500] lg:flex lg:justify-center lg:pb-4">
+          <div className="lg:max-w-md lg:w-full lg:rounded-2xl lg:overflow-hidden lg:shadow-lg">
+            <BottomNav />
+          </div>
         </div>
       )}
     </div>
   )
 }
+
+

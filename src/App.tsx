@@ -33,6 +33,7 @@ const NO_NAV_PAGES = ["/", "/access-list", "/admin/login", "/admin/dashboard"];
 
 function AppRoutes() {
     const location = useLocation();
+
     const pathname = location.pathname;
 
     // Check if current page is an app route (should show splash and nav)
