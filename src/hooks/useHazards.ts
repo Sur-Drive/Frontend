@@ -1,41 +1,5 @@
-// import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-// import { createHazard, createHazardWithPhoto, getMyHazards } from '../api/hazards'
-// import type {
-//   CreateHazardPayload,
-//   CreateHazardWithPhotoPayload,
-// } from '../types/hazard'
 
-// export const hazardKeys = {
-//   all: ['hazards'] as const,
-//   my: () => [...hazardKeys.all, 'my'] as const,
-// }
 
-// export function useMyHazards() {
-//   return useQuery({
-//     queryKey: hazardKeys.my(),
-//     queryFn: getMyHazards,
-//   })
-// }
-
-// export function useCreateHazard() {
-//   const queryClient = useQueryClient()
-//   return useMutation({
-//     mutationFn: (payload: CreateHazardPayload) => createHazard(payload),
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: hazardKeys.my() })
-//     },
-//   })
-// }
-
-// export function useCreateHazardWithPhoto() {
-//   const queryClient = useQueryClient()
-//   return useMutation({
-//     mutationFn: (payload: CreateHazardWithPhotoPayload) => createHazardWithPhoto(payload),
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: hazardKeys.my() })
-//     },
-//   })
-// }
 
 
 
@@ -53,6 +17,7 @@ import type {
   CreateHazardPayload,
   CreateHazardWithPhotoPayload,
   ConfirmHazardPayload,
+  Hazard,
   HazardLocationQuery,
 } from '../types/hazard'
 
@@ -90,7 +55,6 @@ export function useCreateHazardWithPhoto() {
   })
 }
 
-// params is nullable so callers can wait on geolocation before enabling the query
 export function useHazardFeed(params: HazardLocationQuery | null) {
   return useQuery({
     queryKey: params ? hazardKeys.feed(params) : hazardKeys.all,
@@ -107,12 +71,64 @@ export function useNearbyHazards(params: HazardLocationQuery | null) {
   })
 }
 
+type HazardsSnapshot = [readonly unknown[], Hazard[] | undefined][]
+
 export function useConfirmHazard() {
   const queryClient = useQueryClient()
+
   return useMutation({
     mutationFn: (payload: ConfirmHazardPayload) => confirmHazard(payload),
-    onSuccess: () => {
-      // Feed/nearby/my all embed confirmation counts, so just invalidate everything hazard-related
+
+    // Optimistically flip the card the instant the user taps.
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: hazardKeys.all })
+
+      const previous: HazardsSnapshot = queryClient.getQueriesData<Hazard[]>({
+        queryKey: hazardKeys.all,
+      })
+
+      // FIX: backend's userConfirmation is 'CONFIRM' | 'INCORRECT' | null,
+      // not a boolean — payload.type already matches that shape exactly.
+      const newVote = payload.type
+
+      queryClient.setQueriesData<Hazard[] | undefined>(
+        { queryKey: hazardKeys.all },
+        (old) => {
+          if (!old) return old
+          return old.map((hazard) => {
+            if (hazard.id !== payload.hazardId) return hazard
+
+            const prevVote = hazard.confirmations.userConfirmation
+            let confirms = hazard.confirmations.confirms
+
+            if (newVote === 'CONFIRM' && prevVote !== 'CONFIRM') confirms += 1
+            if (newVote !== 'CONFIRM' && prevVote === 'CONFIRM') confirms -= 1
+
+            return {
+              ...hazard,
+              confirmations: {
+                ...hazard.confirmations,
+                confirms,
+                userConfirmation: newVote,
+              },
+            }
+          })
+        }
+      )
+
+      return { previous }
+    },
+
+    onError: (_err, _payload, context) => {
+      context?.previous?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data)
+      })
+      queryClient.invalidateQueries({ queryKey: hazardKeys.all })
+    },
+
+    // Always resync with the server after the mutation settles,
+    // so the UI reflects what actually got persisted.
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: hazardKeys.all })
     },
   })
