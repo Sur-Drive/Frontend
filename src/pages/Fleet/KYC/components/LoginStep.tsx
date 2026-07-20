@@ -185,6 +185,10 @@ const LoginStep: React.FC<LoginStepProps> = ({
                     <div className="text-right">
                         <button
                             type="button"
+                            onClick={() =>
+                                (window.location.href =
+                                    "/fleet/forgot-password")
+                            }
                             className="text-sm font-medium text-[#6E43A3] hover:underline"
                             style={{ fontFamily: "Outfit" }}
                         >
@@ -218,6 +222,7 @@ const LoginStep: React.FC<LoginStepProps> = ({
                     Don't have an account?{" "}
                     <button
                         type="button"
+                        onClick={() => (window.location.href = "/fleet")}
                         className="font-semibold text-[#6E43A3] hover:underline"
                     >
                         Sign up

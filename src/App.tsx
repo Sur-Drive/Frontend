@@ -36,6 +36,7 @@ import PaymentCallback from "./pages/Fleet/SubFleets/PaymentCallback";
 import KYCPending from "./pages/Fleet/KYC/components/KYCPending";
 import PaymentPending from "./pages/Fleet/KYC/components/PaymentPending";
 import SubscriptionRenew from "./pages/Fleet/KYC/components/SubscriptionRenew";
+import ForgotPassword from "./pages/Fleet/Auth/ForgotPassword/ForgotPassword";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -70,6 +71,7 @@ const NO_NAV_PAGES = [
     "/fleet/payment/pending",
     "/fleet/subscription/renew",
     "/fleet/kyc-pending",
+    "/fleet/forgot-password",
 ];
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -146,6 +148,10 @@ function AppRoutes() {
                     <Route path="/plan-route" element={<PlanRoutePage />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
                     <Route path="/fleet" element={<FleetRegistration />} />
+                    <Route
+                        path="/fleet/forgot-password"
+                        element={<ForgotPassword />}
+                    />
                     <Route
                         path="/fleet/kyc"
                         element={
