@@ -1,4 +1,7 @@
 
+
+
+
 import { useState } from 'react'
 import { Paperclip, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react'
 import AddReportModal from '../components/Addreportmodal'
@@ -26,13 +29,7 @@ function formatTimeAgo(dateStr: string): string {
 
 // ---------- Signed-out state ----------
 
-function SignedOutState({
-  onSignIn,
-  onSignUp,
-}: {
-  onSignIn: () => void
-  onSignUp: () => void
-}) {
+function SignedOutState({ onSignIn }: { onSignIn: () => void }) {
   return (
     <div className="flex flex-col items-center px-6 text-center pt-14 sm:px-8 sm:pt-16 lg:pt-20">
       <div className="relative flex items-center justify-center w-32 h-32 mb-6 sm:w-36 sm:h-36 lg:w-40 lg:h-40 sm:mb-8">
@@ -50,21 +47,12 @@ function SignedOutState({
         to get started.
       </p>
 
-      <div className="flex flex-col w-full max-w-sm gap-3 mt-6 sm:mt-8">
-        <button
-          onClick={onSignIn}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-700 py-3 sm:py-3.5 text-sm sm:text-[15px] font-semibold text-white transition active:scale-[0.98]"
-        >
-          Sign in
-        </button>
-
-        <button
-          onClick={onSignUp}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-purple-700 bg-white py-3 sm:py-3.5 text-sm sm:text-[15px] font-semibold text-purple-700 transition active:scale-[0.98]"
-        >
-          Create account
-        </button>
-      </div>
+      <button
+        onClick={onSignIn}
+        className="mt-6 sm:mt-8 flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-purple-700 py-3 sm:py-3.5 text-sm sm:text-[15px] font-semibold text-white transition active:scale-[0.98]"
+      >
+        Sign in
+      </button>
     </div>
   )
 }
@@ -183,38 +171,26 @@ function MyReportCard({ report }: { report: Hazard }) {
 
 // ---------- Page ----------
 
-// ---------- Page ----------
-
-type AuthScreen = 'signin' | 'signup'
-
 export default function MyReport() {
   const [showModal, setShowModal] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
-  const [authInitialScreen, setAuthInitialScreen] = useState<AuthScreen>('signin')
   const { data: reports = [], isLoading, isError, refetch } = useMyHazards()
 
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
-
-  const openSignIn = () => {
-    setAuthInitialScreen('signin')
-    setShowAuth(true)
-  }
-
-  const openSignUp = () => {
-    setAuthInitialScreen('signup')
-    setShowAuth(true)
-  }
 
   const openAddReport = () => {
     if (isLoggedIn) {
       setShowModal(true)
     } else {
-      openSignIn()
+      setShowAuth(true)
     }
   }
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-28">
+      {/* Single-column stacked cards on every screen, like the original.
+          Container widens on larger screens so cards get a bit more
+          breathing room without turning into a multi-column grid. */}
       <div className="max-w-xl mx-auto lg:max-w-5xl">
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-5 pb-3 sm:px-5 sm:pt-6 sm:pb-4">
@@ -231,7 +207,7 @@ export default function MyReport() {
 
         {/* Content */}
         {!isLoggedIn ? (
-          <SignedOutState onSignIn={openSignIn} onSignUp={openSignUp} />
+          <SignedOutState onSignIn={() => setShowAuth(true)} />
         ) : isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 size={22} className="text-purple-700 animate-spin" />
@@ -251,24 +227,19 @@ export default function MyReport() {
         {showModal && (
           <AddReportModal onClose={() => setShowModal(false)} onSuccess={() => setShowModal(false)} />
         )}
-      </div>
 
-      {/* Auth overlay — full viewport, centered, responsive, PWA-safe */}
-      {showAuth && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 lg:p-8 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-          <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg max-h-[90dvh] overflow-y-auto bg-white rounded-3xl shadow-2xl">
-            <AuthFlow
-              initialScreen={authInitialScreen}
-              onClose={() => setShowAuth(false)}
-              onAuthSuccess={() => {
-                setShowAuth(false)
-                refetch()
-              }}
-            />
-          </div>
-        </div>
-      )}
+        {showAuth && (
+          <AuthFlow
+            onClose={() => setShowAuth(false)}
+            onAuthSuccess={() => {
+              setShowAuth(false)
+              refetch()
+            }}
+          />
+        )}
+      </div>
     </div>
   )
 }
+
 
