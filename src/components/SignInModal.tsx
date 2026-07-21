@@ -99,7 +99,7 @@ export default function SignInModal({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 flex items-end justify-center z-70"
+        className="fixed inset-0 flex items-end justify-center z-[70]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -115,7 +115,7 @@ export default function SignInModal({
         />
 
         <motion.div
-          className="relative w-full max-w-[430px] max-h-[95dvh] bg-white rounded-t-[40px] px-6 pt-8 pb-10 flex flex-col overflow-y-auto"
+          className="relative w-full max-w-[430px] h-[92dvh] max-h-[100dvh] bg-white rounded-t-[40px] px-6 pt-8 pb-10 flex flex-col overflow-y-auto"
           initial={{ y: '110%' }}
           animate={{ y: 0 }}
           exit={{ y: '110%' }}

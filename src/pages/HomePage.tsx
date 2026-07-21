@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import LazyGoogleMap from '../components/map/LazyGoogleMap'
+import type { MapMarkerSpec } from '../components/map/GoogleMapView'
+import {
+  reportPinHtml,
+  REPORT_PIN_ANCHOR,
+  REPORT_PIN_SELECTED_ANCHOR,
+  userLocationPinHtml,
+  USER_LOCATION_ANCHOR,
+} from '../components/map/mapMarkerIcons'
 import BottomNav from '../components/BottomNav'
 import CreateAccountModal from '../components/CreateAccountModal'
 import SignInModal from '../components/SignInModal'
@@ -18,82 +24,8 @@ import ReportDetailModal from '../components/ReportDetailModal'
 import { useHazardFeed, useConfirmHazard } from '../hooks/useHazards'
 import { hazardToReport } from '../lib/hazardToReport'
 
-// Fix Leaflet default icon
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-
-const DefaultIcon = L.icon({
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
-L.Marker.prototype.options.icon = DefaultIcon
-
 const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792]
 const FEED_RADIUS_KM = 10
-
-const createReportIcon = (color: string, isSelected: boolean) => {
-  const size = isSelected ? 56 : 36
-  return L.divIcon({
-    className: 'custom-pin',
-    html: `
-      <div style="
-        background:${color};
-        width:${size}px;
-        height:${size}px;
-        border-radius:50%;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        box-shadow:${isSelected ? '0 4px 16px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.2)'};
-        border:3px solid white;
-        transition:all 0.2s;
-        cursor:pointer;
-      ">
-        <span style="color:white;font-size:${isSelected ? 18 : 12}px;font-weight:bold;">!</span>
-      </div>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -size / 2],
-  })
-}
-
-const userLocationIcon = L.divIcon({
-  className: 'user-location',
-  html: `
-    <div style="position:relative;width:24px;height:24px;">
-      <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.3;animation:pulse 1.5s infinite;"></div>
-      <div style="position:absolute;inset:4px;border-radius:50%;background:#3b82f6;border:2px solid white;"></div>
-    </div>
-    <style>
-      @keyframes pulse {
-        0%,100% { transform: scale(1); opacity: 0.3; }
-        50% { transform: scale(2); opacity: 0; }
-      }
-    </style>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-})
-
-function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap()
-  const hasFlownRef = useRef(false)
-
-  useEffect(() => {
-    if (!hasFlownRef.current) {
-      map.setView(center, zoom)
-      hasFlownRef.current = true
-      return
-    }
-    map.flyTo(center, zoom, { duration: 1 })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center[0], center[1], zoom, map])
-
-  return null
-}
 
 export default function HomePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -383,6 +315,29 @@ export default function HomePage() {
     [userLocation]
   )
 
+  const mapMarkers = useMemo<MapMarkerSpec[]>(() => {
+    const markers: MapMarkerSpec[] = reports.map((r) => ({
+      id: r.id,
+      lat: r.lat,
+      lng: r.lng,
+      html: reportPinHtml(r.color, r.id === selectedId),
+      anchor: r.id === selectedId ? REPORT_PIN_SELECTED_ANCHOR : REPORT_PIN_ANCHOR,
+      onClick: () => setSelectedId(r.id === selectedId ? null : r.id),
+    }))
+
+    if (userLocation) {
+      markers.push({
+        id: '__user_location__',
+        lat: userLocation[0],
+        lng: userLocation[1],
+        html: userLocationPinHtml,
+        anchor: USER_LOCATION_ANCHOR,
+      })
+    }
+
+    return markers
+  }, [reports, selectedId, userLocation])
+
   if (!mapReady) {
     return (
       <div className="flex flex-col items-center justify-center h-[100dvh] w-full bg-gray-100">
@@ -400,45 +355,15 @@ export default function HomePage() {
       className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
       style={{ overscrollBehavior: 'none' }}
     >
-      {/* Leaflet Map — fills full viewport on every screen size */}
-      <MapContainer
-        center={mapCenter}
-        zoom={15}
-        style={{ height: '100%', width: '100%', zIndex: 1 }}
-        zoomControl={false}
-        attributionControl={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      {/* Google Map — fills full viewport on every screen size. The map
+          script + component chunk are both lazy-loaded on demand. */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+        <LazyGoogleMap
+          center={{ lat: mapCenter[0], lng: mapCenter[1] }}
+          zoom={15}
+          markers={mapMarkers}
         />
-        <MapController center={mapCenter} zoom={15} />
-
-        {userLocation && (
-          <Marker position={userLocation} icon={userLocationIcon}>
-            <Popup>You are here</Popup>
-          </Marker>
-        )}
-
-        {reports.map((r) => (
-          <Marker
-            key={r.id}
-            position={[r.lat, r.lng]}
-            icon={createReportIcon(r.color, r.id === selectedId)}
-            eventHandlers={{
-              click: () => setSelectedId(r.id === selectedId ? null : r.id),
-            }}
-          >
-            {r.id === selectedId && (
-              <Popup closeButton={false} className="report-popup">
-                <div className="text-center">
-                  <p className="text-[13px] font-bold">{r.streetLabel}</p>
-                </div>
-              </Popup>
-            )}
-          </Marker>
-        ))}
-      </MapContainer>
+      </div>
 
       {/* Location error toast — capped width so it doesn't stretch full-bleed on desktop */}
       {locationError && (
@@ -501,8 +426,8 @@ export default function HomePage() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute z-[500] bottom-16 left-0 right-0 max-h-[70vh] overflow-y-auto
-                       lg:bottom-auto lg:left-auto lg:top-6 lg:right-6 lg:w-96 lg:max-h-[85vh] lg:rounded-3xl lg:shadow-2xl"
+            className="absolute z-[500] bottom-16 left-0 right-0 max-h-[70dvh] overflow-y-auto
+                       lg:bottom-auto lg:left-auto lg:top-6 lg:right-6 lg:w-96 lg:max-h-[85dvh] lg:rounded-3xl lg:shadow-2xl"
           >
             <ReportDetailModal
               report={selected}

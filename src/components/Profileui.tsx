@@ -54,10 +54,13 @@ interface ModalSheetProps {
 
 export function ModalSheet({ title, onClose, onBack, children, footer }: ModalSheetProps) {
   return (
-    <div className="fixed inset-0 flex items-end justify-center z-60 bg-black/40">
-      <div className="relative flex h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl">
+    <div className="fixed inset-0 flex items-end justify-center z-[60] bg-black/40">
+      <div
+        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl"
+        style={{ height: 'min(92dvh, 92svh)', maxHeight: '100dvh' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-2">
+        <div className="flex items-center justify-between px-6 pb-2 pt-[calc(1.5rem+env(safe-area-inset-top))]">
           {onBack ? (
             <button
               onClick={onBack}
@@ -151,8 +154,11 @@ export function SuccessScreen({
   onSecondary,
 }: SuccessScreenProps) {
   return (
-    <div className="fixed inset-0 z-60 flex items-end justify-center bg-black/40">
-      <div className="relative flex h-[92vh] w-full max-w-md flex-col items-center rounded-t-3xl bg-emerald-700 px-8 py-10 text-center shadow-2xl">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40">
+      <div
+        className="relative flex w-full max-w-md flex-col items-center rounded-t-[40px] bg-emerald-700 px-8 py-10 text-center shadow-2xl"
+        style={{ height: 'min(92dvh, 92svh)', maxHeight: '100dvh' }}
+      >
         <div className="flex flex-1 min-h-0 w-full flex-col items-center justify-center overflow-y-auto py-4">
           <div className="flex items-center justify-center rounded-full shadow-lg h-28 w-28 bg-emerald-500 shrink-0">
             <Check size={56} className="text-white" strokeWidth={3} />

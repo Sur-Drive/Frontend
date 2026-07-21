@@ -53,7 +53,7 @@
 // function ConfirmModal({ report, action, onCancel, onConfirm }: ConfirmModalProps) {
 //   const isConfirm = action === 'confirm'
 //   return (
-//     <div className="fixed inset-0 flex items-center justify-center px-6 z-60 bg-black/40" onClick={onCancel}>
+//     <div className="fixed inset-0 flex items-center justify-center px-6 z-[60] bg-black/40" onClick={onCancel}>
 //       <div className="w-full max-w-sm px-6 py-8 text-center bg-white shadow-xl rounded-3xl" onClick={(e) => e.stopPropagation()}>
 //         <h2 className="text-xl font-bold text-gray-900">
 //           {isConfirm ? 'Confirm this hazard?' : 'Mark as incorrect?'}

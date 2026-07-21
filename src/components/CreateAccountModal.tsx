@@ -98,7 +98,7 @@ export default function CreateAccountModal({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 flex items-end justify-center sm:items-center z-90"
+        className="fixed inset-0 flex items-end justify-center sm:items-center z-[90]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -114,7 +114,7 @@ export default function CreateAccountModal({
         />
 
         <motion.div
-          className="relative w-full max-w-[430px] sm:max-w-[480px] lg:max-w-[520px] bg-white rounded-t-[40px] sm:rounded-[40px] sm:max-h-[100vh] sm:m-4 flex flex-col overflow-hidden shadow-2xl"
+          className="relative w-full h-[92dvh] max-w-[430px] sm:max-w-[480px] lg:max-w-[520px] bg-white rounded-t-[40px] sm:rounded-[40px] sm:max-h-[100vh] sm:m-4 flex flex-col overflow-hidden shadow-2xl"
           style={{ maxHeight: '100dvh' }}
           initial={{ y: '110%' }}
           animate={{ y: 0 }}

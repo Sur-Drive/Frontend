@@ -4,112 +4,22 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import LazyGoogleMap from '../components/map/LazyGoogleMap'
+import type { MapMarkerSpec } from '../components/map/GoogleMapView'
+import AddressAutocompleteInput, { type SelectedAddress } from '../components/map/AddressAutocompleteInput'
+import {
+  reportPinHtml,
+  REPORT_PIN_ANCHOR,
+  REPORT_PIN_SELECTED_ANCHOR,
+  userLocationPinHtml,
+  USER_LOCATION_ANCHOR,
+  navArrowPinHtml,
+  NAV_ARROW_ANCHOR,
+} from '../components/map/mapMarkerIcons'
 import BottomNav from '../components/BottomNav'
 import AuthFlow from '../components/AuthFlow'
 import { getUserProfile } from '../api/profile'
-
-// Fix Leaflet default icon
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-
-const DefaultIcon = L.icon({
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
-L.Marker.prototype.options.icon = DefaultIcon
-
-// Create custom report pin icons
-const createReportIcon = (color: string, isSelected: boolean) => {
-  const size = isSelected ? 56 : 36
-  return L.divIcon({
-    className: 'custom-pin',
-    html: `
-      <div style="
-        background:${color};
-        width:${size}px;
-        height:${size}px;
-        border-radius:50%;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        box-shadow:${isSelected ? '0 4px 16px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.2)'};
-        border:3px solid white;
-        transition:all 0.2s;
-        cursor:pointer;
-      ">
-        <span style="color:white;font-size:${isSelected ? 18 : 12}px;font-weight:bold;">!</span>
-      </div>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -size / 2],
-  })
-}
-
-// User location icon (blue dot with pulse)
-const userLocationIcon = L.divIcon({
-  className: 'user-location',
-  html: `
-    <div style="position:relative;width:24px;height:24px;">
-      <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.3;animation:pulse 1.5s infinite;"></div>
-      <div style="position:absolute;inset:4px;border-radius:50%;background:#3b82f6;border:2px solid white;"></div>
-    </div>
-    <style>
-      @keyframes pulse {
-        0%,100% { transform: scale(1); opacity: 0.3; }
-        50% { transform: scale(2); opacity: 0; }
-      }
-    </style>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-})
-
-// Navigation arrow icon (blue arrow)
-const navArrowIcon = L.divIcon({
-  className: 'nav-arrow',
-  html: `
-    <div style="position:relative;width:28px;height:28px;">
-      <div style="position:absolute;inset:0;border-radius:50%;background:#0ea5e9;opacity:0.3;animation:pulse 1.5s infinite;"></div>
-      <div style="position:absolute;inset:3px;border-radius:50%;background:#0ea5e9;border:2px solid white;display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
-          <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
-        </svg>
-      </div>
-    </div>
-    <style>
-      @keyframes pulse {
-        0%,100% { transform: scale(1); opacity: 0.3; }
-        50% { transform: scale(2); opacity: 0; }
-      }
-    </style>
-  `,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-})
-
-// Pan map to location when ready
-function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap()
-  const hasFlownRef = useRef(false)
-
-  useEffect(() => {
-    if (!hasFlownRef.current) {
-      map.setView(center, zoom)
-      hasFlownRef.current = true
-      return
-    }
-    map.flyTo(center, zoom, { duration: 1 })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center[0], center[1], zoom, map])
-
-  return null
-}
+import { reverseGeocode } from '../api/geocoding'
 
 // ─── Types ─────────────────────────────────────────────
 type ReportType = 'wave' | 'hill' | 'pothole' | 'hazard' | 'sos' | 'sign' | 'warning' | 'tractor'
@@ -288,6 +198,10 @@ export default function PlanRoutePage() {
 
   const [startPoint, setStartPoint] = useState('')
   const [destination, setDestination] = useState('')
+  // Captured from the autocomplete/reverse-geocode flows for when route
+  // planning needs real coordinates instead of just display text.
+  const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   // ── Geolocation State ────────────────────────────────
   const [isGettingLocation, setIsGettingLocation] = useState(false)
@@ -331,28 +245,15 @@ export default function PlanRoutePage() {
     }
   }, [])
 
-  // ── Reverse Geocode (OpenStreetMap Nominatim) ──────
-  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+  // ── Reverse geocode via backend (never call Geocoding API from the frontend) ──
+  const reverseGeocodeStartPoint = useCallback(async (lat: number, lng: number) => {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-      )
-      const data = await response.json()
-
-      const address = data.address
-      const suburb = address.suburb || address.neighbourhood || address.district || ''
-      const road = address.road || address.street || ''
-      const city = address.city || address.town || address.village || address.state || ''
-
-      const shortAddress = suburb
-        ? `${suburb}, ${city}`
-        : road
-          ? `${road}, ${city}`
-          : data.display_name?.split(',')[0] || 'Current Location'
-
-      setStartPoint(shortAddress)
+      const { address } = await reverseGeocode(lat, lng)
+      setStartPoint(address)
+      setStartCoords({ lat, lng })
     } catch (err) {
       setStartPoint(`${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+      setStartCoords({ lat, lng })
     } finally {
       setIsGettingLocation(false)
     }
@@ -371,7 +272,7 @@ export default function PlanRoutePage() {
         const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
         setUserLocation(loc)
         setMapReady(true)
-        reverseGeocode(position.coords.latitude, position.coords.longitude)
+        reverseGeocodeStartPoint(position.coords.latitude, position.coords.longitude)
       },
       (error) => {
         let message = 'Unable to retrieve your location'
@@ -417,7 +318,7 @@ export default function PlanRoutePage() {
       (position) => {
         const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
         setUserLocation(loc)
-        reverseGeocode(position.coords.latitude, position.coords.longitude)
+        reverseGeocodeStartPoint(position.coords.latitude, position.coords.longitude)
       },
       (error) => {
         let message = 'Unable to retrieve your location'
@@ -437,7 +338,7 @@ export default function PlanRoutePage() {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
-  }, [reverseGeocode])
+  }, [reverseGeocodeStartPoint])
 
   // ── Route Logic ─────────────────────────────────────
   const handleScanRoute = () => {
@@ -472,6 +373,29 @@ export default function PlanRoutePage() {
     () => userLocation || [reports[0].lat, reports[0].lng],
     [userLocation]
   )
+
+  const mapMarkers = useMemo<MapMarkerSpec[]>(() => {
+    const markers: MapMarkerSpec[] = reports.map((r) => ({
+      id: r.id,
+      lat: r.lat,
+      lng: r.lng,
+      html: reportPinHtml(r.color, r.id === selectedPin),
+      anchor: r.id === selectedPin ? REPORT_PIN_SELECTED_ANCHOR : REPORT_PIN_ANCHOR,
+      onClick: () => setSelectedPin(r.id === selectedPin ? null : r.id),
+    }))
+
+    if (userLocation) {
+      markers.push({
+        id: '__user_location__',
+        lat: userLocation[0],
+        lng: userLocation[1],
+        html: isNavigating ? navArrowPinHtml : userLocationPinHtml,
+        anchor: isNavigating ? NAV_ARROW_ANCHOR : USER_LOCATION_ANCHOR,
+      })
+    }
+
+    return markers
+  }, [selectedPin, userLocation, isNavigating])
 
   // ── Profile Helpers ──────────────────────────────────
   const avatarInitials = useMemo(() => {
@@ -522,53 +446,13 @@ export default function PlanRoutePage() {
       className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
       style={{ overscrollBehavior: 'none' }}
     >
-      {/* Leaflet Map */}
+      {/* Google Map — script + component chunk both lazy-loaded on demand */}
       <div className="absolute inset-0 z-0">
-        <MapContainer
-          center={mapCenter}
+        <LazyGoogleMap
+          center={{ lat: mapCenter[0], lng: mapCenter[1] }}
           zoom={15}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-          attributionControl={false}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapController center={mapCenter} zoom={15} />
-
-          {/* User location marker */}
-          {userLocation && !isNavigating && (
-            <Marker position={userLocation} icon={userLocationIcon}>
-              <Popup>You are here</Popup>
-            </Marker>
-          )}
-
-          {/* Navigation arrow (when navigating) */}
-          {isNavigating && userLocation && (
-            <Marker position={userLocation} icon={navArrowIcon} />
-          )}
-
-          {/* Report markers */}
-          {reports.map((r) => (
-            <Marker
-              key={r.id}
-              position={[r.lat, r.lng]}
-              icon={createReportIcon(r.color, r.id === selectedPin)}
-              eventHandlers={{
-                click: () => setSelectedPin(r.id === selectedPin ? null : r.id),
-              }}
-            >
-              {r.id === selectedPin && (
-                <Popup closeButton={false} className="report-popup">
-                  <div className="text-center">
-                    <p className="text-sm font-bold">{r.label}</p>
-                  </div>
-                </Popup>
-              )}
-            </Marker>
-          ))}
-        </MapContainer>
+          markers={mapMarkers}
+        />
       </div>
 
       {/* Location error toast */}
@@ -798,12 +682,13 @@ export default function PlanRoutePage() {
                   <span className="text-xs font-medium text-gray-900 sm:text-sm">Point A — Start</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl">
-                  <input
-                    type="text"
-                    placeholder="Search a place or Address"
+                  <AddressAutocompleteInput
                     value={startPoint}
-                    onChange={(e) => setStartPoint(e.target.value)}
-                    className="flex-1 text-xs text-gray-900 placeholder-gray-400 bg-transparent outline-none sm:text-sm"
+                    onChange={setStartPoint}
+                    onSelect={(result) => setStartCoords({ lat: result.lat, lng: result.lng })}
+                    placeholder="Search a place or Address"
+                    className="flex-1"
+                    inputClassName="w-full text-xs text-gray-900 placeholder-gray-400 bg-transparent outline-none sm:text-sm"
                   />
                   <button
                     onClick={handleUseMyLocation}
@@ -834,12 +719,12 @@ export default function PlanRoutePage() {
                   <span className="text-xs font-medium text-gray-900 sm:text-sm">Point B — Destination</span>
                 </div>
                 <div className="px-4 py-3 bg-gray-50 rounded-xl">
-                  <input
-                    type="text"
-                    placeholder="Where to?"
+                  <AddressAutocompleteInput
                     value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
-                    className="w-full text-xs text-gray-900 placeholder-gray-400 bg-transparent outline-none sm:text-sm"
+                    onChange={setDestination}
+                    onSelect={(result) => setDestinationCoords({ lat: result.lat, lng: result.lng })}
+                    placeholder="Where to?"
+                    inputClassName="w-full text-xs text-gray-900 placeholder-gray-400 bg-transparent outline-none sm:text-sm"
                   />
                 </div>
               </div>

@@ -1,18 +1,10 @@
 
-
-
-
-
-
-
-import { useEffect, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useCurrentLocation } from '../hooks/useCurrentLocation'
-import { useHazardFeed, useConfirmHazard } from '../hooks/useHazards'
+import { useNearbyFeed, useVoteHazard } from '../hooks/useFeed'
 import AuthFlow from '../components/AuthFlow'
 import type { BackendHazardType, Hazard } from '../types/hazard'
-
-// ---------- Display mapping ----------
 
 const TYPE_LABEL: Record<BackendHazardType, string> = {
   POTHOLE: 'Pothole',
@@ -60,53 +52,11 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): num
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function getErrorStatus(error: unknown): number | undefined {
-  if (!error || typeof error !== 'object') return undefined
-  const e = error as any
-  return (
-    e.response?.status ??
-    e.status ??
-    e.statusCode ??
-    e.cause?.status ??
-    undefined
-  )
-}
-
-// ---------- Signed-out state ----------
-
-function SignedOutFeed({ onSignIn }: { onSignIn: () => void }) {
-  return (
-    <div className="flex flex-col items-center px-6 text-center pt-14">
-      <div className="relative flex items-center justify-center mb-5 w-28 h-28">
-        <div className="absolute w-32 h-16 rounded-full bg-purple-50" />
-        <span className="absolute text-sm text-purple-200 -left-2 top-2">✦</span>
-        <span className="absolute text-base text-purple-200 -right-2 top-6">✦</span>
-        <div className="relative flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full">
-          <LockIcon />
-        </div>
-      </div>
-
-      <h2 className="text-base font-bold text-gray-900">Sign in to see the road feed</h2>
-      <p className="mt-1.5 max-w-xs text-[12px] leading-relaxed text-gray-400">
-        Live hazard reports from drivers near you are only visible to signed-in users. Sign in or
-        create an account to get started.
-      </p>
-
-      <button
-        onClick={onSignIn}
-        className="mt-5 flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-purple-700 py-3 text-[13px] font-semibold text-white transition hover:bg-purple-800 active:scale-[0.98]"
-      >
-        Sign in
-      </button>
-    </div>
-  )
-}
-
 function LockIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="w-6 h-6 text-purple-500"
+      className="w-6 h-6 text-purple-500 sm:w-7 sm:h-7"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -118,8 +68,6 @@ function LockIcon() {
     </svg>
   )
 }
-
-// ---------- Confirmation Modal ----------
 
 function ConfirmModal({
   hazard,
@@ -195,8 +143,6 @@ function ConfirmModal({
   )
 }
 
-// ---------- Report Card ----------
-
 function ReportCard({
   hazard,
   distanceKm: dist,
@@ -215,7 +161,6 @@ function ReportCard({
 
   return (
     <div className="w-full overflow-hidden transition bg-white border border-gray-100 shadow-sm rounded-3xl hover:shadow-md">
-      {/* Map-style header */}
       <div className="relative flex items-center justify-center h-24 bg-gradient-to-br from-emerald-100 via-teal-50 to-sky-100">
         {hazard.photoUrl ? (
           <img src={hazard.photoUrl} alt="" className="absolute inset-0 object-cover w-full h-full" />
@@ -235,7 +180,6 @@ function ReportCard({
         )}
       </div>
 
-      {/* Body */}
       <div className="px-3 pt-2.5 pb-3">
         <div className="flex items-center justify-between gap-2">
           <span className="px-2 py-0.5 text-[10px] font-medium text-gray-600 bg-gray-100 rounded-full whitespace-nowrap">
@@ -290,16 +234,58 @@ function ReportCard({
   )
 }
 
-// ---------- Page ----------
+// ---------- Signed-out state (same design as Profile page) ----------
+
+function SignedOutFeed({
+  onSignIn,
+  onCreateAccount,
+}: {
+  onSignIn: () => void
+  onCreateAccount: () => void
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 pt-10 text-center sm:pt-14">
+      <div className="relative flex items-center justify-center mb-5 w-28 h-28 sm:w-32 sm:h-32 sm:mb-6">
+        <div className="absolute w-32 h-16 rounded-full sm:w-36 sm:h-[72px] bg-purple-50" />
+        <span className="absolute text-sm text-purple-200 -left-1 top-1">✦</span>
+        <span className="absolute text-base text-purple-200 -right-1 top-6 sm:top-8">✦</span>
+        <div className="relative flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full sm:w-[72px] sm:h-[72px]">
+          <LockIcon />
+        </div>
+      </div>
+
+      <h2 className="text-base font-bold text-gray-900 sm:text-lg">
+        Sign in to vote on hazards
+      </h2>
+      <p className="max-w-sm mt-2 text-xs leading-relaxed text-gray-400 sm:text-sm">
+        Confirm or mark hazards as incorrect to help other drivers stay safe. Sign in or create an account to get started.
+      </p>
+
+      <div className="flex flex-col w-full max-w-sm gap-3 mt-6 sm:mt-8">
+        <button
+          onClick={onCreateAccount}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-purple-200 bg-white py-3 text-sm font-semibold text-purple-700 transition active:scale-[0.98] hover:bg-purple-50"
+        >
+          Create Account
+        </button>
+        <button
+          onClick={onSignIn}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-700 py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
+        >
+          Sign in
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const DEFAULT_RADIUS_KM = 10
 
-export default function RoadFeed() {
+export default function FeedPage() {
   const [showAuth, setShowAuth] = useState(false)
-
-  const [hasToken, setHasToken] = useState(
-    () => typeof window !== 'undefined' && !!localStorage.getItem('token')
-  )
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
+  const [showAuthWall, setShowAuthWall] = useState(false)
+  const [pendingVote, setPendingVote] = useState<PendingAction | null>(null)
 
   const { coords, isLoading: isLocating, error: locationError } = useCurrentLocation()
 
@@ -313,67 +299,123 @@ export default function RoadFeed() {
     isError,
     error: feedError,
     refetch,
-  } = useHazardFeed(hasToken ? feedParams : null)
+  } = useNearbyFeed(feedParams)
 
-  const confirmMutation = useConfirmHazard()
+  const voteMutation = useVoteHazard()
 
   const [pending, setPending] = useState<PendingAction | null>(null)
   const [voteError, setVoteError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!isError) return
-    const status = getErrorStatus(feedError)
-    if (status === 401) {
-      localStorage.removeItem('token')
-      setHasToken(false)
-    }
-  }, [isError, feedError])
+  // Tracks whether the vote currently in `pending` should be auto-submitted
+  // once state settles (used for the post-auth retry flow).
+  const autoRetryRef = useRef(false)
 
-  const isLoggedIn = hasToken
+  const handleSignIn = () => {
+    setAuthMode('signin')
+    setShowAuth(true)
+  }
+
+  const handleCreateAccount = () => {
+    setAuthMode('signup')
+    setShowAuth(true)
+  }
+
+  const handleAuthSuccess = () => {
+    setShowAuth(false)
+    setShowAuthWall(false)
+    if (pendingVote) {
+      autoRetryRef.current = true
+      setPending(pendingVote)
+      setPendingVote(null)
+    }
+  }
+
+  // Runs once `pending` actually reflects the retried vote, avoiding the
+  // fragile setTimeout-based retry from the original implementation.
+  useEffect(() => {
+    if (autoRetryRef.current && pending) {
+      autoRetryRef.current = false
+      applyVote()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending])
 
   const requestVote = (hazardId: string, action: 'confirm' | 'incorrect') => {
+    // Ignore new requests while a vote is mid-flight, to prevent
+    // double-submits from rapid clicks.
+    if (voteMutation.isPending) return
     setVoteError(null)
     setPending({ hazardId, action })
   }
 
   const cancelVote = () => {
-    if (confirmMutation.isPending) return
+    if (voteMutation.isPending) return
     setPending(null)
     setVoteError(null)
   }
 
   const applyVote = async () => {
-    if (!pending) return
+    // Guard against double-submit: ignore if there's nothing pending or
+    // a request is already in flight.
+    if (!pending || voteMutation.isPending) return
     setVoteError(null)
     try {
-      await confirmMutation.mutateAsync({
+      await voteMutation.mutateAsync({
         hazardId: pending.hazardId,
         type: pending.action === 'confirm' ? 'CONFIRM' : 'INCORRECT',
       })
       setPending(null)
+      setPendingVote(null)
     } catch (err) {
       console.error('Failed to submit vote', err)
-      const status = getErrorStatus(err)
+
+      const status = err instanceof Error && 'status' in err ? (err as any).status : undefined
+
       if (status === 401) {
-        localStorage.removeItem('token')
-        setHasToken(false)
+        setPendingVote({ ...pending })
+        setShowAuthWall(true)
         setPending(null)
         return
       }
+
       setVoteError('Something went wrong sending your vote. Please try again.')
     }
   }
 
   const pendingHazard = pending ? hazards.find((h) => h.id === pending.hazardId) : undefined
 
-  const isLoading = isLoggedIn && (isLocating || (coords !== null && isFeedLoading))
+  const isLoading = isLocating || (coords !== null && isFeedLoading)
 
-  const isRealError = isError && getErrorStatus(feedError) !== 401
+  // If auth wall is showing, render the signed-out design
+  if (showAuthWall) {
+    return (
+      <div className="min-h-screen bg-gray-50 pb-28">
+        <div className="max-w-6xl px-4 mx-auto sm:px-6 lg:px-8">
+          <div className="pt-5 pb-3 lg:pt-8 lg:pb-4">
+            <h1 className="text-[18px] font-extrabold leading-none text-gray-800">
+              Road Feed
+            </h1>
+            <p className="mt-1 text-[12px] text-gray-400">
+              Live reports from drivers near you.
+            </p>
+          </div>
+          <SignedOutFeed onSignIn={handleSignIn} onCreateAccount={handleCreateAccount} />
+        </div>
+
+        {showAuth && (
+          <AuthFlow
+            initialScreen={authMode}
+            onClose={() => setShowAuth(false)}
+            onAuthSuccess={handleAuthSuccess}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
       <div className="max-w-6xl px-4 mx-auto sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="pt-5 pb-3 lg:pt-8 lg:pb-4">
           <h1 className="text-[18px] font-extrabold leading-none text-gray-800">
             Road Feed
@@ -383,10 +425,7 @@ export default function RoadFeed() {
           </p>
         </div>
 
-        {/* Feed */}
-        {!isLoggedIn ? (
-          <SignedOutFeed onSignIn={() => setShowAuth(true)} />
-        ) : locationError ? (
+        {locationError ? (
           <p className="text-[13px] text-center text-red-500 max-w-md mx-auto">
             Couldn't get your location: {locationError}
           </p>
@@ -394,8 +433,19 @@ export default function RoadFeed() {
           <div className="flex items-center justify-center py-16">
             <Loader2 size={22} className="text-purple-700 animate-spin" />
           </div>
-        ) : isRealError ? (
-          <p className="text-[13px] text-center text-red-500 max-w-md mx-auto">Failed to load the feed.</p>
+        ) : isError ? (
+          <div className="max-w-md mx-auto text-center">
+            <p className="text-[13px] text-red-500">Failed to load the feed.</p>
+            <pre className="mt-2 text-[11px] text-left bg-gray-100 p-3 rounded-lg overflow-auto">
+              {feedError instanceof Error ? feedError.message : JSON.stringify(feedError, null, 2)}
+            </pre>
+            <button
+              onClick={() => refetch()}
+              className="mt-3 text-[12px] text-purple-700 underline"
+            >
+              Retry
+            </button>
+          </div>
         ) : hazards.length === 0 ? (
           <p className="text-[13px] text-center text-gray-400 max-w-md mx-auto">No hazards reported nearby.</p>
         ) : (
@@ -427,23 +477,18 @@ export default function RoadFeed() {
             error={voteError}
             onCancel={cancelVote}
             onConfirm={applyVote}
-            isSubmitting={confirmMutation.isPending}
+            isSubmitting={voteMutation.isPending}
           />
         )}
 
         {showAuth && (
           <AuthFlow
+            initialScreen={authMode}
             onClose={() => setShowAuth(false)}
-            onAuthSuccess={() => {
-              setShowAuth(false)
-              setHasToken(true)
-              refetch()
-            }}
+            onAuthSuccess={handleAuthSuccess}
           />
         )}
       </div>
-
-      {/* Your existing <BottomNav /> renders below this page */}
     </div>
   )
 }
