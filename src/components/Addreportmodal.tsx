@@ -1,11 +1,8 @@
-
-
-
-
-
 import { useRef, useState } from 'react'
 import { X, Camera, MapPin, Check, Loader2, Navigation } from 'lucide-react'
 import { useCreateHazard, useCreateHazardWithPhoto } from '../hooks/useHazards'
+import AddressAutocompleteInput, { type SelectedAddress } from './map/AddressAutocompleteInput'
+import { reverseGeocode, forwardGeocode } from '../api/geocoding'
 import type { BackendHazardType, Severity } from '../types/hazard'
 
 // ---------- Types ----------
@@ -67,6 +64,7 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
   const [locationAddress, setLocationAddress] = useState('')
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -75,7 +73,13 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
   const createHazardWithPhoto = useCreateHazardWithPhoto()
   const isSubmitting = createHazard.isPending || createHazardWithPhoto.isPending
 
-  const canSubmit = hazardType !== null && coords !== null && !isSubmitting
+  // A user can either pick a suggestion (coords already known) or type a
+  // free-form address and let handleSubmit resolve it via forwardGeocode.
+  const canSubmit =
+    hazardType !== null &&
+    (coords !== null || locationAddress.trim().length > 0) &&
+    !isSubmitting &&
+    !isResolvingAddress
 
   const resetForm = () => {
     setHazardType(null)
@@ -102,26 +106,11 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
     setPhotos((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // ── Reverse Geocode (OpenStreetMap Nominatim) ──────
-  const reverseGeocode = async (lat: number, lng: number) => {
+  // ── Reverse geocode via backend (never call Geocoding API from the frontend) ──
+  const reverseGeocodeCoords = async (lat: number, lng: number) => {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-      )
-      const data = await response.json()
-
-      const address = data.address
-      const suburb = address.suburb || address.neighbourhood || address.district || ''
-      const road = address.road || address.street || ''
-      const city = address.city || address.town || address.village || address.state || ''
-
-      const shortAddress = suburb
-        ? `${suburb}, ${city}`
-        : road
-          ? `${road}, ${city}`
-          : data.display_name?.split(',')[0] || 'Current Location'
-
-      setLocationAddress(shortAddress)
+      const { address } = await reverseGeocode(lat, lng)
+      setLocationAddress(address)
       setCoords({ lat, lng })
     } catch {
       setLocationAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`)
@@ -129,6 +118,15 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
     } finally {
       setIsGettingLocation(false)
     }
+  }
+
+  // ── Address selected from the autocomplete dropdown ──
+  // Places Autocomplete + Place Details already return lat/lng directly —
+  // no geocoding call needed for this path at all.
+  const handleAddressSelect = (result: SelectedAddress) => {
+    setLocationAddress(result.address)
+    setCoords({ lat: result.lat, lng: result.lng })
+    setLocationError(null)
   }
 
   const handleUseMyLocation = () => {
@@ -144,7 +142,7 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords
-        reverseGeocode(latitude, longitude)
+        reverseGeocodeCoords(latitude, longitude)
       },
       (error) => {
         let message = 'Unable to get location'
@@ -167,13 +165,34 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
   }
 
   const handleSubmit = async () => {
-    if (!hazardType || !coords) return
+    if (!hazardType) return
+
+    let finalCoords = coords
+
+    if (!finalCoords) {
+      const trimmed = locationAddress.trim()
+      if (!trimmed) return
+
+      setIsResolvingAddress(true)
+      setLocationError(null)
+      try {
+        const result = await forwardGeocode(trimmed)
+        finalCoords = { lat: result.lat, lng: result.lng }
+        setCoords(finalCoords)
+      } catch (err) {
+        console.error('Failed to geocode address', err)
+        setLocationError('Could not find that address — try picking a suggestion from the dropdown.')
+        return
+      } finally {
+        setIsResolvingAddress(false)
+      }
+    }
 
     const basePayload = {
       type: HAZARD_TYPE_MAP[hazardType],
       description,
-      latitude: coords.lat,
-      longitude: coords.lng,
+      latitude: finalCoords.lat,
+      longitude: finalCoords.lng,
       locationAddress,
       severity,
       isAnonymous,
@@ -204,7 +223,7 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40">
-      <div className="relative flex h-[92dvh] sm:h-auto sm:max-h-[85vh] w-full sm:max-w-[420px] flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+      <div className="relative flex h-[92dvh] sm:h-auto sm:max-h-[85vh] w-full sm:max-w-[420px] flex-col overflow-hidden rounded-t-[40px] sm:rounded-3xl bg-white shadow-2xl">
         {step === 'form' ? (
           <>
             {/* Header */}
@@ -317,11 +336,13 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
                 Location
               </div>
               <div className="flex items-center gap-2 rounded-xl sm:rounded-2xl bg-gray-100 px-3.5 sm:px-4 py-3 sm:py-3.5">
-                <input
+                <AddressAutocompleteInput
                   value={locationAddress}
-                  onChange={(e) => setLocationAddress(e.target.value)}
+                  onChange={setLocationAddress}
+                  onSelect={handleAddressSelect}
                   placeholder="Search location"
-                  className="flex-1 bg-transparent text-sm sm:text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                  className="flex-1"
+                  inputClassName="w-full bg-transparent text-sm sm:text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -342,9 +363,9 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
                   )}
                 </button>
               </div>
-              {!coords && (
+              {!coords && !locationAddress.trim() && (
                 <p className="mt-1.5 ml-1 text-[11px] sm:text-xs text-gray-400">
-                  Tap "Use my location" to attach coordinates — required to submit.
+                  Search an address, pick a suggestion, or tap "Use my location".
                 </p>
               )}
               {locationError && (
@@ -372,8 +393,8 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
                   canSubmit ? 'bg-purple-700 active:scale-[0.98]' : 'bg-purple-300'
                 }`}
               >
-                {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                {isSubmitting ? 'Submitting...' : 'Submit report'}
+                {(isSubmitting || isResolvingAddress) && <Loader2 size={16} className="animate-spin" />}
+                {isResolvingAddress ? 'Finding location...' : isSubmitting ? 'Submitting...' : 'Submit report'}
               </button>
             </div>
           </>

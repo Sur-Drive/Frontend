@@ -625,7 +625,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
-                        className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 shadow-2xl border-2 border-gold-500/30"
+                        className="bg-white rounded-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 md:p-8 shadow-2xl border-2 border-gold-500/30"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {status === "success" ? (

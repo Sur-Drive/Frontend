@@ -38,7 +38,7 @@ export default defineConfig({
         background_color: "#000000",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/",
+        start_url: "/home",
         scope: "/",
         icons: [
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },

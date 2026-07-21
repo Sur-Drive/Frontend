@@ -75,7 +75,7 @@ export default function CreatePassword({
       {step !== 'success' ? (
         <motion.div
           key="form-sheet"
-          className="fixed inset-0 flex items-end justify-center z-60"
+          className="fixed inset-0 flex items-end justify-center z-[60]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
