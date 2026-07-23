@@ -29,7 +29,12 @@ const queryClient = new QueryClient({
 });
 
 // Pages that should NOT show the BottomNav
-const NO_NAV_PAGES = ["/", "/access-list", "/admin/login", "/admin/dashboard"];
+// /plan-route renders its own contextual BottomNav (see PlanRoutePage) that
+// hides itself while a trip is actively navigating — this global layout-level
+// nav doesn't know about that state, so keeping it here meant it sat fixed
+// on top of the page, at a higher z-index, permanently covering the
+// End Trip button whenever a trip was in progress.
+const NO_NAV_PAGES = ["/", "/access-list", "/admin/login", "/admin/dashboard", "/plan-route"];
 
 function AppRoutes() {
     const location = useLocation();

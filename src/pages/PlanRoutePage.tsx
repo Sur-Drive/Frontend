@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import LazyGoogleMap from '../components/map/LazyGoogleMap'
+import RouteMapView from '../components/map/RouteMapView'
 import type { MapMarkerSpec } from '../components/map/GoogleMapView'
 import AddressAutocompleteInput, { type SelectedAddress } from '../components/map/AddressAutocompleteInput'
 import {
@@ -13,13 +14,18 @@ import {
   REPORT_PIN_SELECTED_ANCHOR,
   userLocationPinHtml,
   USER_LOCATION_ANCHOR,
-  navArrowPinHtml,
-  NAV_ARROW_ANCHOR,
 } from '../components/map/mapMarkerIcons'
 import BottomNav from '../components/BottomNav'
 import AuthFlow from '../components/AuthFlow'
 import { getUserProfile } from '../api/profile'
 import { reverseGeocode } from '../api/geocoding'
+import { usePlanRouteOptions } from '../hooks/useRoutePlan'
+import { pickDefaultMode, getRoutePath } from '../api/route'
+import type { RouteModeKey } from '../types/routePlan'
+import { useRouteAnimation } from '../hooks/useRouteAnimation'
+import { useTriggerSos, useCancelSos } from '../hooks/useSos'
+import { ApiError } from '../lib/apiClient'
+import { cumulativeDistances, pointAtFraction, projectPointOntoPath, type LatLng } from '../lib/geoPath'
 
 // ─── Types ─────────────────────────────────────────────
 type ReportType = 'wave' | 'hill' | 'pothole' | 'hazard' | 'sos' | 'sign' | 'warning' | 'tractor'
@@ -195,6 +201,13 @@ export default function PlanRoutePage() {
   const [sosProgress, setSosProgress] = useState(0)
   const [showUpcomingAlert, setShowUpcomingAlert] = useState(false)
   const [selectedPin, setSelectedPin] = useState<string | null>(null)
+  // Which of the backend's driving/walking/cycling/motorcycle options is
+  // currently drawn on the map + drives the trip simulation below.
+  const [selectedMode, setSelectedMode] = useState<RouteModeKey>('driving')
+  // Lets the person collapse the ETA/End Trip card down to a slim pill so
+  // the map underneath isn't mostly covered by it — see the nav bottom
+  // sheet further down.
+  const [navPanelExpanded, setNavPanelExpanded] = useState(true)
 
   const [startPoint, setStartPoint] = useState('')
   const [destination, setDestination] = useState('')
@@ -202,12 +215,139 @@ export default function PlanRoutePage() {
   // planning needs real coordinates instead of just display text.
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [routeError, setRouteError] = useState<string | null>(null)
+  const [activeSosId, setActiveSosId] = useState<string | null>(null)
+  const [sosError, setSosError] = useState<string | null>(null)
+
+  // ── API mutations ────────────────────────────────────
+  // Real backend shape: one full RouteOption (with its own path/distance/
+  // duration/hazards) per travel mode, not a single flattened result — see
+  // types/routePlan.ts. This is what actually lets us draw the route and
+  // animate a trip along it, instead of just showing numbers in a panel.
+  const planRouteMutation = usePlanRouteOptions()
+  const triggerSosMutation = useTriggerSos()
+  const cancelSosMutation = useCancelSos()
+
+  const routePlan = planRouteMutation.data
+  const activeRoute = routePlan?.routes[selectedMode]
+  const routePath = useMemo(() => getRoutePath(activeRoute), [activeRoute])
+  const availableModes = useMemo<RouteModeKey[]>(
+    () => (routePlan ? (Object.keys(routePlan.routes) as RouteModeKey[]) : []),
+    [routePlan]
+  )
+
+  // Pick a sensible default mode (the backend's declared best/fastest) the
+  // first time a plan comes back, rather than always defaulting to driving
+  // even if the backend didn't return a driving option for this pair.
+  useEffect(() => {
+    if (!routePlan) return
+    const preferred = pickDefaultMode(routePlan)
+    if (preferred) setSelectedMode(preferred)
+  }, [routePlan])
+
+  // Drives the moving position/heading for the "trip in progress" view —
+  // a simulated run along the real planned path, standing in for GPS
+  // until this is wired to live location. Not started until Start Trip is
+  // tapped (autoPlay/loop both false: it plays once through, then stops
+  // at the destination like a real trip would).
+  const tripDurationMs = useMemo(() => {
+    if (!activeRoute) return 30000
+    // Compress the real ETA into a watchable demo pace (20s–90s) rather
+    // than literally waiting out an 18-minute drive.
+    return Math.min(90000, Math.max(20000, activeRoute.durationInSeconds * 60))
+  }, [activeRoute])
+
+  const trip = useRouteAnimation({
+    path: routePath,
+    durationMs: tripDurationMs,
+    autoPlay: false,
+    loop: false,
+  })
 
   // ── Geolocation State ────────────────────────────────
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [mapReady, setMapReady] = useState(false)
+
+  // ── Live GPS-driven trip progress ────────────────────
+  // While navigating, watch the device's real position and project each
+  // fix onto the planned route (projectPointOntoPath) instead of relying
+  // on the simulated `trip` clock above. Walking forward along the route
+  // increases `liveProgress`; doubling back genuinely decreases it, since
+  // the projection always snaps to the nearest point on the whole path.
+  // `trip` is left running as a fallback for devices/browsers where
+  // geolocation isn't available or hasn't produced a fix yet — see
+  // `displayProgress`/`displayHeading` below, which prefer the live value
+  // once one exists.
+  const routeCum = useMemo(() => cumulativeDistances(routePath), [routePath])
+  const [liveProgress, setLiveProgress] = useState<number | null>(null)
+  const [liveHeading, setLiveHeading] = useState(0)
+  // Distance in meters from the last GPS fix to the route itself — a
+  // simple "has the user wandered off the planned path" signal (missed
+  // turn, different street, etc.).
+  const [routeDeviationMeters, setRouteDeviationMeters] = useState<number | null>(null)
+  // Explicit state machine instead of silently guessing from liveProgress
+  // being null — 'waiting' shows a "getting your location" banner instead
+  // of quietly running the demo animation as if it were real movement.
+  // Only 'error' triggers the simulated-trip fallback, and the UI says so.
+  const [gpsStatus, setGpsStatus] = useState<'waiting' | 'active' | 'error'>('waiting')
+  const [gpsErrorMessage, setGpsErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isNavigating || routePath.length < 2) {
+      setLiveProgress(null)
+      return
+    }
+
+    if (!navigator.geolocation) {
+      setGpsStatus('error')
+      setGpsErrorMessage('Geolocation is not supported on this device')
+      trip.play()
+      return
+    }
+
+    setGpsStatus('waiting')
+    setGpsErrorMessage(null)
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude }
+        const projection = projectPointOntoPath(routePath, routeCum, raw)
+        const sample = pointAtFraction(routePath, routeCum, projection.fraction)
+
+        setGpsStatus('active')
+        setLiveProgress(projection.fraction)
+        setLiveHeading(sample.heading)
+        setRouteDeviationMeters(projection.distanceMeters)
+        setUserLocation([raw.lat, raw.lng])
+      },
+      (err) => {
+        console.warn('[gps] watchPosition error:', err.message)
+        setGpsStatus('error')
+        setGpsErrorMessage(err.message || 'Unable to get your location')
+        // Only now — a genuine permission denial or timeout, not just "no
+        // fix yet" — fall back to the simulated clock, so the map still
+        // shows *something* instead of a frozen trip.
+        trip.play()
+      },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+    )
+
+    return () => navigator.geolocation.clearWatch(watchId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNavigating, routePath, routeCum])
+
+  // Real GPS progress once we have a fix, simulated trip clock only as an
+  // explicit error fallback (see gpsStatus above) — never as a silent default.
+  const displayProgress = liveProgress ?? trip.progress
+  const displayHeading = liveProgress != null ? liveHeading : trip.heading
+
+  // Only meaningful once a real GPS fix is driving progress — the
+  // simulated fallback trip is always exactly on the path by definition.
+  const OFF_ROUTE_THRESHOLD_METERS = 40
+  const isOffRoute =
+    isNavigating && liveProgress != null && (routeDeviationMeters ?? 0) > OFF_ROUTE_THRESHOLD_METERS
 
   const sosTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null)
   const sosProgressRef = useRef(0)
@@ -227,10 +367,47 @@ export default function PlanRoutePage() {
         setSosHolding(false)
         setSosProgress(0)
         sosProgressRef.current = 0
+        setSosError(null)
+
+        if (!userLocation) {
+          // Never send an SOS with a hardcoded demo coordinate standing in
+          // for the user's real position — better to surface the failure
+          // than silently alert from the wrong place.
+          setSosError('Unable to get your location. Please enable location access and try again.')
+          return
+        }
+
         setShowSOS(true)
+
+        const [lat, lng] = userLocation
+        console.log('[sos] triggering SOS at', { lat, lng })
+        triggerSosMutation.mutate(
+          { latitude: lat, longitude: lng },
+          {
+            onSuccess: (data) => {
+              console.log('[sos] triggered successfully', data)
+              if (data?.id) setActiveSosId(data.id)
+            },
+            onError: (err) => {
+              console.error('[sos] failed to trigger', err)
+              const status = err instanceof ApiError ? err.status : undefined
+              const message = err instanceof Error ? err.message : 'Failed to send SOS alert'
+
+              if (status === 401) {
+                // Not signed in / session expired — close the SOS screen and
+                // send them to sign in rather than showing a fake success.
+                setShowSOS(false)
+                setShowAuth(true)
+                return
+              }
+
+              setSosError(message)
+            },
+          }
+        )
       }
     }, 60)
-  }, [showSOS])
+  }, [showSOS, userLocation, triggerSosMutation])
 
   const endSOSHold = useCallback(() => {
     if (sosTimerRef.current) window.clearInterval(sosTimerRef.current)
@@ -288,7 +465,14 @@ export default function PlanRoutePage() {
             break
         }
         setLocationError(message)
-        setUserLocation([reports[0].lat, reports[0].lng])
+        // Previously fell back to a hardcoded demo coordinate here
+        // (reports[0], a mock hazard pin) and treated it as the user's
+        // real location — which looked like location had been fetched
+        // successfully when it hadn't. Leave userLocation unset instead;
+        // the map's own center memo (below) already falls back to a
+        // neutral default for *display* purposes without pretending it's
+        // "your location," and the error banner tells the user what
+        // actually happened so they can retry/grant permission.
         setMapReady(true)
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -342,14 +526,69 @@ export default function PlanRoutePage() {
 
   // ── Route Logic ─────────────────────────────────────
   const handleScanRoute = () => {
-    if (!startPoint || !destination) return
+    console.log('[route] scan route clicked', {
+      startPoint,
+      destination,
+      startCoords,
+      destinationCoords,
+      userLocation,
+    })
+
+    if (!startPoint || !destination) {
+      console.log('[route] blocked: startPoint or destination text is empty')
+      return
+    }
+
+    const origin = startCoords ?? (userLocation ? { lat: userLocation[0], lng: userLocation[1] } : null)
+    const dest = destinationCoords
+
+    if (!origin || !dest) {
+      // This is the case that used to fail silently: the plan modal stayed
+      // open with no feedback at all if the user typed an address without
+      // picking a suggestion (so we never got real coordinates for it).
+      console.log('[route] blocked: missing coordinates', { origin, dest })
+      setRouteError('Pick both points from the suggestions so we have exact coordinates.')
+      return
+    }
+
+    console.log('[route] planning route with payload', { origin, destination: dest })
+    setRouteError(null)
     setShowPlanModal(false)
     setShowScanResults(true)
+
+    planRouteMutation.mutate(
+      { origin, destination: dest },
+      {
+        onSuccess: (data) => {
+          console.log('[route] plan succeeded', data)
+        },
+        onError: (err) => {
+          console.error('[route] plan failed', err)
+          const status = err instanceof ApiError ? err.status : undefined
+          const message = err instanceof Error ? err.message : 'Failed to plan route'
+
+          if (status === 401) {
+            setShowScanResults(false)
+            setShowAuth(true)
+            return
+          }
+
+          setRouteError(message)
+        },
+      }
+    )
   }
 
   const handleStartTrip = () => {
     setShowScanResults(false)
     setIsNavigating(true)
+    setNavPanelExpanded(true)
+    setGpsStatus('waiting')
+    setGpsErrorMessage(null)
+    trip.reset()
+    // trip.play() is NOT called here — it only starts as a fallback if the
+    // GPS watcher (above) reports a genuine error. Until then we wait for
+    // a real fix instead of quietly animating a fake trip.
     setTimeout(() => setShowUpcomingAlert(true), 2000)
   }
 
@@ -359,7 +598,18 @@ export default function PlanRoutePage() {
     setStartPoint('')
     setDestination('')
     setShowScanResults(false)
+    setRouteError(null)
+    trip.pause()
+    trip.reset()
+    setLiveProgress(null)
+    setRouteDeviationMeters(null)
+    setGpsStatus('waiting')
+    setGpsErrorMessage(null)
+    planRouteMutation.reset()
   }
+
+  const hasArrived =
+    isNavigating && displayProgress >= 0.995 && (liveProgress != null || !trip.isPlaying)
 
   // ── Upcoming hazard (mock) ──────────────────────────
   const upcomingHazard = {
@@ -367,6 +617,12 @@ export default function PlanRoutePage() {
     label: 'Road Works ahead — Independence',
     distance: '0.9 KM',
   }
+
+  // ── Live trip stats, driven by real GPS progress once available,
+  // falling back to the simulated clock otherwise ──────────────────────
+  const navHazardCount = (activeRoute?.hazards?.length || scanHazards.length)
+  const remainingKm = activeRoute ? Math.max(0, activeRoute.distance * (1 - displayProgress)) : 0
+  const etaMinutes = activeRoute ? Math.max(0, Math.round(activeRoute.duration * (1 - displayProgress))) : 0
 
   // Memoize map center
   const mapCenter = useMemo<[number, number]>(
@@ -384,13 +640,17 @@ export default function PlanRoutePage() {
       onClick: () => setSelectedPin(r.id === selectedPin ? null : r.id),
     }))
 
-    if (userLocation) {
+    // While navigating, RouteMapView's followMode renders a fixed,
+    // screen-centered "you are here" puck itself (see GoogleMapView) —
+    // adding a second, geo-projected marker here would drift out of sync
+    // with it the moment the map starts rotating to face the heading.
+    if (userLocation && !isNavigating) {
       markers.push({
         id: '__user_location__',
         lat: userLocation[0],
         lng: userLocation[1],
-        html: isNavigating ? navArrowPinHtml : userLocationPinHtml,
-        anchor: isNavigating ? NAV_ARROW_ANCHOR : USER_LOCATION_ANCHOR,
+        html: userLocationPinHtml,
+        anchor: USER_LOCATION_ANCHOR,
       })
     }
 
@@ -446,13 +706,30 @@ export default function PlanRoutePage() {
       className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
       style={{ overscrollBehavior: 'none' }}
     >
-      {/* Google Map — script + component chunk both lazy-loaded on demand */}
+      {/* Google Map — script + component chunk both lazy-loaded on demand.
+          Once we have a planned route (scan results or an active trip),
+          RouteMapView takes over so the actual path is drawn; before that
+          (still on the home screen) it's just the plain marker map. */}
       <div className="absolute inset-0 z-0">
-        <LazyGoogleMap
-          center={{ lat: mapCenter[0], lng: mapCenter[1] }}
-          zoom={15}
-          markers={mapMarkers}
-        />
+        {activeRoute ? (
+          <RouteMapView
+            route={activeRoute}
+            markers={mapMarkers}
+            zoom={isNavigating ? 17 : 15}
+            progress={isNavigating ? displayProgress : undefined}
+            flowing={!isNavigating}
+            heading={isNavigating ? displayHeading : 0}
+            interactive={!isNavigating}
+            followMode={isNavigating}
+            className="w-full h-full"
+          />
+        ) : (
+          <LazyGoogleMap
+            center={{ lat: mapCenter[0], lng: mapCenter[1] }}
+            zoom={15}
+            markers={mapMarkers}
+          />
+        )}
       </div>
 
       {/* Location error toast */}
@@ -496,7 +773,10 @@ export default function PlanRoutePage() {
 
             {/* Search bar */}
             <button
-              onClick={() => setShowPlanModal(true)}
+              onClick={() => {
+                setRouteError(null)
+                setShowPlanModal(true)
+              }}
               className="w-full flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 shadow-sm text-left"
             >
               <svg viewBox="0 0 24 24" className="flex-shrink-0 w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -545,23 +825,72 @@ export default function PlanRoutePage() {
         </div>
       )}
 
-      {/* Navigation Header (when navigating) */}
+      {/* Navigation Header (when navigating) — kept short on purpose so
+          the map is visible right below it, the way Google/Waze show
+          just the next-turn banner up top and nothing else until the
+          bottom trip card. */}
       {isNavigating && (
-        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2 max-h-[70%] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex sm:justify-center">
+        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2 sm:flex sm:justify-center">
           <div className="space-y-2 sm:w-full sm:max-w-md">
-            <div className="flex items-center gap-3 px-4 py-3 shadow-sm bg-emerald-500 rounded-2xl">
+            <div className={`flex items-center gap-3 px-4 py-3 shadow-sm rounded-2xl ${hasArrived ? 'bg-purple-600' : 'bg-emerald-500'}`}>
               <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20">
                 <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 19V5M5 12l7-7 7 7" />
+                  {hasArrived ? <path d="M20 6L9 17l-5-5" /> : <path d="M12 19V5M5 12l7-7 7 7" />}
                 </svg>
               </div>
               <div>
-                <p className="text-[10px] sm:text-xs font-medium tracking-wide uppercase text-white/80">In 3.6 KM</p>
-                <p className="text-xs font-semibold text-white sm:text-sm">Head out and follow the route</p>
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide uppercase text-white/80">
+                  {hasArrived ? 'Trip complete' : `${remainingKm.toFixed(1)} KM left`}
+                </p>
+                <p className="text-xs font-semibold text-white sm:text-sm">
+                  {hasArrived ? "You've arrived" : 'Head out and follow the route'}
+                </p>
               </div>
             </div>
 
-            {showUpcomingAlert && (
+            {gpsStatus === 'waiting' && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm rounded-xl animate-in slide-in-from-top-2">
+                <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-blue-100">
+                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-blue-500 rounded-full border-t-transparent animate-spin" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium uppercase tracking-wide">GPS</p>
+                  <p className="text-xs font-medium text-gray-900 truncate sm:text-sm">Waiting for your location…</p>
+                </div>
+              </div>
+            )}
+
+            {gpsStatus === 'error' && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 shadow-sm rounded-xl animate-in slide-in-from-top-2">
+                <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-amber-100">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] sm:text-[10px] text-amber-500 font-medium uppercase tracking-wide">Demo mode — GPS unavailable</p>
+                  <p className="text-xs font-medium text-amber-900 truncate sm:text-sm">{gpsErrorMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {isOffRoute && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 shadow-sm rounded-xl animate-in slide-in-from-top-2">
+                <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-red-100">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] sm:text-[10px] text-red-400 font-medium uppercase tracking-wide">Off route</p>
+                  <p className="text-xs font-medium text-red-900 truncate sm:text-sm">
+                    You've drifted {Math.round(routeDeviationMeters ?? 0)}m from the planned path
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {showUpcomingAlert && !hasArrived && (
               <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-amber-100">
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -575,29 +904,78 @@ export default function PlanRoutePage() {
                 <span className="text-[11px] sm:text-xs font-medium text-gray-500">{upcomingHazard.distance}</span>
               </div>
             )}
+          </div>
+        </div>
+      )}
 
-            <div className="px-5 py-4 bg-white shadow-sm rounded-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-center">
-                  <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">ETA</p>
-                  <p className="text-lg font-bold text-gray-900 sm:text-xl">17 min</p>
+      {/* Bottom trip card (when navigating) — anchored to the bottom
+          instead of stacked under the top banner, and collapsible down to
+          a slim pill so the map in between is actually visible instead of
+          being covered top-to-bottom. */}
+      {isNavigating && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex sm:justify-center">
+          <div className="sm:w-full sm:max-w-md">
+            {navPanelExpanded ? (
+              <div className="px-5 pt-3 pb-4 bg-white shadow-lg rounded-2xl">
+                {/* Collapse handle — tap to shrink the card and see the full map */}
+                <button
+                  onClick={() => setNavPanelExpanded(false)}
+                  className="flex items-center justify-center w-full py-1 -mt-1 mb-2 group"
+                  aria-label="Collapse trip card"
+                >
+                  <span className="w-10 h-1 transition bg-gray-300 rounded-full group-active:bg-gray-400" />
+                </button>
+
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-center">
+                    <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">ETA</p>
+                    <p className="text-lg font-bold text-gray-900 sm:text-xl">{hasArrived ? '0 min' : `${etaMinutes} min`}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">Remaining</p>
+                    <p className="text-lg font-bold text-gray-900 sm:text-xl">{remainingKm.toFixed(1)} km</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">Hazards</p>
+                    <p className="text-lg font-bold sm:text-xl text-amber-500">{navHazardCount}</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">Remaining</p>
-                  <p className="text-lg font-bold text-gray-900 sm:text-xl">7.1 km</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">Hazards</p>
-                  <p className="text-lg font-bold sm:text-xl text-amber-500">2</p>
-                </div>
+                <button
+                  onClick={handleEndTrip}
+                  className="w-full h-11 sm:h-12 bg-red-500 hover:bg-red-600 text-white text-sm sm:text-base font-semibold rounded-xl transition active:scale-[0.98]"
+                >
+                  {hasArrived ? 'Done' : 'End Trip'}
+                </button>
               </div>
+            ) : (
+              // Collapsed: a slim pill — ETA + remaining still visible at a
+              // glance, tap anywhere to bring the full card back, End Trip
+              // stays one tap away instead of being hidden entirely.
               <button
-                onClick={handleEndTrip}
-                className="w-full h-11 sm:h-12 bg-red-500 hover:bg-red-600 text-white text-sm sm:text-base font-semibold rounded-xl transition active:scale-[0.98]"
+                onClick={() => setNavPanelExpanded(true)}
+                className="flex items-center w-full gap-3 py-2.5 pl-4 pr-2 bg-white shadow-lg rounded-full"
               >
-                End Trip
+                <span className="flex-1 text-xs font-semibold text-left text-gray-900 sm:text-sm">
+                  {hasArrived ? "You've arrived" : `${etaMinutes} min · ${remainingKm.toFixed(1)} km left`}
+                </span>
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 15l-6-6-6 6" />
+                </svg>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleEndTrip()
+                  }}
+                  role="button"
+                  aria-label="End trip"
+                  className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-white bg-red-500 rounded-full active:scale-95"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </span>
               </button>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -605,7 +983,9 @@ export default function PlanRoutePage() {
       {/* SOS Floating Button */}
       {!showSOS && (
         <div
-          className="absolute z-[999] bottom-32 right-4 sm:right-8"
+          className={`absolute z-[999] right-4 sm:right-8 transition-[bottom] ${
+            isNavigating ? (navPanelExpanded ? 'bottom-56' : 'bottom-24') : 'bottom-32'
+          }`}
           onMouseDown={startSOSHold}
           onMouseUp={endSOSHold}
           onMouseLeave={endSOSHold}
@@ -733,6 +1113,9 @@ export default function PlanRoutePage() {
             </div>
 
             <div className="flex-shrink-0 px-5 pt-4 pb-8 sm:pb-6">
+              {routeError && (
+                <p className="mb-3 text-xs text-center text-red-500 sm:text-sm">{routeError}</p>
+              )}
               <button
                 onClick={handleScanRoute}
                 disabled={!startPoint || !destination}
@@ -761,48 +1144,98 @@ export default function PlanRoutePage() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pt-4 sm:pt-6 pb-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="p-3 text-center bg-gray-50 rounded-2xl">
-                  <p className="text-base font-bold text-gray-900 sm:text-lg">9.5 km</p>
-                  <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Distance</p>
+              {planRouteMutation.isPending && (
+                <div className="flex flex-col items-center justify-center gap-3 py-10">
+                  <SpinnerIcon className="w-6 h-6 text-purple-600" />
+                  <p className="text-xs text-gray-500 sm:text-sm">Scanning route for hazards...</p>
                 </div>
-                <div className="p-3 text-center bg-gray-50 rounded-2xl">
-                  <p className="text-base font-bold text-gray-900 sm:text-lg">23 min</p>
-                  <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">ETA</p>
-                </div>
-                <div className="p-3 text-center bg-gray-50 rounded-2xl">
-                  <p className="text-base font-bold sm:text-lg text-emerald-500">91</p>
-                  <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Safety</p>
-                </div>
-              </div>
+              )}
 
-              <div className="flex items-center gap-2 px-4 py-3 mb-4 border bg-amber-50 rounded-xl border-amber-100">
-                <svg viewBox="0 0 24 24" className="flex-shrink-0 w-4.5 h-4.5 sm:w-5 sm:h-5 text-amber-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                <p className="text-xs font-medium sm:text-sm text-amber-700">
-                  {scanHazards.length} hazards reported on this route. Drive carefully.
-                </p>
-              </div>
+              {!planRouteMutation.isPending && routeError && (
+                <div className="flex items-center gap-2 px-4 py-3 mb-4 border border-red-100 bg-red-50 rounded-xl">
+                  <p className="text-xs font-medium text-red-700 sm:text-sm">{routeError}</p>
+                </div>
+              )}
 
-              <div className="mb-6 space-y-3">
-                {scanHazards.map((hazard) => (
-                  <div key={hazard.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <HazardListIcon type={hazard.type} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-900 truncate sm:text-sm">{hazard.title}</p>
-                      <p className="text-[11px] sm:text-xs text-gray-400">{hazard.location}</p>
+              {!planRouteMutation.isPending && !routeError && (
+                <>
+                  {availableModes.length > 1 && (
+                    <div className="flex gap-2 mb-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {availableModes.map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => setSelectedMode(mode)}
+                          className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition ${
+                            mode === selectedMode ? 'bg-purple-700 text-white' : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {routePlan?.routes[mode]?.label ?? mode}
+                        </button>
+                      ))}
                     </div>
-                    <span className="flex-shrink-0 px-2 py-1 text-[11px] sm:text-xs font-medium text-gray-500 bg-white rounded-lg">
-                      {hazard.distance}
-                    </span>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="p-3 text-center bg-gray-50 rounded-2xl">
+                      <p className="text-base font-bold text-gray-900 sm:text-lg">
+                        {activeRoute ? `${activeRoute.distance.toFixed(1)} km` : '9.5 km'}
+                      </p>
+                      <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Distance</p>
+                    </div>
+                    <div className="p-3 text-center bg-gray-50 rounded-2xl">
+                      <p className="text-base font-bold text-gray-900 sm:text-lg">
+                        {activeRoute ? `${Math.round(activeRoute.duration)} min` : '23 min'}
+                      </p>
+                      <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">ETA</p>
+                    </div>
+                    <div className="p-3 text-center bg-gray-50 rounded-2xl">
+                      <p className="text-base font-bold sm:text-lg text-emerald-500">
+                        {activeRoute ? Math.round(activeRoute.safetyScore) : 91}
+                      </p>
+                      <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Safety</p>
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  {(() => {
+                    const liveHazards = activeRoute?.hazards as any[] | undefined
+                    const hazardCount = liveHazards?.length ? liveHazards.length : scanHazards.length
+                    return (
+                      <div className="flex items-center gap-2 px-4 py-3 mb-4 border bg-amber-50 rounded-xl border-amber-100">
+                        <svg viewBox="0 0 24 24" className="flex-shrink-0 w-4.5 h-4.5 sm:w-5 sm:h-5 text-amber-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                        <p className="text-xs font-medium sm:text-sm text-amber-700">
+                          {hazardCount} hazards reported on this route. Drive carefully.
+                        </p>
+                      </div>
+                    )
+                  })()}
+
+                  <div className="mb-6 space-y-3">
+                    {((activeRoute?.hazards as any[] | undefined)?.length ? (activeRoute!.hazards as any[]) : scanHazards).map((hazard: any) => (
+                      <div key={hazard.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <HazardListIcon type={hazard.type} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-900 truncate sm:text-sm">
+                            {typeof hazard.title === 'string' ? hazard.title : 'Reported hazard'}
+                          </p>
+                          <p className="text-[11px] sm:text-xs text-gray-400">
+                            {typeof hazard.location === 'string' ? hazard.location : ''}
+                          </p>
+                        </div>
+                        <span className="flex-shrink-0 px-2 py-1 text-[11px] sm:text-xs font-medium text-gray-500 bg-white rounded-lg">
+                          {typeof hazard.distanceKm === 'number' ? `${hazard.distanceKm.toFixed(1)} km` : hazard.distance}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               <button
                 onClick={handleStartTrip}
-                className="w-full h-12 sm:h-14 bg-purple-700 hover:bg-purple-800 text-white font-semibold text-sm sm:text-base rounded-2xl transition active:scale-[0.98] flex items-center justify-center gap-2"
+                disabled={planRouteMutation.isPending}
+                className="w-full h-12 sm:h-14 bg-purple-700 hover:bg-purple-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm sm:text-base rounded-2xl transition active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 Start trip
                 <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -834,6 +1267,14 @@ export default function PlanRoutePage() {
             </button>
           </div>
 
+          {sosError && (
+            <div className="mx-5 mt-3 rounded-xl bg-white/20 px-4 py-2.5 backdrop-blur-sm sm:mx-auto sm:w-full sm:max-w-md">
+              <p className="text-[13px] font-medium text-white">
+                Couldn&apos;t reach the server: {sosError}. Your emergency call still works.
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-center flex-1">
             <div className="relative">
               <div className="absolute inset-0 w-40 h-40 -m-6 rounded-full sm:w-48 sm:h-48 bg-white/10 animate-ping" />
@@ -857,10 +1298,19 @@ export default function PlanRoutePage() {
 
           <div className="px-5 pb-24 space-y-3 sm:mx-auto sm:w-full sm:max-w-md">
             <button
-              onClick={() => setShowSOS(false)}
-              className="w-full h-12 sm:h-14 bg-white text-red-500 font-semibold text-sm sm:text-base rounded-xl hover:bg-gray-50 transition active:scale-[0.98]"
+              onClick={() => {
+                if (activeSosId) {
+                  cancelSosMutation.mutate(activeSosId, {
+                    onSettled: () => setActiveSosId(null),
+                  })
+                }
+                setShowSOS(false)
+                setSosError(null)
+              }}
+              disabled={cancelSosMutation.isPending}
+              className="w-full h-12 sm:h-14 bg-white text-red-500 font-semibold text-sm sm:text-base rounded-xl hover:bg-gray-50 transition active:scale-[0.98] disabled:opacity-60"
             >
-              Cancel SOS
+              {cancelSosMutation.isPending ? 'Cancelling...' : 'Cancel SOS'}
             </button>
             <a
               href="tel:112"
@@ -887,7 +1337,7 @@ export default function PlanRoutePage() {
       )}
 
       {/* BottomNav */}
-      {!showPlanModal && !showScanResults && !showSOS && (
+      {!showPlanModal && !showScanResults && !showSOS && !isNavigating && (
         <div className="absolute bottom-0 left-0 right-0 z-[500] sm:flex sm:justify-center">
           <div className="w-full sm:max-w-md">
             <BottomNav />

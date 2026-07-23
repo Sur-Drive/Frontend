@@ -58,3 +58,23 @@ export const navArrowPinHtml = `
 `
 
 export const NAV_ARROW_ANCHOR: [number, number] = [14, 14]
+
+// Same nav puck as navArrowPinHtml, but rotatable — used for the moving
+// position marker on an animated route (heading updates every frame as
+// the marker travels along the path).
+export function navHeadingArrowHtml(headingDeg: number, color = '#0ea5e9'): string {
+  return `
+    <div style="position:relative;width:28px;height:28px;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.25;"></div>
+      <div style="
+        position:absolute;inset:3px;border-radius:50%;background:${color};
+        border:2px solid white;display:flex;align-items:center;justify-content:center;
+        transform:rotate(${headingDeg}deg);transition:transform 0.15s linear;
+      ">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+          <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+        </svg>
+      </div>
+    </div>
+  `
+}

@@ -6,26 +6,51 @@ import { useNearbyFeed, useVoteHazard } from '../hooks/useFeed'
 import AuthFlow from '../components/AuthFlow'
 import type { BackendHazardType, Hazard } from '../types/hazard'
 
+// const TYPE_LABEL: Record<BackendHazardType, string> = {
+//   POTHOLE: 'Pothole',
+//   ACCIDENT: 'Accident',
+//   FLOOD: 'Flood',
+//   ROAD: 'Road Works',
+//   CHECKPOINT: 'Checkpoint',
+//   DEBRIS: 'Debris',
+//   SOS: 'SOS',
+//   DANGER: 'Danger Zone',
+// }
+
+// const TYPE_EMOJI: Record<BackendHazardType, string> = {
+//   POTHOLE: '🕳️',
+//   ACCIDENT: '🚧',
+//   FLOOD: '🌊',
+//   ROAD: '🚜',
+//   CHECKPOINT: '🚓',
+//   DEBRIS: '🪨',
+//   SOS: '🆘',
+//   DANGER: '⚠️',
+// }
+
+
 const TYPE_LABEL: Record<BackendHazardType, string> = {
   POTHOLE: 'Pothole',
   ACCIDENT: 'Accident',
   FLOOD: 'Flood',
-  ROAD: 'Road Works',
+  ROAD_WORKS: 'Road Works',
   CHECKPOINT: 'Checkpoint',
   DEBRIS: 'Debris',
   SOS: 'SOS',
   DANGER: 'Danger Zone',
+  OTHER: 'Other',
 }
 
 const TYPE_EMOJI: Record<BackendHazardType, string> = {
   POTHOLE: '🕳️',
   ACCIDENT: '🚧',
   FLOOD: '🌊',
-  ROAD: '🚜',
+  ROAD_WORKS: '🚜',
   CHECKPOINT: '🚓',
   DEBRIS: '🪨',
   SOS: '🆘',
   DANGER: '⚠️',
+  OTHER: '❓',
 }
 
 type VoteState = 'confirmed' | 'incorrect' | null
