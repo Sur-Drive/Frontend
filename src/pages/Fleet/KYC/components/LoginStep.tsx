@@ -71,8 +71,8 @@ const LoginStep: React.FC<LoginStepProps> = ({
         }
 
         // Case 2: KYC is pending approval
-        if (status === "pending") {
-            return "/fleet/dashboard";
+        if (status === "pending" && subscription?.plan === "free_trial") {
+            return "/fleet/dashboard"; //
         }
 
         // Case 4: KYC is completed
