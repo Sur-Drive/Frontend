@@ -394,21 +394,23 @@ const Billing: React.FC = () => {
         <div className="min-h-screen bg-[#F7F7F7] p-6">
             <div className="max-w-[1126px] mx-auto space-y-6">
                 {/* Header */}
-                {/* Header Section - White background, aligned top */}
-                <div className="bg-white rounded-xl p-6">
-                    <div className="text-left">
+
+                <div className="bg-white rounded-xl p-6 flex justify-between items-center">
+                    <div>
                         <h1
-                            className="text-[40px] font-bold text-[#1F083B]"
+                            className="text-2xl font-bold text-[#1F083B]"
                             style={{ fontFamily: "Outfit" }}
                         >
                             Billing & Subscription
                         </h1>
-                        <p
-                            className="text-[#8E98A8] text-lg"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            Nigeria pricing · per vehicle / month
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span
+                                className="text-[#8E98A8]"
+                                style={{ fontFamily: "Outfit" }}
+                            >
+                                Nigeria pricing · per vehicle / month
+                            </span>
+                        </div>
                     </div>
                 </div>
 

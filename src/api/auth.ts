@@ -285,8 +285,6 @@ export async function setPassword(
 }
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
-    console.log("📤 Logging in:", payload.identifier);
-
     const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: {
@@ -304,7 +302,6 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
 
     if (token) {
         localStorage.setItem("token", token);
-        console.log("🔑 Login token saved:", token.substring(0, 30) + "...");
     } else {
         console.warn(
             "⚠️ No token found in login response. Keys:",

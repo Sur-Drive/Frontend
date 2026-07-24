@@ -4,6 +4,7 @@ import {
     getKYCStatus,
     type KYCStatusResponse,
 } from "../../../../api/auth";
+import GoogleLoginButton from "../../components/GoogleLoginButton";
 
 interface LoginStepProps {
     onSuccess: (data: any) => void;
@@ -34,6 +35,15 @@ const LoginStep: React.FC<LoginStepProps> = ({
         try {
             // Step 1: Login
             const loginResponse = await login({ identifier, password });
+
+            // Check user role from login response
+            const userRole = loginResponse?.user?.role || loginResponse?.role;
+
+            // If fleet manager, redirect to manager login
+            if (userRole === "fleet_manager" || userRole === "manager") {
+                onRedirect("/manager");
+                return;
+            }
 
             // Step 2: Check KYC Status
             const kycStatus: KYCStatusResponse = await getKYCStatus();
@@ -111,7 +121,7 @@ const LoginStep: React.FC<LoginStepProps> = ({
             {/* Header */}
             <div
                 className="flex flex-col items-center text-center"
-                style={{ width: "520px", height: "120px", gap: "16px" }}
+                style={{ width: "520px", gap: "8px" }}
             >
                 <h1
                     className="text-[40px] font-bold leading-[100%] text-black"
@@ -125,6 +135,23 @@ const LoginStep: React.FC<LoginStepProps> = ({
                 >
                     Login to your fleet management dashboard
                 </p>
+            </div>
+
+            <div className="w-full" style={{ maxWidth: "520px" }}>
+                <GoogleLoginButton />
+            </div>
+
+            {/* Divider */}
+            <div className="flex w-full items-center gap-4">
+                <div
+                    className="flex-1 border-t"
+                    style={{ borderColor: "#7A8492" }}
+                />
+                <span className="text-sm text-[#7A8492]">OR</span>
+                <div
+                    className="flex-1 border-t"
+                    style={{ borderColor: "#7A8492" }}
+                />
             </div>
 
             {/* Login Form */}

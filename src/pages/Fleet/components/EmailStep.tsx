@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { sendOtp } from "../../../api/auth";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 interface EmailStepProps {
     onSuccess: (email: string) => void;
@@ -65,41 +66,7 @@ const EmailStep: React.FC<EmailStepProps> = ({
             </div>
 
             {/* Google Button */}
-            <button
-                onClick={handleGoogleSignIn}
-                className="flex w-full items-center justify-center rounded-2xl border border-gray-200 bg-white px-9 py-4 transition hover:bg-gray-50"
-                style={{
-                    width: "520px",
-                    height: "56px",
-                    padding: "16px 36px",
-                    borderRadius: "16px",
-                    backgroundColor: "#FFFFFF",
-                }}
-            >
-                <div className="flex items-center gap-3">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <path
-                            d="M19.766 10.223C19.766 9.543 19.704 8.886 19.588 8.25H10.2V11.964H15.59C15.34 13.238 14.618 14.325 13.545 15.04V17.515H16.818C18.714 15.77 19.766 13.247 19.766 10.223Z"
-                            fill="#4285F4"
-                        />
-                        <path
-                            d="M10.2 19.998C12.876 19.998 15.125 19.064 16.818 17.515L13.545 15.04C12.63 15.65 11.497 16.013 10.2 16.013C7.622 16.013 5.456 14.302 4.638 12.01H1.26V14.55C2.942 17.886 6.352 19.998 10.2 19.998Z"
-                            fill="#34A853"
-                        />
-                        <path
-                            d="M4.638 12.01C4.421 11.31 4.3 10.564 4.3 9.799C4.3 9.034 4.421 8.288 4.638 7.588V5.048H1.26C0.578 6.404 0.2 7.924 0.2 9.799C0.2 11.674 0.578 13.194 1.26 14.55L4.638 12.01Z"
-                            fill="#FBBC05"
-                        />
-                        <path
-                            d="M10.2 3.585C11.626 3.585 12.904 4.081 13.91 5.044L16.892 2.059C15.114 0.394 12.875 0 10.2 0C6.352 0 2.942 2.112 1.26 5.048L4.638 7.588C5.456 5.296 7.622 3.585 10.2 3.585Z"
-                            fill="#EA4335"
-                        />
-                    </svg>
-                    <span className="text-base font-medium text-[#1F083B]">
-                        Continue with Google
-                    </span>
-                </div>
-            </button>
+            <GoogleLoginButton />
 
             {/* Divider */}
             <div className="flex w-full items-center gap-4">

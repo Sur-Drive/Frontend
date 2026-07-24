@@ -37,6 +37,14 @@ import KYCPending from "./pages/Fleet/KYC/components/KYCPending";
 import PaymentPending from "./pages/Fleet/KYC/components/PaymentPending";
 import SubscriptionRenew from "./pages/Fleet/KYC/components/SubscriptionRenew";
 import ForgotPassword from "./pages/Fleet/Auth/ForgotPassword/ForgotPassword";
+import GoogleCallback from "./pages/Fleet/components/GoogleCallback";
+import ManagerAcceptInvite from "./pages/Fleet/SubFleets/ManagerAcceptInvite";
+import ManagerSignIn from "./pages/Fleet/Manager/ManagerSignIn";
+import ManagerDashboard from "./pages/Fleet/Manager/ManagerDashboard";
+import ManagerDriver from "./pages/Fleet/Manager/ManagerDriver";
+import ManagerSidebar from "./pages/Fleet/Manager/ManagerSidebar";
+import ManagerForgotPassword from "./pages/Fleet/Manager/ManagerForgotPassword";
+import ManagerVehicles from "./pages/Fleet/Manager/ManagerVehicles";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -72,6 +80,12 @@ const NO_NAV_PAGES = [
     "/fleet/subscription/renew",
     "/fleet/kyc-pending",
     "/fleet/forgot-password",
+    "/fleet/accept-invite",
+    "/manager",
+    "/manager/dashboard",
+    "/manager/drivers",
+    "/manager/forgot-password",
+    "/manager/vehicles",
 ];
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -144,6 +158,39 @@ function AppRoutes() {
                         path="/payment/cancel"
                         element={<PaymentCallback />}
                     />
+                    <Route
+                        path="/auth/google/callback"
+                        element={<GoogleCallback />}
+                    />
+
+                    <Route
+                        path="/fleet/accept-invite"
+                        element={<ManagerAcceptInvite />}
+                    />
+                    <Route
+                        path="/manager/dashboard"
+                        element={<ManagerDashboard />}
+                    />
+
+                    <Route
+                        path="/manager/drivers"
+                        element={
+                            <ManagerSidebar>
+                                <ManagerDriver />
+                            </ManagerSidebar>
+                        }
+                    />
+
+                    <Route
+                        path="/manager/vehicles"
+                        element={
+                            <ManagerSidebar>
+                                <ManagerVehicles />
+                            </ManagerSidebar>
+                        }
+                    />
+
+                    <Route path="/manager" element={<ManagerSignIn />} />
                     <Route path="/payment/*" element={<PaymentCallback />} />
                     <Route path="/plan-route" element={<PlanRoutePage />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
@@ -151,6 +198,10 @@ function AppRoutes() {
                     <Route
                         path="/fleet/forgot-password"
                         element={<ForgotPassword />}
+                    />
+                    <Route
+                        path="/manager/forgot-password"
+                        element={<ManagerForgotPassword />}
                     />
                     <Route
                         path="/fleet/kyc"

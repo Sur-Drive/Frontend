@@ -11,21 +11,16 @@ import {
     Navigation,
     X,
     ArrowRight,
-    Ban,
-    AlertTriangle,
     CheckCircle,
     MoreVertical,
     Phone,
-    Car,
-    Calendar,
-    Clock,
 } from "lucide-react";
 
 const API_BASE = "https://backend-production-01de.up.railway.app";
 
 interface Driver {
     id: string;
-    fullName: string;
+    name: string;
     phoneNumber: string;
     licenseNumber: string;
     email: string | null;
@@ -53,7 +48,9 @@ interface DriverStats {
 interface SubFleet {
     id: string;
     name: string;
+    region: string;
     status: string;
+    vehicleCount: number;
 }
 
 const StatCard = ({ icon: Icon, label, value, subtext, valueColor }: any) => (
@@ -70,7 +67,7 @@ const StatCard = ({ icon: Icon, label, value, subtext, valueColor }: any) => (
     </div>
 );
 
-const FleetDrivers: React.FC = () => {
+const ManagerDriver: React.FC = () => {
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [stats, setStats] = useState<DriverStats>({
         totalDrivers: 0,
@@ -79,7 +76,8 @@ const FleetDrivers: React.FC = () => {
         tripsThisWeek: 0,
         totalDistance: "0km",
     });
-    const [subFleets, setSubFleets] = useState<SubFleet[]>([]);
+
+    const [subFleet, setSubFleet] = useState<SubFleet | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -113,7 +111,7 @@ const FleetDrivers: React.FC = () => {
             setLoading(true);
             const token = localStorage.getItem("token");
 
-            const response = await fetch(`${API_BASE}/fleet/drivers`, {
+            const response = await fetch(`${API_BASE}/manager/drivers`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -152,12 +150,33 @@ const FleetDrivers: React.FC = () => {
         }
     };
 
-    // Fetch sub-fleets
+    // Fetch manager profile to get managerId
+    const fetchManagerProfile = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(`${API_BASE}/manager/profile`, {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                localStorage.setItem("managerId", data.id);
+            }
+        } catch (error) {
+            console.error("Error fetching manager profile:", error);
+        }
+    };
+
     const fetchSubFleets = async () => {
         try {
             const token = localStorage.getItem("token");
 
-            const response = await fetch(`${API_BASE}/fleet/sub-fleets`, {
+            const response = await fetch(`${API_BASE}/manager/sub-fleet`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -166,26 +185,27 @@ const FleetDrivers: React.FC = () => {
             });
 
             if (!response.ok) {
-                throw new Error("Failed to fetch sub-fleets");
+                throw new Error("Failed to fetch sub-fleet");
             }
 
             const data = await response.json();
-            const fleets = Array.isArray(data) ? data : [];
-            setSubFleets(fleets);
 
-            if (fleets.length > 0 && !inviteForm.subFleetId) {
+            setSubFleet(data.subFleet);
+
+            if (data.subFleet?.id && !inviteForm.subFleetId) {
                 setInviteForm((prev) => ({
                     ...prev,
-                    subFleetId: fleets[0].id,
+                    subFleetId: data.subFleet.id,
                 }));
             }
         } catch (error) {
-            console.error("Error fetching sub-fleets:", error);
-            setSubFleets([]);
+            console.error("Error fetching sub-fleet:", error);
+            setSubFleet(null);
         }
     };
 
     useEffect(() => {
+        fetchManagerProfile();
         fetchDrivers();
         fetchSubFleets();
     }, []);
@@ -208,30 +228,43 @@ const FleetDrivers: React.FC = () => {
         return () => document.removeEventListener("click", handleClickOutside);
     }, [activeDropdown]);
 
-    // Invite driver
     const handleInvite = async () => {
         try {
             setIsSubmitting(true);
             const token = localStorage.getItem("token");
 
-            const response = await fetch(`${API_BASE}/fleet/drivers/invite`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
+            // Get the manager ID from token or state
+
+            const managerId = localStorage.getItem("managerId");
+
+            const response = await fetch(
+                `${API_BASE}/fleet/drivers/invite-by-manager`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        fullName: inviteForm.fullName,
+                        mobileNumber: inviteForm.mobileNumber,
+                        licenseNumber: inviteForm.licenseNumber,
+                        subFleetId: inviteForm.subFleetId,
+                        managerId: managerId,
+                    }),
                 },
-                body: JSON.stringify(inviteForm),
-            });
+            );
+
+            const data = await response.json();
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || "Failed to send invitation");
+                throw new Error(data.message || "Failed to send invitation");
             }
 
             setShowInviteModal(false);
             setSuccessTitle("Driver Invitation Sent Successfully");
             setSuccessMessage(
-                "An invitation has been sent to the driver's email address. They can use the invitation link to create their account and join your fleet.",
+                "An invitation has been sent to the driver's mobile number. They can use the link to create their account and join your sub-fleet.",
             );
             setShowSuccessModal(true);
             setShowSuccessAction(true);
@@ -239,7 +272,7 @@ const FleetDrivers: React.FC = () => {
                 fullName: "",
                 mobileNumber: "",
                 licenseNumber: "",
-                subFleetId: subFleets[0]?.id || "",
+                subFleetId: subFleet?.id || "",
             });
             fetchDrivers();
         } catch (error: any) {
@@ -327,7 +360,7 @@ const FleetDrivers: React.FC = () => {
     const filteredDrivers = drivers.filter((driver) => {
         const searchLower = searchTerm.toLowerCase();
         const nameMatch =
-            driver.fullName?.toLowerCase().includes(searchLower) || false;
+            driver.name?.toLowerCase().includes(searchLower) || false;
         const phoneMatch =
             driver.phoneNumber?.toLowerCase().includes(searchLower) || false;
         const matchesSearch = nameMatch || phoneMatch;
@@ -360,8 +393,8 @@ const FleetDrivers: React.FC = () => {
                                 className="text-[#8E98A8]"
                                 style={{ fontFamily: "Outfit" }}
                             >
-                                {stats.totalDrivers} drivers active across your
-                                fleets
+                                {stats.totalDrivers} drivers active in your
+                                subfleet
                             </span>
                         </div>
                     </div>
@@ -539,7 +572,7 @@ const FleetDrivers: React.FC = () => {
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-[#EDE8F4] flex items-center justify-center text-[#6E43A3] font-semibold">
                                                         {getInitials(
-                                                            driver.fullName,
+                                                            driver.name,
                                                         )}
                                                     </div>
                                                     <div>
@@ -550,7 +583,7 @@ const FleetDrivers: React.FC = () => {
                                                                     "Outfit",
                                                             }}
                                                         >
-                                                            {driver.fullName ||
+                                                            {driver.name ||
                                                                 "Unknown"}
                                                         </div>
                                                         <div
@@ -846,7 +879,6 @@ const FleetDrivers: React.FC = () => {
                 </div>
             </div>
 
-            {/* INVITE DRIVER MODAL */}
             {showInviteModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
@@ -863,7 +895,7 @@ const FleetDrivers: React.FC = () => {
                                     style={{ fontFamily: "Outfit" }}
                                 >
                                     Send an invitation for a new driver to join
-                                    your fleet.
+                                    your sub-fleet.
                                 </p>
                             </div>
                             <button
@@ -877,57 +909,45 @@ const FleetDrivers: React.FC = () => {
                         <div className="h-px w-full bg-[#E5E7EB] mb-6" />
 
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
-                                        Full Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={inviteForm.fullName}
-                                        onChange={(e) =>
-                                            setInviteForm((prev) => ({
-                                                ...prev,
-                                                fullName: e.target.value,
-                                            }))
-                                        }
-                                        placeholder="Jan Doe"
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
-                                    />
-                                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                    Full Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={inviteForm.fullName}
+                                    onChange={(e) =>
+                                        setInviteForm((prev) => ({
+                                            ...prev,
+                                            fullName: e.target.value,
+                                        }))
+                                    }
+                                    placeholder="Jane Doe"
+                                    className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
+                                    style={{ fontFamily: "Outfit" }}
+                                />
+                            </div>
+
+                            {/* Sub-fleet - Read-only display */}
+                            {subFleet && (
                                 <div>
                                     <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
                                         Sub-fleet
                                     </label>
-                                    <select
-                                        value={inviteForm.subFleetId}
-                                        onChange={(e) =>
-                                            setInviteForm((prev) => ({
-                                                ...prev,
-                                                subFleetId: e.target.value,
-                                            }))
-                                        }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
-                                        {subFleets.length === 0 ? (
-                                            <option value="">
-                                                No sub-fleets available
-                                            </option>
-                                        ) : (
-                                            subFleets.map((fleet) => (
-                                                <option
-                                                    key={fleet.id}
-                                                    value={fleet.id}
-                                                >
-                                                    {fleet.name}
-                                                </option>
-                                            ))
-                                        )}
-                                    </select>
+                                    <div className="w-full px-4 py-3 bg-[#F8F8F8] border border-[#E0E5EB] rounded-xl text-[#1F083B]">
+                                        {subFleet.name}
+                                    </div>
+                                    <p className="text-xs text-[#8E98A8] mt-1">
+                                        Drivers will be assigned to this
+                                        sub-fleet automatically
+                                    </p>
                                 </div>
-                            </div>
+                            )}
+
+                            <input
+                                type="hidden"
+                                value={inviteForm.subFleetId}
+                            />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -967,6 +987,12 @@ const FleetDrivers: React.FC = () => {
                                     />
                                 </div>
                             </div>
+
+                            {/* Hidden field for subFleetId */}
+                            <input
+                                type="hidden"
+                                value={inviteForm.subFleetId}
+                            />
 
                             <div className="flex gap-3 mt-6">
                                 <button
@@ -1030,7 +1056,6 @@ const FleetDrivers: React.FC = () => {
                     </div>
                 </div>
             )}
-
             {/* VIEW DRIVER DETAILS MODAL */}
             {showViewModal && selectedDriver && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
@@ -1066,7 +1091,7 @@ const FleetDrivers: React.FC = () => {
                         <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-full bg-[#EDE8F4] flex items-center justify-center text-[#6E43A3] font-semibold text-lg">
-                                    {getInitials(selectedDriver.fullName)}
+                                    {getInitials(selectedDriver.name)}
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
@@ -1074,7 +1099,7 @@ const FleetDrivers: React.FC = () => {
                                             className="text-base font-bold text-[#1A2A3F]"
                                             style={{ fontFamily: "Outfit" }}
                                         >
-                                            {selectedDriver.fullName}
+                                            {selectedDriver.name}
                                         </div>
                                         <span
                                             className={`px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getStatusColor(selectedDriver.status)}`}
@@ -1111,7 +1136,7 @@ const FleetDrivers: React.FC = () => {
                                     className="text-base font-bold text-[#1A2A3F] mt-1"
                                     style={{ fontFamily: "Outfit" }}
                                 >
-                                    {selectedDriver.subFleet?.name || "-"}
+                                    {subFleet?.name || "-"}
                                 </div>
                             </div>
                             <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
@@ -1183,7 +1208,7 @@ const FleetDrivers: React.FC = () => {
                             style={{ fontFamily: "Outfit", color: "#5B646F" }}
                         >
                             Are you sure you want to remove{" "}
-                            <strong>{selectedDriver.fullName}</strong> from your
+                            <strong>{selectedDriver.name}</strong> from your
                             fleet?
                         </p>
                         <div
@@ -1308,4 +1333,4 @@ const FleetDrivers: React.FC = () => {
     );
 };
 
-export default FleetDrivers;
+export default ManagerDriver;
