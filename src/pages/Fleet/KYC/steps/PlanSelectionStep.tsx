@@ -5,12 +5,12 @@ interface PlanSelectionStepProps {
 }
 
 const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ onNext }) => {
-    const [selectedPlan, setSelectedPlan] = useState<string>("free");
-    const [selectedCard, setSelectedCard] = useState<string>("free");
+    const [selectedPlan, setSelectedPlan] = useState<string>("free_trial");
+    const [selectedCard, setSelectedCard] = useState<string>("free_trial");
 
     const plans = [
         {
-            id: "free",
+            id: "free_trial",
             name: "Free Trial",
             description:
                 "For small fleets just getting started with road intelligence.",

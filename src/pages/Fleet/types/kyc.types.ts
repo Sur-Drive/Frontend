@@ -9,7 +9,7 @@ export interface CompanyDetails {
 }
 
 export interface PlanDetails {
-    plan: "free" | "starter" | "pro" | "enterprise";
+    plan: "fre_trial" | "starter" | "pro" | "enterprise";
     numberOfVehicles: number;
 }
 

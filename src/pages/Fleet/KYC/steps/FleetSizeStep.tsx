@@ -16,7 +16,7 @@ const FleetSizeStep: React.FC<FleetSizeStepProps> = ({ onNext, plan }) => {
 
         // Validation based on plan
         if (numValue > 0) {
-            if (plan === "free" && numValue > 5) {
+            if (plan === "free_trial" && numValue > 5) {
                 setError(
                     "The Free Trial supports up to 5 vehicles. Choose a paid plan to manage more vehicles.",
                 );
@@ -37,7 +37,7 @@ const FleetSizeStep: React.FC<FleetSizeStepProps> = ({ onNext, plan }) => {
         }
 
         // Check minimum requirements
-        if (plan === "free" && numValue > 5) {
+        if (plan === "free_trial" && numValue > 5) {
             setError(
                 "The Free Trial supports up to 5 vehicles. Choose a paid plan to manage more vehicles.",
             );

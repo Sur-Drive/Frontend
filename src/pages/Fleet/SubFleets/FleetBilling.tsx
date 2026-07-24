@@ -74,7 +74,7 @@ const Billing: React.FC = () => {
 
     const allPlans = [
         {
-            id: "free",
+            id: "free_trial",
             name: "Free Trial",
             description:
                 "For small fleets just getting started with road intelligence.",

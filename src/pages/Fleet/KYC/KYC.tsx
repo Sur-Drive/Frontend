@@ -48,7 +48,7 @@ const KYC: React.FC = () => {
             await submitKYC();
 
             // Step 3: Initialize payment if not free trial
-            if (planData.plan !== "free") {
+            if (planData.plan !== "free_trial") {
                 const token = localStorage.getItem("token");
 
                 // Calculate amount based on plan and vehicle count
@@ -114,7 +114,7 @@ const KYC: React.FC = () => {
                 return (
                     <FleetSizeStep
                         onNext={handleFleetNext}
-                        plan={planData.plan || "free"}
+                        plan={planData.plan || "free_trial"}
                     />
                 );
             case 3:
