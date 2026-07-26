@@ -1,4 +1,4 @@
-// import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+// import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react'
 // import { AnimatePresence, motion } from 'framer-motion'
 // import LazyGoogleMap from '../components/map/LazyGoogleMap'
 // import type { MapMarkerSpec } from '../components/map/GoogleMapView'
@@ -23,6 +23,8 @@
 // import ReportDetailModal from '../components/ReportDetailModal'
 // import { useHazardFeed, useConfirmHazard } from '../hooks/useHazards'
 // import { hazardToReport } from '../lib/hazardToReport'
+// import { useTriggerSos, useCancelSos } from '../hooks/useSos'
+// import { ApiError } from '../lib/apiClient'
 
 // const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792]
 // const FEED_RADIUS_KM = 10
@@ -55,14 +57,20 @@
 //   const [sosActive, setSosActive] = useState(false)
 //   const [sosProgress, setSosProgress] = useState(0)
 //   const [isPressing, setIsPressing] = useState(false)
+//   const [sosError, setSosError] = useState<string | null>(null)
+//   const [activeSosId, setActiveSosId] = useState<string | null>(null)
 //   const sosTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null)
 //   const sosStartTimeRef = useRef<number>(0)
 //   const sosCompletedRef = useRef<boolean>(false)
 
-//   // FIX: this was hardcoded to `false`, which meant Confirm/Incorrect always
-//   // short-circuited into the create-account modal and never reached the
-//   // API — regardless of whether the user was actually logged in. Derive it
-//   // from the real auth token, same as every other page in the app does.
+//   // Measures the report sheet's real rendered height so the SOS button can
+//   // sit exactly above it — never overlapping its clickable content.
+//   const reportSheetRef = useRef<HTMLDivElement | null>(null)
+//   const [sosBottomOffset, setSosBottomOffset] = useState<number | null>(null)
+
+//   const triggerSosMutation = useTriggerSos()
+//   const cancelSosMutation = useCancelSos()
+
 //   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token')
 
 //   const feedParams = mapReady
@@ -81,6 +89,8 @@
 //     [hazards, userLocation]
 //   )
 
+//   // selectedId intentionally excluded — the report sheet sits above the
+//   // bottom nav, it doesn't hide it. Only these full-screen flows hide it.
 //   const isAnyModalOpen =
 //     showCreateAccount ||
 //     showSignIn ||
@@ -91,8 +101,7 @@
 //     showCreatePassword ||
 //     showCreateNewPassword ||
 //     showResetSuccess ||
-//     sosActive ||
-//     selectedId !== null
+//     sosActive
 
 //   const selected = useMemo(
 //     () => reports.find((r) => r.id === selectedId) || null,
@@ -143,6 +152,30 @@
 //     }
 //   }, [])
 
+//   // Recalculate SOS button offset whenever the report sheet mounts, resizes,
+//   // or its content changes (e.g. photo count). Prevents any overlap between
+//   // the SOS hit area and the modal's buttons/photos.
+//   useLayoutEffect(() => {
+//     if (!selected) {
+//       setSosBottomOffset(null)
+//       return
+//     }
+
+//     const node = reportSheetRef.current
+//     if (!node) return
+
+//     const updateOffset = () => {
+//       const height = node.getBoundingClientRect().height
+//       setSosBottomOffset(height + 16) // 16px gap above the sheet
+//     }
+
+//     updateOffset()
+
+//     const observer = new ResizeObserver(updateOffset)
+//     observer.observe(node)
+//     return () => observer.disconnect()
+//   }, [selected])
+
 //   const startSosPress = useCallback((e: React.MouseEvent | React.TouchEvent) => {
 //     e.stopPropagation()
 
@@ -167,12 +200,39 @@
 //           sosTimerRef.current = null
 //         }
 //         sosCompletedRef.current = true
+//         setSosError(null)
 //         setSosActive(true)
 //         setSosProgress(0)
 //         setIsPressing(false)
+
+//         const [lat, lng] = userLocation ?? DEFAULT_COORDS
+//         console.log('[sos] triggering SOS at', { lat, lng })
+//         triggerSosMutation.mutate(
+//           { latitude: lat, longitude: lng },
+//           {
+//             onSuccess: (data) => {
+//               console.log('[sos] triggered successfully', data)
+//               if (data?.id) setActiveSosId(data.id)
+//             },
+//             onError: (err) => {
+//               console.error('[sos] failed to trigger', err)
+//               const status = err instanceof ApiError ? err.status : undefined
+//               const message = err instanceof Error ? err.message : 'Failed to send SOS alert'
+
+//               if (status === 401) {
+//                 setSosActive(false)
+//                 sosCompletedRef.current = false
+//                 setShowSignIn(true)
+//                 return
+//               }
+
+//               setSosError(message)
+//             },
+//           }
+//         )
 //       }
 //     }, 16)
-//   }, [])
+//   }, [userLocation, triggerSosMutation])
 
 //   const endSosPress = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
 //     e?.stopPropagation?.()
@@ -190,7 +250,13 @@
 //   }, [])
 
 //   const handleCancelSOS = () => {
+//     if (activeSosId) {
+//       cancelSosMutation.mutate(activeSosId, {
+//         onSettled: () => setActiveSosId(null),
+//       })
+//     }
 //     setSosActive(false)
+//     setSosError(null)
 //     sosCompletedRef.current = false
 //   }
 
@@ -355,8 +421,7 @@
 //       className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
 //       style={{ overscrollBehavior: 'none' }}
 //     >
-//       {/* Google Map — fills full viewport on every screen size. The map
-//           script + component chunk are both lazy-loaded on demand. */}
+//       {/* Google Map — fills full viewport on every screen size. */}
 //       <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
 //         <LazyGoogleMap
 //           center={{ lat: mapCenter[0], lng: mapCenter[1] }}
@@ -365,7 +430,7 @@
 //         />
 //       </div>
 
-//       {/* Location error toast — capped width so it doesn't stretch full-bleed on desktop */}
+//       {/* Location error toast */}
 //       {locationError && (
 //         <div className="absolute z-[500] flex items-start gap-3 px-4 py-3 border border-yellow-200 top-4 left-4 right-4 sm:right-auto sm:w-80 lg:top-6 lg:left-6 bg-yellow-50 rounded-xl">
 //           <div className="text-yellow-600 mt-0.5 text-sm">⚠️</div>
@@ -376,7 +441,10 @@
 //         </div>
 //       )}
 
-//       {/* SOS floating button — pulled further from the edge on larger screens */}
+//       {/* SOS floating button — dynamically offset above the report sheet's
+//           REAL measured height, so it can never overlap the sheet's buttons
+//           or photos (that overlap was silently firing endSosPress → opening
+//           CreateAccountModal on a stray tap). */}
 //       <button
 //         onMouseDown={startSosPress}
 //         onMouseUp={endSosPress}
@@ -384,8 +452,14 @@
 //         onTouchStart={startSosPress}
 //         onTouchEnd={endSosPress}
 //         onContextMenu={(e) => e.preventDefault()}
-//         className="absolute z-[999] flex flex-col items-center justify-center w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 text-white transition rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] bottom-28 right-4 lg:bottom-10 lg:right-10 bg-[#ff4444] overflow-hidden select-none"
-//         style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+//         className="absolute z-[999] flex flex-col items-center justify-center w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 text-white transition-all duration-200 rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] right-4 lg:right-10 lg:!bottom-10 bg-[#ff4444] overflow-hidden select-none"
+//         style={{
+//           bottom: selected && sosBottomOffset !== null ? `${sosBottomOffset}px` : '7rem',
+//           touchAction: 'none',
+//           WebkitTouchCallout: 'none',
+//           WebkitUserSelect: 'none',
+//           userSelect: 'none',
+//         }}
 //       >
 //         <svg
 //           className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
@@ -418,15 +492,18 @@
 //         </span>
 //       </button>
 
-//       {/* REPORT DETAIL — bottom sheet on mobile, floating right-side panel on desktop */}
+//       {/* REPORT DETAIL — sits ABOVE the bottom nav on mobile, floating
+//           right-side panel on desktop. reportSheetRef lets the SOS button
+//           measure this element's real height (see effect above). */}
 //       <AnimatePresence>
 //         {selected && (
 //           <motion.div
+//             ref={reportSheetRef}
 //             initial={{ y: '100%' }}
 //             animate={{ y: 0 }}
 //             exit={{ y: '100%' }}
 //             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-//             className="absolute z-[500] bottom-16 left-0 right-0 max-h-[70dvh] overflow-y-auto
+//             className="absolute z-[400] bottom-16 left-0 right-0 max-h-[70dvh] overflow-y-auto
 //                        lg:bottom-auto lg:left-auto lg:top-6 lg:right-6 lg:w-96 lg:max-h-[85dvh] lg:rounded-3xl lg:shadow-2xl"
 //           >
 //             <ReportDetailModal
@@ -554,13 +631,15 @@
 //           <SOSActiveModal
 //             onCancel={handleCancelSOS}
 //             onCall={handleCallEmergency}
+//             errorMessage={sosError}
 //           />
 //         )}
 //       </AnimatePresence>
 
-//       {/* BottomNav — mobile-style bar centered/narrowed on desktop instead of full-bleed */}
+//       {/* BottomNav — always visible except during full-screen auth/SOS flows.
+//           z-[600] keeps it above the report sheet (z-[400]). */}
 //       {!isAnyModalOpen && (
-//         <div className="absolute bottom-0 left-0 right-0 z-[500] lg:flex lg:justify-center lg:pb-4">
+//         <div className="absolute bottom-0 left-0 right-0 z-[600] lg:flex lg:justify-center lg:pb-4">
 //           <div className="lg:max-w-md lg:w-full lg:rounded-2xl lg:overflow-hidden lg:shadow-lg">
 //             <BottomNav />
 //           </div>
@@ -574,7 +653,8 @@
 
 
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+
+import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import LazyGoogleMap from '../components/map/LazyGoogleMap'
 import type { MapMarkerSpec } from '../components/map/GoogleMapView'
@@ -629,6 +709,7 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [isLocating, setIsLocating] = useState(false)
 
   const [sosActive, setSosActive] = useState(false)
   const [sosProgress, setSosProgress] = useState(0)
@@ -639,13 +720,14 @@ export default function HomePage() {
   const sosStartTimeRef = useRef<number>(0)
   const sosCompletedRef = useRef<boolean>(false)
 
+  // Measures the report sheet's real rendered height so the SOS button can
+  // sit exactly above it — never overlapping its clickable content.
+  const reportSheetRef = useRef<HTMLDivElement | null>(null)
+  const [sosBottomOffset, setSosBottomOffset] = useState<number | null>(null)
+
   const triggerSosMutation = useTriggerSos()
   const cancelSosMutation = useCancelSos()
 
-  // FIX: this was hardcoded to `false`, which meant Confirm/Incorrect always
-  // short-circuited into the create-account modal and never reached the
-  // API — regardless of whether the user was actually logged in. Derive it
-  // from the real auth token, same as every other page in the app does.
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token')
 
   const feedParams = mapReady
@@ -664,6 +746,8 @@ export default function HomePage() {
     [hazards, userLocation]
   )
 
+  // selectedId intentionally excluded — the report sheet sits above the
+  // bottom nav, it doesn't hide it. Only these full-screen flows hide it.
   const isAnyModalOpen =
     showCreateAccount ||
     showSignIn ||
@@ -674,40 +758,66 @@ export default function HomePage() {
     showCreatePassword ||
     showCreateNewPassword ||
     showResetSuccess ||
-    sosActive ||
-    selectedId !== null
+    sosActive
 
   const selected = useMemo(
     () => reports.find((r) => r.id === selectedId) || null,
     [reports, selectedId]
   )
 
-  useEffect(() => {
+  // Locates the user with a fast low-accuracy lookup first (resolves in
+  // ~1-2s via wifi/IP on most devices), then falls back to a slower
+  // high-accuracy GPS lookup with a longer timeout if that fails.
+  // This avoids the common desktop/browser timeout when forcing
+  // enableHighAccuracy immediately with only a 10s window.
+  const locateUser = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation not supported by your browser')
       setMapReady(true)
+      setIsLocating(false)
       return
     }
 
+    setIsLocating(true)
+    setLocationError(null)
+
+    const onSuccess = (position: GeolocationPosition) => {
+      setUserLocation([position.coords.latitude, position.coords.longitude])
+      setLocationError(null)
+      setMapReady(true)
+      setIsLocating(false)
+    }
+
+    const onFinalError = (error: GeolocationPositionError) => {
+      setLocationError(
+        error.code === 1
+          ? 'Location access denied. Please enable location permissions.'
+          : error.code === 2
+          ? 'Location unavailable.'
+          : 'Location request timed out.'
+      )
+      setUserLocation((prev) => prev ?? DEFAULT_COORDS)
+      setMapReady(true)
+      setIsLocating(false)
+    }
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation([position.coords.latitude, position.coords.longitude])
-        setMapReady(true)
+      onSuccess,
+      () => {
+        // Fast attempt failed/timed out — retry with GPS + longer timeout.
+        navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
       },
-      (error) => {
-        setLocationError(
-          error.code === 1
-            ? 'Location access denied. Please enable location permissions.'
-            : error.code === 2
-            ? 'Location unavailable.'
-            : 'Location request timed out.'
-        )
-        setUserLocation(DEFAULT_COORDS)
-        setMapReady(true)
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
     )
   }, [])
+
+  useEffect(() => {
+    locateUser()
+  }, [locateUser])
 
   useEffect(() => {
     const previousOverscroll = document.body.style.overscrollBehavior
@@ -725,6 +835,30 @@ export default function HomePage() {
       }
     }
   }, [])
+
+  // Recalculate SOS button offset whenever the report sheet mounts, resizes,
+  // or its content changes (e.g. photo count). Prevents any overlap between
+  // the SOS hit area and the modal's buttons/photos.
+  useLayoutEffect(() => {
+    if (!selected) {
+      setSosBottomOffset(null)
+      return
+    }
+
+    const node = reportSheetRef.current
+    if (!node) return
+
+    const updateOffset = () => {
+      const height = node.getBoundingClientRect().height
+      setSosBottomOffset(height + 16) // 16px gap above the sheet
+    }
+
+    updateOffset()
+
+    const observer = new ResizeObserver(updateOffset)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [selected])
 
   const startSosPress = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation()
@@ -770,8 +904,6 @@ export default function HomePage() {
               const message = err instanceof Error ? err.message : 'Failed to send SOS alert'
 
               if (status === 401) {
-                // Session expired / not signed in — close the SOS screen and
-                // send them to sign in instead of pretending it worked.
                 setSosActive(false)
                 sosCompletedRef.current = false
                 setShowSignIn(true)
@@ -973,8 +1105,7 @@ export default function HomePage() {
       className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
       style={{ overscrollBehavior: 'none' }}
     >
-      {/* Google Map — fills full viewport on every screen size. The map
-          script + component chunk are both lazy-loaded on demand. */}
+      {/* Google Map — fills full viewport on every screen size. */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
         <LazyGoogleMap
           center={{ lat: mapCenter[0], lng: mapCenter[1] }}
@@ -983,18 +1114,29 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Location error toast — capped width so it doesn't stretch full-bleed on desktop */}
+      {/* Location error toast — includes a retry button so users aren't
+          stuck on DEFAULT_COORDS with no way to re-trigger the lookup. */}
       {locationError && (
         <div className="absolute z-[500] flex items-start gap-3 px-4 py-3 border border-yellow-200 top-4 left-4 right-4 sm:right-auto sm:w-80 lg:top-6 lg:left-6 bg-yellow-50 rounded-xl">
           <div className="text-yellow-600 mt-0.5 text-sm">⚠️</div>
-          <div>
+          <div className="flex-1">
             <p className="text-[12px] font-medium text-yellow-800">{locationError}</p>
             <p className="mt-1 text-[11px] text-yellow-600">Showing default area</p>
+            <button
+              onClick={locateUser}
+              disabled={isLocating}
+              className="mt-2 text-[11px] font-semibold text-yellow-800 underline disabled:opacity-50"
+            >
+              {isLocating ? 'Locating...' : 'Retry location'}
+            </button>
           </div>
         </div>
       )}
 
-      {/* SOS floating button — pulled further from the edge on larger screens */}
+      {/* SOS floating button — dynamically offset above the report sheet's
+          REAL measured height, so it can never overlap the sheet's buttons
+          or photos (that overlap was silently firing endSosPress → opening
+          CreateAccountModal on a stray tap). */}
       <button
         onMouseDown={startSosPress}
         onMouseUp={endSosPress}
@@ -1002,8 +1144,14 @@ export default function HomePage() {
         onTouchStart={startSosPress}
         onTouchEnd={endSosPress}
         onContextMenu={(e) => e.preventDefault()}
-        className="absolute z-[999] flex flex-col items-center justify-center w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 text-white transition rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] bottom-28 right-4 lg:bottom-10 lg:right-10 bg-[#ff4444] overflow-hidden select-none"
-        style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        className="absolute z-[999] flex flex-col items-center justify-center w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 text-white transition-all duration-200 rounded-full shadow-[0_4px_20px_rgba(255,68,68,0.4)] right-4 lg:right-10 lg:!bottom-10 bg-[#ff4444] overflow-hidden select-none"
+        style={{
+          bottom: selected && sosBottomOffset !== null ? `${sosBottomOffset}px` : '7rem',
+          touchAction: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+        }}
       >
         <svg
           className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
@@ -1036,15 +1184,18 @@ export default function HomePage() {
         </span>
       </button>
 
-      {/* REPORT DETAIL — bottom sheet on mobile, floating right-side panel on desktop */}
+      {/* REPORT DETAIL — sits ABOVE the bottom nav on mobile, floating
+          right-side panel on desktop. reportSheetRef lets the SOS button
+          measure this element's real height (see effect above). */}
       <AnimatePresence>
         {selected && (
           <motion.div
+            ref={reportSheetRef}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute z-[500] bottom-16 left-0 right-0 max-h-[70dvh] overflow-y-auto
+            className="absolute z-[400] bottom-16 left-0 right-0 max-h-[70dvh] overflow-y-auto
                        lg:bottom-auto lg:left-auto lg:top-6 lg:right-6 lg:w-96 lg:max-h-[85dvh] lg:rounded-3xl lg:shadow-2xl"
           >
             <ReportDetailModal
@@ -1177,9 +1328,10 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      {/* BottomNav — mobile-style bar centered/narrowed on desktop instead of full-bleed */}
+      {/* BottomNav — always visible except during full-screen auth/SOS flows.
+          z-[600] keeps it above the report sheet (z-[400]). */}
       {!isAnyModalOpen && (
-        <div className="absolute bottom-0 left-0 right-0 z-[500] lg:flex lg:justify-center lg:pb-4">
+        <div className="absolute bottom-0 left-0 right-0 z-[600] lg:flex lg:justify-center lg:pb-4">
           <div className="lg:max-w-md lg:w-full lg:rounded-2xl lg:overflow-hidden lg:shadow-lg">
             <BottomNav />
           </div>
@@ -1188,5 +1340,3 @@ export default function HomePage() {
     </div>
   )
 }
-
-

@@ -1,6 +1,29 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -200,30 +223,24 @@ export default function PlanRoutePage() {
   const [sosHolding, setSosHolding] = useState(false)
   const [sosProgress, setSosProgress] = useState(0)
   const [showUpcomingAlert, setShowUpcomingAlert] = useState(false)
-  const [selectedPin, setSelectedPin] = useState<string | null>(null)
-  // Which of the backend's driving/walking/cycling/motorcycle options is
-  // currently drawn on the map + drives the trip simulation below.
+
   const [selectedMode, setSelectedMode] = useState<RouteModeKey>('driving')
-  // Lets the person collapse the ETA/End Trip card down to a slim pill so
-  // the map underneath isn't mostly covered by it — see the nav bottom
-  // sheet further down.
+
   const [navPanelExpanded, setNavPanelExpanded] = useState(true)
+
+  // Fix: this state was referenced by mapMarkers below but never declared,
+  // which caused "Cannot find name 'selectedPin'" (TS2552).
+  const [selectedPin, setSelectedPin] = useState<string | null>(null)
 
   const [startPoint, setStartPoint] = useState('')
   const [destination, setDestination] = useState('')
-  // Captured from the autocomplete/reverse-geocode flows for when route
-  // planning needs real coordinates instead of just display text.
+
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [destinationCoords, setDestinationCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [routeError, setRouteError] = useState<string | null>(null)
   const [activeSosId, setActiveSosId] = useState<string | null>(null)
   const [sosError, setSosError] = useState<string | null>(null)
 
-  // ── API mutations ────────────────────────────────────
-  // Real backend shape: one full RouteOption (with its own path/distance/
-  // duration/hazards) per travel mode, not a single flattened result — see
-  // types/routePlan.ts. This is what actually lets us draw the route and
-  // animate a trip along it, instead of just showing numbers in a panel.
   const planRouteMutation = usePlanRouteOptions()
   const triggerSosMutation = useTriggerSos()
   const cancelSosMutation = useCancelSos()
@@ -236,24 +253,17 @@ export default function PlanRoutePage() {
     [routePlan]
   )
 
-  // Pick a sensible default mode (the backend's declared best/fastest) the
-  // first time a plan comes back, rather than always defaulting to driving
-  // even if the backend didn't return a driving option for this pair.
+
   useEffect(() => {
     if (!routePlan) return
     const preferred = pickDefaultMode(routePlan)
     if (preferred) setSelectedMode(preferred)
   }, [routePlan])
 
-  // Drives the moving position/heading for the "trip in progress" view —
-  // a simulated run along the real planned path, standing in for GPS
-  // until this is wired to live location. Not started until Start Trip is
-  // tapped (autoPlay/loop both false: it plays once through, then stops
-  // at the destination like a real trip would).
+
   const tripDurationMs = useMemo(() => {
     if (!activeRoute) return 30000
-    // Compress the real ETA into a watchable demo pace (20s–90s) rather
-    // than literally waiting out an 18-minute drive.
+
     return Math.min(90000, Math.max(20000, activeRoute.durationInSeconds * 60))
   }, [activeRoute])
 
@@ -270,27 +280,13 @@ export default function PlanRoutePage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [mapReady, setMapReady] = useState(false)
 
-  // ── Live GPS-driven trip progress ────────────────────
-  // While navigating, watch the device's real position and project each
-  // fix onto the planned route (projectPointOntoPath) instead of relying
-  // on the simulated `trip` clock above. Walking forward along the route
-  // increases `liveProgress`; doubling back genuinely decreases it, since
-  // the projection always snaps to the nearest point on the whole path.
-  // `trip` is left running as a fallback for devices/browsers where
-  // geolocation isn't available or hasn't produced a fix yet — see
-  // `displayProgress`/`displayHeading` below, which prefer the live value
-  // once one exists.
+
   const routeCum = useMemo(() => cumulativeDistances(routePath), [routePath])
   const [liveProgress, setLiveProgress] = useState<number | null>(null)
   const [liveHeading, setLiveHeading] = useState(0)
-  // Distance in meters from the last GPS fix to the route itself — a
-  // simple "has the user wandered off the planned path" signal (missed
-  // turn, different street, etc.).
+
   const [routeDeviationMeters, setRouteDeviationMeters] = useState<number | null>(null)
-  // Explicit state machine instead of silently guessing from liveProgress
-  // being null — 'waiting' shows a "getting your location" banner instead
-  // of quietly running the demo animation as if it were real movement.
-  // Only 'error' triggers the simulated-trip fallback, and the UI says so.
+
   const [gpsStatus, setGpsStatus] = useState<'waiting' | 'active' | 'error'>('waiting')
   const [gpsErrorMessage, setGpsErrorMessage] = useState<string | null>(null)
 
@@ -326,25 +322,21 @@ export default function PlanRoutePage() {
         console.warn('[gps] watchPosition error:', err.message)
         setGpsStatus('error')
         setGpsErrorMessage(err.message || 'Unable to get your location')
-        // Only now — a genuine permission denial or timeout, not just "no
-        // fix yet" — fall back to the simulated clock, so the map still
-        // shows *something* instead of a frozen trip.
+
         trip.play()
       },
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
     )
 
     return () => navigator.geolocation.clearWatch(watchId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [isNavigating, routePath, routeCum])
 
-  // Real GPS progress once we have a fix, simulated trip clock only as an
-  // explicit error fallback (see gpsStatus above) — never as a silent default.
+
   const displayProgress = liveProgress ?? trip.progress
   const displayHeading = liveProgress != null ? liveHeading : trip.heading
 
-  // Only meaningful once a real GPS fix is driving progress — the
-  // simulated fallback trip is always exactly on the path by definition.
+
   const OFF_ROUTE_THRESHOLD_METERS = 40
   const isOffRoute =
     isNavigating && liveProgress != null && (routeDeviationMeters ?? 0) > OFF_ROUTE_THRESHOLD_METERS
@@ -370,9 +362,7 @@ export default function PlanRoutePage() {
         setSosError(null)
 
         if (!userLocation) {
-          // Never send an SOS with a hardcoded demo coordinate standing in
-          // for the user's real position — better to surface the failure
-          // than silently alert from the wrong place.
+
           setSosError('Unable to get your location. Please enable location access and try again.')
           return
         }
@@ -394,8 +384,7 @@ export default function PlanRoutePage() {
               const message = err instanceof Error ? err.message : 'Failed to send SOS alert'
 
               if (status === 401) {
-                // Not signed in / session expired — close the SOS screen and
-                // send them to sign in rather than showing a fake success.
+
                 setShowSOS(false)
                 setShowAuth(true)
                 return
@@ -465,22 +454,13 @@ export default function PlanRoutePage() {
             break
         }
         setLocationError(message)
-        // Previously fell back to a hardcoded demo coordinate here
-        // (reports[0], a mock hazard pin) and treated it as the user's
-        // real location — which looked like location had been fetched
-        // successfully when it hadn't. Leave userLocation unset instead;
-        // the map's own center memo (below) already falls back to a
-        // neutral default for *display* purposes without pretending it's
-        // "your location," and the error banner tells the user what
-        // actually happened so they can retry/grant permission.
+
         setMapReady(true)
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Prevent page-level bounce/rubber-banding on mobile
   useEffect(() => {
     const previousOverscroll = document.body.style.overscrollBehavior
     document.body.style.overscrollBehavior = 'none'
@@ -543,9 +523,7 @@ export default function PlanRoutePage() {
     const dest = destinationCoords
 
     if (!origin || !dest) {
-      // This is the case that used to fail silently: the plan modal stayed
-      // open with no feedback at all if the user typed an address without
-      // picking a suggestion (so we never got real coordinates for it).
+
       console.log('[route] blocked: missing coordinates', { origin, dest })
       setRouteError('Pick both points from the suggestions so we have exact coordinates.')
       return
@@ -586,9 +564,7 @@ export default function PlanRoutePage() {
     setGpsStatus('waiting')
     setGpsErrorMessage(null)
     trip.reset()
-    // trip.play() is NOT called here — it only starts as a fallback if the
-    // GPS watcher (above) reports a genuine error. Until then we wait for
-    // a real fix instead of quietly animating a fake trip.
+
     setTimeout(() => setShowUpcomingAlert(true), 2000)
   }
 
@@ -618,8 +594,7 @@ export default function PlanRoutePage() {
     distance: '0.9 KM',
   }
 
-  // ── Live trip stats, driven by real GPS progress once available,
-  // falling back to the simulated clock otherwise ──────────────────────
+
   const navHazardCount = (activeRoute?.hazards?.length || scanHazards.length)
   const remainingKm = activeRoute ? Math.max(0, activeRoute.distance * (1 - displayProgress)) : 0
   const etaMinutes = activeRoute ? Math.max(0, Math.round(activeRoute.duration * (1 - displayProgress))) : 0
@@ -640,10 +615,7 @@ export default function PlanRoutePage() {
       onClick: () => setSelectedPin(r.id === selectedPin ? null : r.id),
     }))
 
-    // While navigating, RouteMapView's followMode renders a fixed,
-    // screen-centered "you are here" puck itself (see GoogleMapView) —
-    // adding a second, geo-projected marker here would drift out of sync
-    // with it the moment the map starts rotating to face the heading.
+
     if (userLocation && !isNavigating) {
       markers.push({
         id: '__user_location__',
@@ -698,18 +670,12 @@ export default function PlanRoutePage() {
   }
 
   return (
-    // Full-bleed on every breakpoint: the map fills the entire viewport on
-    // desktop (no phone-shaped frame floating in the middle of a wide
-    // screen). Floating UI panels below cap their own width and center
-    // themselves once the viewport is wider than a phone.
+
     <div
       className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
       style={{ overscrollBehavior: 'none' }}
     >
-      {/* Google Map — script + component chunk both lazy-loaded on demand.
-          Once we have a planned route (scan results or an active trip),
-          RouteMapView takes over so the actual path is drawn; before that
-          (still on the home screen) it's just the plain marker map. */}
+
       <div className="absolute inset-0 z-0">
         {activeRoute ? (
           <RouteMapView
@@ -825,10 +791,7 @@ export default function PlanRoutePage() {
         </div>
       )}
 
-      {/* Navigation Header (when navigating) — kept short on purpose so
-          the map is visible right below it, the way Google/Waze show
-          just the next-turn banner up top and nothing else until the
-          bottom trip card. */}
+
       {isNavigating && (
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2 sm:flex sm:justify-center">
           <div className="space-y-2 sm:w-full sm:max-w-md">
@@ -850,7 +813,7 @@ export default function PlanRoutePage() {
 
             {gpsStatus === 'waiting' && (
               <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm rounded-xl animate-in slide-in-from-top-2">
-                <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-blue-100">
+                <div className="flex items-center justify-center flex-shrink-0 bg-blue-100 rounded-lg w-7 h-7 sm:w-8 sm:h-8">
                   <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-blue-500 rounded-full border-t-transparent animate-spin" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -861,7 +824,7 @@ export default function PlanRoutePage() {
             )}
 
             {gpsStatus === 'error' && (
-              <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 shadow-sm rounded-xl animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-3 px-4 py-3 border shadow-sm bg-amber-50 border-amber-200 rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-amber-100">
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -869,14 +832,14 @@ export default function PlanRoutePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[9px] sm:text-[10px] text-amber-500 font-medium uppercase tracking-wide">Demo mode — GPS unavailable</p>
-                  <p className="text-xs font-medium text-amber-900 truncate sm:text-sm">{gpsErrorMessage}</p>
+                  <p className="text-xs font-medium truncate text-amber-900 sm:text-sm">{gpsErrorMessage}</p>
                 </div>
               </div>
             )}
 
             {isOffRoute && (
-              <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 shadow-sm rounded-xl animate-in slide-in-from-top-2">
-                <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-red-100">
+              <div className="flex items-center gap-3 px-4 py-3 border border-red-200 shadow-sm bg-red-50 rounded-xl animate-in slide-in-from-top-2">
+                <div className="flex items-center justify-center flex-shrink-0 bg-red-100 rounded-lg w-7 h-7 sm:w-8 sm:h-8">
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-2.96L13.71 3.86a2 2 0 0 0-3.42 0z" />
                   </svg>
@@ -908,10 +871,6 @@ export default function PlanRoutePage() {
         </div>
       )}
 
-      {/* Bottom trip card (when navigating) — anchored to the bottom
-          instead of stacked under the top banner, and collapsible down to
-          a slim pill so the map in between is actually visible instead of
-          being covered top-to-bottom. */}
       {isNavigating && (
         <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex sm:justify-center">
           <div className="sm:w-full sm:max-w-md">
@@ -920,7 +879,7 @@ export default function PlanRoutePage() {
                 {/* Collapse handle — tap to shrink the card and see the full map */}
                 <button
                   onClick={() => setNavPanelExpanded(false)}
-                  className="flex items-center justify-center w-full py-1 -mt-1 mb-2 group"
+                  className="flex items-center justify-center w-full py-1 mb-2 -mt-1 group"
                   aria-label="Collapse trip card"
                 >
                   <span className="w-10 h-1 transition bg-gray-300 rounded-full group-active:bg-gray-400" />
@@ -948,9 +907,7 @@ export default function PlanRoutePage() {
                 </button>
               </div>
             ) : (
-              // Collapsed: a slim pill — ETA + remaining still visible at a
-              // glance, tap anywhere to bring the full card back, End Trip
-              // stays one tap away instead of being hidden entirely.
+
               <button
                 onClick={() => setNavPanelExpanded(true)}
                 className="flex items-center w-full gap-3 py-2.5 pl-4 pr-2 bg-white shadow-lg rounded-full"

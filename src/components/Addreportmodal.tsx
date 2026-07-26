@@ -22,7 +22,7 @@ const HAZARD_TYPE_MAP: Record<HazardType, BackendHazardType> = {
   Flood: 'FLOOD',
   Accident: 'ACCIDENT',
   Debris: 'DEBRIS',
-  Road: 'ROAD',
+  Road: 'ROAD_WORKS',
   Checkpoint: 'CHECKPOINT',
   Danger: 'DANGER',
   SOS: 'SOS',
@@ -222,7 +222,7 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40">
       <div className="relative flex h-[92dvh] sm:h-auto sm:max-h-[85vh] w-full sm:max-w-[420px] flex-col overflow-hidden rounded-t-[40px] sm:rounded-3xl bg-white shadow-2xl">
         {step === 'form' ? (
           <>
@@ -237,7 +237,8 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
               </button>
             </div>
 
-            <div className="flex-1 px-5 pb-5 overflow-y-auto sm:px-6 sm:pb-6">
+            {/* <div className="flex-1 px-5 pb-5 overflow-y-auto sm:px-6 sm:pb-6"> */}
+            <div className="flex-1 min-h-0 px-5 pb-5 overflow-y-auto sm:px-6 sm:pb-6">
               {/* Hazard type */}
               <p className="mb-2 text-sm sm:text-[15px] font-medium text-gray-500">Hazard type</p>
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 sm:gap-2.5">

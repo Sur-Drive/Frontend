@@ -1,3 +1,7 @@
+
+
+
+
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -28,12 +32,7 @@ const queryClient = new QueryClient({
     },
 });
 
-// Pages that should NOT show the BottomNav
-// /plan-route renders its own contextual BottomNav (see PlanRoutePage) that
-// hides itself while a trip is actively navigating — this global layout-level
-// nav doesn't know about that state, so keeping it here meant it sat fixed
-// on top of the page, at a higher z-index, permanently covering the
-// End Trip button whenever a trip was in progress.
+
 const NO_NAV_PAGES = ["/", "/access-list", "/admin/login", "/admin/dashboard", "/plan-route"];
 
 function AppRoutes() {
@@ -94,8 +93,8 @@ function AppRoutes() {
                 </Routes>
             </div>
 
-            {/* BottomNav only shows on app pages */}
-            {showNav && <BottomNav />}
+            {/* BottomNav only shows on app pages, and never underneath the splash overlay */}
+            {showNav && !showSplash && <BottomNav />}
 
             {/* Splash screen overlay - only on app routes */}
             {showSplash && (
