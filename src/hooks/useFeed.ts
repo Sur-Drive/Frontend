@@ -13,11 +13,7 @@ function getToken(): string | null {
   return localStorage.getItem('token')
 }
 
-// ---- Local vote persistence ----
-// /hazards/nearby is a public endpoint and doesn't return per-user vote
-// state, so we track "what did I vote on this hazard" ourselves and merge
-// it into every fetched hazard list. This is what makes the vote survive
-// a page refresh.
+
 
 const VOTES_KEY = 'hazardVotes' // { [hazardId]: 'CONFIRM' | 'INCORRECT' }
 

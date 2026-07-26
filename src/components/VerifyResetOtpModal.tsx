@@ -1,8 +1,14 @@
+
+
+
+
+
+
+
+
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMutation } from '@tanstack/react-query'
 import { useVerifyResetOtp } from '../hooks/useAuth'
-
 
 interface VerifyResetOtpModalProps {
   phoneNumber: string
@@ -22,7 +28,12 @@ export default function VerifyResetOtpModal({
   const verifyResetOtp = useVerifyResetOtp()
 
   const isComplete = otp.every((d) => d !== '')
-  const maskedPhone = phoneNumber?.replace(/(\+\d{3})(\d{3})(\d{4})/, '$1 *** $3') || 'your phone'
+
+  // Handle both phone (+234...) and email identifiers
+  const isEmail = phoneNumber?.includes('@')
+  const displayIdentifier = isEmail
+    ? phoneNumber
+    : phoneNumber?.replace(/(\+\d{3})(\d{3})(\d{4})/, '$1 *** $3') || 'your phone'
 
   useEffect(() => {
     inputRefs.current[0]?.focus()
@@ -66,7 +77,7 @@ export default function VerifyResetOtpModal({
 
     const otpString = otp.join('')
     try {
-     await verifyResetOtp.mutateAsync({ identifier: phoneNumber, otp: otpString })
+      await verifyResetOtp.mutateAsync({ identifier: phoneNumber, otp: otpString })
       onVerifySuccess()
     } catch (err: any) {
       console.error('Verify reset OTP failed:', err)
@@ -96,7 +107,11 @@ export default function VerifyResetOtpModal({
 
         {/* Bottom Sheet */}
         <motion.div
-          className="relative w-full max-w-[430px] h-[92dvh] bg-white rounded-t-[40px] px-6 pt-8 pb-10 flex flex-col overflow-hidden"
+          className="relative w-full max-w-[430px] bg-white rounded-t-[40px] px-4 sm:px-6 pt-5 sm:pt-8 pb-4 sm:pb-10 flex flex-col overflow-hidden"
+          style={{
+            height: '100%',
+            maxHeight: '100vh',
+          }}
           initial={{ y: '110%' }}
           animate={{ y: 0 }}
           exit={{ y: '110%' }}
@@ -106,15 +121,9 @@ export default function VerifyResetOtpModal({
             stiffness: 220,
             mass: 1.2,
           }}
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={0.15}
-          onDragEnd={(_, info) => {
-            if (info.offset.y > 150) onClose()
-          }}
         >
           {/* Drag Handle */}
-          <div className="flex justify-center mb-2 -mt-2">
+          <div className="flex justify-center mb-1 -mt-1 shrink-0">
             <div className="w-10 h-1 bg-gray-300 rounded-full" />
           </div>
 
@@ -122,7 +131,7 @@ export default function VerifyResetOtpModal({
           <motion.button
             onClick={onBack}
             aria-label="Go back"
-            className="absolute top-6 left-6 w-10 h-10 rounded-full bg-[#1a0a2e] flex items-center justify-center text-white"
+            className="absolute top-5 left-4 sm:left-6 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#1a0a2e] flex items-center justify-center text-white z-10"
             whileTap={{ scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
@@ -133,16 +142,17 @@ export default function VerifyResetOtpModal({
           <motion.button
             onClick={onClose}
             aria-label="Close"
-            className="absolute flex items-center justify-center text-gray-500 bg-gray-100 rounded-full top-6 right-6 w-9 h-9"
+            className="absolute flex items-center justify-center text-gray-500 bg-gray-100 rounded-full top-5 right-4 sm:right-6 w-9 h-9"
             whileTap={{ scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
             <CloseIcon />
           </motion.button>
 
-          <div className="mt-6">
+          {/* Title */}
+          <div className="mt-4 sm:mt-6 shrink-0">
             <motion.h1
-              className="text-2xl sm:text-[32px] font-extrabold text-gray-900 leading-tight"
+              className="text-xl sm:text-2xl sm:text-[32px] font-extrabold text-gray-900 leading-tight"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -151,86 +161,108 @@ export default function VerifyResetOtpModal({
             </motion.h1>
 
             <motion.p
-              className="mt-2 text-base text-gray-600"
+              className="mt-1 text-sm leading-relaxed text-gray-600 sm:mt-2 sm:text-base"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.32, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              We sent a verification code to <span className="font-semibold text-gray-900">{maskedPhone}</span>.
+              We sent a verification code to{' '}
+              <span className="font-semibold text-gray-900 break-all">{displayIdentifier}</span>.
               Enter the 6-digit code below to continue.
             </motion.p>
           </div>
 
-          {/* OTP Inputs */}
-          <div className="mt-8 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <motion.div
-              className="flex justify-center gap-3"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-              onPaste={handlePaste}
-            >
-              {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => { inputRefs.current[index] = el }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`w-12 h-14 text-2xl font-bold text-center rounded-2xl border-2 outline-none transition-all ${
-                    digit
-                      ? 'border-[#6E43A3] bg-purple-50 text-[#6E43A3]'
-                      : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-[#6E43A3] focus:ring-2 focus:ring-purple-300'
-                  }`}
-                />
-              ))}
-            </motion.div>
-
-            {verifyResetOtp.isError && (
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 text-sm text-center text-red-500"
-              >
-                {(verifyResetOtp.error as Error)?.message || 'Invalid code. Please try again.'}
-              </motion.p>
-            )}
-
-            <motion.p
-              className="mt-6 text-center text-gray-600"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              Didn&apos;t receive it?{' '}
-              <button
-                onClick={() => {
-                  // Resend logic
-                }}
-                className="text-[#6E43A3] font-semibold"
-              >
-                Resend code
-              </button>
-            </motion.p>
-          </div>
-
-          {/* Verify button */}
-          <motion.button
-            onClick={handleSubmit}
-            disabled={!isComplete || verifyResetOtp.isPending}
-            className={`mt-4 h-14 rounded-2xl font-semibold text-lg text-white transition-all flex items-center justify-center ${
-              isComplete && !verifyResetOtp.isPending ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
-            }`}
-            whileTap={isComplete && !verifyResetOtp.isPending ? { scale: 0.97 } : {}}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+          {/* Scrollable content + button */}
+          <div
+            className="relative flex-1 min-h-0 mt-4 overflow-y-auto sm:mt-6"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+              touchAction: 'pan-y',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
           >
-            {verifyResetOtp.isPending ? <Spinner /> : 'Verify'}
-          </motion.button>
+            <style>{`
+              .hide-scrollbar::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+            <div className="hide-scrollbar">
+
+              {/* OTP Inputs */}
+              <motion.div
+                className="flex justify-center gap-2 sm:gap-3"
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                onPaste={handlePaste}
+              >
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => { inputRefs.current[index] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    className={`w-10 h-12 sm:w-12 sm:h-14 text-xl sm:text-2xl font-bold text-center rounded-2xl border-2 outline-none transition-all ${
+                      digit
+                        ? 'border-[#6E43A3] bg-purple-50 text-[#6E43A3]'
+                        : 'border-gray-200 bg-gray-50 text-gray-900 focus:border-[#6E43A3] focus:ring-2 focus:ring-purple-300'
+                    }`}
+                  />
+                ))}
+              </motion.div>
+
+              {verifyResetOtp.isError && (
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 text-xs text-center text-red-500 sm:text-sm"
+                >
+                  {(verifyResetOtp.error as Error)?.message || 'Invalid code. Please try again.'}
+                </motion.p>
+              )}
+
+              <motion.p
+                className="mt-6 text-sm text-center text-gray-600 sm:text-base"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                Didn&apos;t receive it?{' '}
+                <button
+                  onClick={() => {
+                    // Resend logic
+                  }}
+                  className="text-[#6E43A3] font-semibold"
+                >
+                  Resend code
+                </button>
+              </motion.p>
+
+              {/* Verify button */}
+              <div className="pt-6 pb-24 sm:pb-8">
+                <motion.button
+                  onClick={handleSubmit}
+                  disabled={!isComplete || verifyResetOtp.isPending}
+                  className={`w-full h-12 sm:h-14 rounded-2xl font-semibold text-base sm:text-lg text-white transition-all flex items-center justify-center ${
+                    isComplete && !verifyResetOtp.isPending ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
+                  }`}
+                  whileTap={isComplete && !verifyResetOtp.isPending ? { scale: 0.97 } : {}}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                >
+                  {verifyResetOtp.isPending ? <Spinner /> : 'Verify'}
+                </motion.button>
+              </div>
+
+            </div>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>

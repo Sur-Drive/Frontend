@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLogin } from '../hooks/useAuth'
@@ -115,7 +114,7 @@ export default function SignInModal({
         />
 
         <motion.div
-          className="relative w-full max-w-[430px] h-[92dvh] max-h-[100dvh] bg-white rounded-t-[40px] px-6 pt-8 pb-10 flex flex-col overflow-y-auto"
+          className="relative w-full max-w-[430px] h-[92vh] max-h-[100vh] bg-white rounded-t-[40px] flex flex-col overflow-hidden"
           initial={{ y: '110%' }}
           animate={{ y: 0 }}
           exit={{ y: '110%' }}
@@ -132,235 +131,240 @@ export default function SignInModal({
             if (info.offset.y > 150) onClose()
           }}
         >
-          <div className="flex justify-center mb-2 -mt-2 shrink-0">
-            <div className="w-10 h-1 bg-gray-300 rounded-full" />
-          </div>
+          <div
+  className="flex flex-col flex-1 px-6 pt-8 pb-24 overflow-y-auto"
+  style={{ WebkitOverflowScrolling: 'touch', paddingBottom: 'max(6rem, env(safe-area-inset-bottom))' }}
+>
+            <div className="flex justify-center mb-2 -mt-2 shrink-0">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            </div>
 
-          <motion.button
-            onClick={onClose}
-            aria-label="Close"
-            className="absolute flex items-center justify-center text-gray-500 bg-gray-100 rounded-full top-6 right-6 w-9 h-9 shrink-0"
-            whileTap={{ scale: 0.92 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-          >
-            <CloseIcon />
-          </motion.button>
-
-          <motion.h1
-            className="pr-12 text-2xl font-extrabold text-gray-900 sm:text-3xl shrink-0"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            Welcome Back 👋
-          </motion.h1>
-
-          <motion.p
-            className="mt-2 text-gray-600 shrink-0"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.32, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            Sign in to access real-time road alerts, safer routes, and your personalised driving experience.
-          </motion.p>
-
-          {/* ─── Toggle: Phone / Email ─── */}
-          <motion.div
-            className="flex p-1 mt-6 bg-gray-100 rounded-xl shrink-0"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.38, duration: 0.4 }}
-          >
-            <button
-              onClick={() => switchMode('phone')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                inputMode === 'phone'
-                  ? 'bg-white text-[#6E43A3] shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+            <motion.button
+              onClick={onClose}
+              aria-label="Close"
+              className="absolute flex items-center justify-center text-gray-500 bg-gray-100 rounded-full top-6 right-6 w-9 h-9 shrink-0"
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             >
-              <span className="flex items-center justify-center gap-2">
-                <PhoneIcon />
-                Phone Number
-              </span>
-            </button>
-            <button
-              onClick={() => switchMode('email')}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                inputMode === 'email'
-                  ? 'bg-white text-[#6E43A3] shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <span className="flex items-center justify-center gap-2">
-                <EmailIcon />
-                Email Address
-              </span>
-            </button>
-          </motion.div>
+              <CloseIcon />
+            </motion.button>
 
-          {/* ─── Identifier Input ─── */}
-          <motion.div
-            className="mt-4 shrink-0"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            <AnimatePresence mode="wait">
-              {inputMode === 'phone' ? (
-                <motion.div
-                  key="phone-input"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
+            <motion.h1
+              className="pr-12 text-2xl font-extrabold text-gray-900 sm:text-3xl shrink-0"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              Welcome Back 👋
+            </motion.h1>
+
+            <motion.p
+              className="mt-2 text-gray-600 shrink-0"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.32, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              Sign in to access real-time road alerts, safer routes, and your personalised driving experience.
+            </motion.p>
+
+            {/* ─── Toggle: Phone / Email ─── */}
+            <motion.div
+              className="flex p-1 mt-6 bg-gray-100 rounded-xl shrink-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.38, duration: 0.4 }}
+            >
+              <button
+                onClick={() => switchMode('phone')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  inputMode === 'phone'
+                    ? 'bg-white text-[#6E43A3] shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <PhoneIcon />
+                  Phone Number
+                </span>
+              </button>
+              <button
+                onClick={() => switchMode('email')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  inputMode === 'email'
+                    ? 'bg-white text-[#6E43A3] shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <EmailIcon />
+                  Email Address
+                </span>
+              </button>
+            </motion.div>
+
+            {/* ─── Identifier Input ─── */}
+            <motion.div
+              className="mt-4 shrink-0"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <AnimatePresence mode="wait">
+                {inputMode === 'phone' ? (
+                  <motion.div
+                    key="phone-input"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <label className="text-sm font-semibold text-gray-900">Phone Number</label>
+                    <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+                      <div className="flex items-center px-4 text-gray-600 border-r border-gray-200 shrink-0">
+                        {countryCode}
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={formatPhone(phone)}
+                        onChange={handlePhoneChange}
+                        placeholder="812-345-6789"
+                        className="flex-1 px-4 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                      />
+                      <div className="flex items-center pr-4 shrink-0">
+                        <NigeriaFlagIcon />
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="email-input"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <label className="text-sm font-semibold text-gray-900">Email Address</label>
+                    <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+                      <div className="flex items-center pl-4 pr-3 text-gray-400 shrink-0">
+                        <EmailIcon />
+                      </div>
+                      <input
+                        type="email"
+                        inputMode="email"
+                        value={email}
+                        onChange={handleEmailChange}
+                        placeholder="you@example.com"
+                        className="flex-1 px-0 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* ─── Password Input ─── */}
+            <motion.div
+              className="mt-4 shrink-0"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.52, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-gray-900">Enter Password</label>
+                <button
+                  onClick={onForgotPassword}
+                  className="text-sm font-semibold text-red-500 hover:text-red-600"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="mt-2 flex items-center rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={handlePasswordChange}
+                  placeholder="Enter password"
+                  className="flex-1 px-4 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="px-4 text-gray-400 hover:text-gray-600 shrink-0"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
+                </button>
+              </div>
+            </motion.div>
+
+            <AnimatePresence>
+              {error && (
+                <motion.p
+                  className="mt-3 text-sm font-medium text-red-500 shrink-0"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <label className="text-sm font-semibold text-gray-900">Phone Number</label>
-                  <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
-                    <div className="flex items-center px-4 text-gray-600 border-r border-gray-200 shrink-0">
-                      {countryCode}
-                    </div>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      value={formatPhone(phone)}
-                      onChange={handlePhoneChange}
-                      placeholder="812-345-6789"
-                      className="flex-1 px-4 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
-                    />
-                    <div className="flex items-center pr-4 shrink-0">
-                      <NigeriaFlagIcon />
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="email-input"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <label className="text-sm font-semibold text-gray-900">Email Address</label>
-                  <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
-                    <div className="flex items-center pl-4 pr-3 text-gray-400 shrink-0">
-                      <EmailIcon />
-                    </div>
-                    <input
-                      type="email"
-                      inputMode="email"
-                      value={email}
-                      onChange={handleEmailChange}
-                      placeholder="you@example.com"
-                      className="flex-1 px-0 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
-                    />
-                  </div>
-                </motion.div>
+                  {error}
+                </motion.p>
               )}
             </AnimatePresence>
-          </motion.div>
 
-          {/* ─── Password Input ─── */}
-          <motion.div
-            className="mt-4 shrink-0"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.52, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-gray-900">Enter Password</label>
-              <button
-                onClick={onForgotPassword}
-                className="text-sm font-semibold text-red-500 hover:text-red-600"
-              >
-                Forgot password?
-              </button>
-            </div>
-            <div className="mt-2 flex items-center rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={handlePasswordChange}
-                placeholder="Enter password"
-                className="flex-1 px-4 py-4 text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="px-4 text-gray-400 hover:text-gray-600 shrink-0"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
-              </button>
-            </div>
-          </motion.div>
-
-          <AnimatePresence>
-            {error && (
-              <motion.p
-                className="mt-3 text-sm font-medium text-red-500 shrink-0"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                {error}
-              </motion.p>
-            )}
-          </AnimatePresence>
-
-          <motion.button
-            onClick={handleSubmit}
-            disabled={!isFormValid}
-            className={`mt-6 h-14 rounded-xl font-semibold text-white shrink-0 ${
-              isFormValid ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
-            }`}
-            whileTap={isFormValid ? { scale: 0.97 } : {}}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.58, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            {login.isPending ? 'Signing in...' : 'Sign in'}
-          </motion.button>
-
-          {/* ─── Divider ─── */}
-          <motion.div
-            className="flex items-center gap-3 mt-6 text-sm font-medium text-gray-400 shrink-0"
-            initial={{ opacity: 0, scaleX: 0.8 }}
-            animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ delay: 0.64, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            <div className="flex-1 h-px bg-gray-200" />
-            <span>OR</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </motion.div>
-
-          {/* ─── Google Button ─── */}
-          <motion.button
-            onClick={onGoogleSignIn}
-            className="flex items-center justify-center gap-3 mt-6 font-medium text-gray-900 border border-gray-200 h-14 rounded-xl bg-gray-50 shrink-0"
-            whileTap={{ scale: 0.97 }}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            <GoogleIcon />
-            Continue with Google
-          </motion.button>
-
-          {/* ─── Sign Up Link (always at bottom, no overlap) ─── */}
-          <div className="mt-8 shrink-0">
-            <motion.p
-              className="text-center text-gray-700"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.78, duration: 0.5 }}
+            <motion.button
+              onClick={handleSubmit}
+              disabled={!isFormValid}
+              className={`mt-6 h-14 rounded-xl font-semibold text-white shrink-0 ${
+                isFormValid ? 'bg-[#6E43A3]' : 'bg-purple-300 cursor-not-allowed'
+              }`}
+              whileTap={isFormValid ? { scale: 0.97 } : {}}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.58, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              Don't have an account?{' '}
-              <button onClick={onSignUp} className="text-[#6E43A3] font-bold">
-                Sign Up
-              </button>
-            </motion.p>
+              {login.isPending ? 'Signing in...' : 'Sign in'}
+            </motion.button>
+
+            {/* ─── Divider ─── */}
+            <motion.div
+              className="flex items-center gap-3 mt-6 text-sm font-medium text-gray-400 shrink-0"
+              initial={{ opacity: 0, scaleX: 0.8 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              transition={{ delay: 0.64, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <div className="flex-1 h-px bg-gray-200" />
+              <span>OR</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </motion.div>
+
+            {/* ─── Google Button ─── */}
+            <motion.button
+              onClick={onGoogleSignIn}
+              className="flex items-center justify-center gap-3 mt-6 font-medium text-gray-900 border border-gray-200 h-14 rounded-xl bg-gray-50 shrink-0"
+              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <GoogleIcon />
+              Continue with Google
+            </motion.button>
+
+            {/* ─── Sign Up Link (always at bottom, no overlap) ─── */}
+            <div className="mt-8 shrink-0">
+              <motion.p
+                className="text-center text-gray-700"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.78, duration: 0.5 }}
+              >
+                Don't have an account?{' '}
+                <button onClick={onSignUp} className="text-[#6E43A3] font-bold">
+                  Sign Up
+                </button>
+              </motion.p>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -434,14 +438,5 @@ function GoogleIcon() {
     </svg>
   )
 }
-
-
-
-
-
-
-
-
-
 
 

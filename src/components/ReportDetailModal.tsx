@@ -1,8 +1,3 @@
-
-
-
-
-
 import { useState } from 'react'
 
 interface Report {
@@ -55,16 +50,14 @@ export default function ReportDetailModal({
       return
     }
 
-    if (isVoting) return // Prevent double-click while API call is in flight
+    if (isVoting) return
 
-    // Call the API handler
     if (choice === 'confirm') {
       onConfirm()
     } else {
       onIncorrect()
     }
 
-    // Optimistic UI update
     setVotes((prev) => {
       if (prev.voted === choice) return prev
       const next = { ...prev }
@@ -87,14 +80,14 @@ export default function ReportDetailModal({
   }
 
   return (
-    <div className="bg-white rounded-t-[20px] shadow-[0_-4px_24px_rgba(0,0,0,0.12)] overflow-hidden">
-      {/* Drag handle */}
-      <div className="flex justify-center pt-2.5 pb-1">
+    <div className="bg-white rounded-t-[20px] lg:rounded-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.12)] overflow-hidden">
+      {/* Drag handle — mobile only, hidden on desktop card */}
+      <div className="flex justify-center pt-2.5 pb-1 lg:hidden">
         <div className="w-10 h-1 bg-gray-300 rounded-full" />
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between px-5 pt-1 pb-3">
+      <div className="flex items-start justify-between px-5 pt-3 pb-3 lg:pt-5">
         <h2 className="text-[22px] font-extrabold text-gray-900 leading-tight">{report.title}</h2>
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -200,3 +193,8 @@ function ThumbDownIcon() {
     </svg>
   )
 }
+
+
+
+
+  

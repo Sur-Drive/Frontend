@@ -3,8 +3,7 @@ import { precacheAndRoute } from 'workbox-precaching'
 
 declare let self: ServiceWorkerGlobalScope
 
-// Required by injectManifest — Workbox replaces this at build time with
-// the actual list of files to precache. Keep this line as-is.
+
 precacheAndRoute(self.__WB_MANIFEST)
 
 // ---------- Push notifications ----------
