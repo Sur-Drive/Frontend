@@ -1,17 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { useState } from 'react'
 import { Paperclip, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react'
 import AddReportModal from '../components/Addreportmodal'

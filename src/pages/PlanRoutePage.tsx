@@ -677,19 +677,21 @@ export default function PlanRoutePage() {
     >
 
       <div className="absolute inset-0 z-0">
+        
+
         {activeRoute ? (
-          <RouteMapView
-            route={activeRoute}
-            markers={mapMarkers}
-            zoom={isNavigating ? 17 : 15}
-            progress={isNavigating ? displayProgress : undefined}
-            flowing={!isNavigating}
-            heading={isNavigating ? displayHeading : 0}
-            interactive={!isNavigating}
-            followMode={isNavigating}
-            className="w-full h-full"
-          />
-        ) : (
+  <RouteMapView
+    route={activeRoute}
+    markers={mapMarkers}
+    zoom={isNavigating ? 17 : 15}
+    progress={isNavigating ? displayProgress : undefined}
+    flowing={!isNavigating}
+    heading={isNavigating ? displayHeading : 0}
+    interactive={!isNavigating}
+    followMode={isNavigating}
+    className="w-full h-full"
+  />
+) : (
           <LazyGoogleMap
             center={{ lat: mapCenter[0], lng: mapCenter[1] }}
             zoom={15}
