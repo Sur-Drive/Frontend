@@ -1,5 +1,4 @@
-// Same visual markers the app used via react-leaflet's L.divIcon, now as
-// plain HTML strings for use with HtmlMapOverlay.
+
 
 export function reportPinHtml(color: string, isSelected: boolean): string {
   const size = isSelected ? 56 : 36

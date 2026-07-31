@@ -1,3 +1,5 @@
+
+
 // import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react'
 // import { AnimatePresence, motion } from 'framer-motion'
 // import LazyGoogleMap from '../components/map/LazyGoogleMap'
@@ -53,6 +55,7 @@
 //   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
 //   const [locationError, setLocationError] = useState<string | null>(null)
 //   const [mapReady, setMapReady] = useState(false)
+//   const [isLocating, setIsLocating] = useState(false)
 
 //   const [sosActive, setSosActive] = useState(false)
 //   const [sosProgress, setSosProgress] = useState(0)
@@ -108,32 +111,59 @@
 //     [reports, selectedId]
 //   )
 
-//   useEffect(() => {
+//   // Locates the user with a fast low-accuracy lookup first (resolves in
+//   // ~1-2s via wifi/IP on most devices), then falls back to a slower
+//   // high-accuracy GPS lookup with a longer timeout if that fails.
+//   // This avoids the common desktop/browser timeout when forcing
+//   // enableHighAccuracy immediately with only a 10s window.
+//   const locateUser = useCallback(() => {
 //     if (!navigator.geolocation) {
 //       setLocationError('Geolocation not supported by your browser')
 //       setMapReady(true)
+//       setIsLocating(false)
 //       return
 //     }
 
+//     setIsLocating(true)
+//     setLocationError(null)
+
+//     const onSuccess = (position: GeolocationPosition) => {
+//       setUserLocation([position.coords.latitude, position.coords.longitude])
+//       setLocationError(null)
+//       setMapReady(true)
+//       setIsLocating(false)
+//     }
+
+//     const onFinalError = (error: GeolocationPositionError) => {
+//       setLocationError(
+//         error.code === 1
+//           ? 'Location access denied. Please enable location permissions.'
+//           : error.code === 2
+//           ? 'Location unavailable.'
+//           : 'Location request timed out.'
+//       )
+//       setUserLocation((prev) => prev ?? DEFAULT_COORDS)
+//       setMapReady(true)
+//       setIsLocating(false)
+//     }
+
 //     navigator.geolocation.getCurrentPosition(
-//       (position) => {
-//         setUserLocation([position.coords.latitude, position.coords.longitude])
-//         setMapReady(true)
+//       onSuccess,
+//       () => {
+//         // Fast attempt failed/timed out — retry with GPS + longer timeout.
+//         navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+//           enableHighAccuracy: true,
+//           timeout: 15000,
+//           maximumAge: 0,
+//         })
 //       },
-//       (error) => {
-//         setLocationError(
-//           error.code === 1
-//             ? 'Location access denied. Please enable location permissions.'
-//             : error.code === 2
-//             ? 'Location unavailable.'
-//             : 'Location request timed out.'
-//         )
-//         setUserLocation(DEFAULT_COORDS)
-//         setMapReady(true)
-//       },
-//       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+//       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
 //     )
 //   }, [])
+
+//   useEffect(() => {
+//     locateUser()
+//   }, [locateUser])
 
 //   useEffect(() => {
 //     const previousOverscroll = document.body.style.overscrollBehavior
@@ -430,13 +460,21 @@
 //         />
 //       </div>
 
-//       {/* Location error toast */}
+//       {/* Location error toast — includes a retry button so users aren't
+//           stuck on DEFAULT_COORDS with no way to re-trigger the lookup. */}
 //       {locationError && (
 //         <div className="absolute z-[500] flex items-start gap-3 px-4 py-3 border border-yellow-200 top-4 left-4 right-4 sm:right-auto sm:w-80 lg:top-6 lg:left-6 bg-yellow-50 rounded-xl">
 //           <div className="text-yellow-600 mt-0.5 text-sm">⚠️</div>
-//           <div>
+//           <div className="flex-1">
 //             <p className="text-[12px] font-medium text-yellow-800">{locationError}</p>
 //             <p className="mt-1 text-[11px] text-yellow-600">Showing default area</p>
+//             <button
+//               onClick={locateUser}
+//               disabled={isLocating}
+//               className="mt-2 text-[11px] font-semibold text-yellow-800 underline disabled:opacity-50"
+//             >
+//               {isLocating ? 'Locating...' : 'Retry location'}
+//             </button>
 //           </div>
 //         </div>
 //       )}
@@ -654,10 +692,18 @@
 
 
 
+
+
+
+
+
+
+
 import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import LazyGoogleMap from '../components/map/LazyGoogleMap'
 import type { MapMarkerSpec } from '../components/map/GoogleMapView'
+import StreetViewModal, { StreetViewPegman } from '../components/map/StreetView'
 import {
   reportPinHtml,
   REPORT_PIN_ANCHOR,
@@ -681,6 +727,9 @@ import { useHazardFeed, useConfirmHazard } from '../hooks/useHazards'
 import { hazardToReport } from '../lib/hazardToReport'
 import { useTriggerSos, useCancelSos } from '../hooks/useSos'
 import { ApiError } from '../lib/apiClient'
+import { useQueryClient } from '@tanstack/react-query'
+import { useGoogleSignIn, prefetchOnboardingStatus } from '../hooks/useAuth'
+import { getGoogleIdToken } from '../lib/googleIdentity'
 
 const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792]
 const FEED_RADIUS_KM = 10
@@ -710,12 +759,14 @@ export default function HomePage() {
   const [locationError, setLocationError] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
+  const [streetViewOpen, setStreetViewOpen] = useState(false)
 
   const [sosActive, setSosActive] = useState(false)
   const [sosProgress, setSosProgress] = useState(0)
   const [isPressing, setIsPressing] = useState(false)
   const [sosError, setSosError] = useState<string | null>(null)
   const [activeSosId, setActiveSosId] = useState<string | null>(null)
+  const [googleSignInError, setGoogleSignInError] = useState<string | null>(null)
   const sosTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null)
   const sosStartTimeRef = useRef<number>(0)
   const sosCompletedRef = useRef<boolean>(false)
@@ -727,6 +778,9 @@ export default function HomePage() {
 
   const triggerSosMutation = useTriggerSos()
   const cancelSosMutation = useCancelSos()
+
+  const queryClient = useQueryClient()
+  const googleSignInMutation = useGoogleSignIn()
 
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token')
 
@@ -1036,6 +1090,30 @@ export default function HomePage() {
     setShowSignIn(false)
   }
 
+  // Shared by both the sign-in and create-account modals' "Continue with
+  // Google" button. Grabs a real idToken from Google, exchanges it for
+  // our own tokens via POST /auth/google, then routes the user based on
+  // whether they still need to finish onboarding.
+  const handleGoogleSignIn = async () => {
+    setGoogleSignInError(null)
+    try {
+      const idToken = await getGoogleIdToken()
+      const data = await googleSignInMutation.mutateAsync({ idToken, role: 'driver' })
+      console.log('Google sign-in success:', data)
+
+      setShowCreateAccount(false)
+      setShowSignIn(false)
+
+      const status = await prefetchOnboardingStatus(queryClient)
+      if (!status.hasCompletedOnboarding) {
+        setShowPersonalInfo(true)
+      }
+    } catch (err) {
+      console.error('Google sign-in failed:', err)
+      setGoogleSignInError(err instanceof Error ? err.message : 'Google sign-in failed')
+    }
+  }
+
   const handleConfirm = async (hazardId: string) => {
     if (!isAuthenticated) {
       setShowCreateAccount(true)
@@ -1133,6 +1211,14 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Street View pegman — opens Google's own panorama at the current
+          map center. Sits on the opposite side from SOS, above the bottom
+          nav, so it never overlaps either. */}
+      <StreetViewPegman
+        onClick={() => setStreetViewOpen(true)}
+        className="absolute z-[500] bottom-24 left-4 lg:left-6 lg:bottom-8"
+      />
+
       {/* SOS floating button — dynamically offset above the report sheet's
           REAL measured height, so it can never overlap the sheet's buttons
           or photos (that overlap was silently firing endSosPress → opening
@@ -1218,7 +1304,8 @@ export default function HomePage() {
             onClose={() => setShowCreateAccount(false)}
             onSendCode={handleSendCode}
             onSendCodeSuccess={handleSendCodeSuccess}
-            onGoogleSignIn={() => console.log('google sign in')}
+            onGoogleSignIn={handleGoogleSignIn}
+            googleError={googleSignInError}
             onSignIn={handleSwitchToSignIn}
           />
         )}
@@ -1229,7 +1316,8 @@ export default function HomePage() {
           <SignInModal
             onClose={() => setShowSignIn(false)}
             onSignInSuccess={handleSignInSuccess}
-            onGoogleSignIn={() => console.log('google sign in')}
+            onGoogleSignIn={handleGoogleSignIn}
+            googleError={googleSignInError}
             onForgotPassword={handleSwitchToForgotPassword}
             onSignUp={handleSwitchToSignUp}
           />
@@ -1327,6 +1415,14 @@ export default function HomePage() {
           />
         )}
       </AnimatePresence>
+
+      <StreetViewModal
+        isOpen={streetViewOpen}
+        onClose={() => setStreetViewOpen(false)}
+        lat={mapCenter[0]}
+        lng={mapCenter[1]}
+        label={userLocation ? 'Current location' : 'This area'}
+      />
 
       {/* BottomNav — always visible except during full-screen auth/SOS flows.
           z-[600] keeps it above the report sheet (z-[400]). */}

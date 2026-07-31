@@ -1,21 +1,25 @@
-import { useMemo, useState } from 'react'
+
+
+import { useEffect, useMemo, useState } from 'react'
 import GoogleMapView, { type MapMarkerSpec } from './GoogleMapView'
 import AnimatedRoutePolyline from './AnimatedRoutePolyline'
 import { getRoutePath } from '../../api/route'
-import { cumulativeDistances, pointAtFraction } from '../../lib/geoPath'
+import { cumulativeDistances, pointAtFraction, type LatLng } from '../../lib/geoPath'
 import type { RouteOption } from '../../types/routePlan'
+
+export interface SecondaryRoute {
+  /** ready-to-render {lat,lng} vertices for one alternative route */
+  path: LatLng[]
+  /** called when the user taps this alternative's line on the map */
+  onClick?: () => void
+}
 
 export interface RouteMapViewProps {
   route: RouteOption
   markers?: MapMarkerSpec[]
   className?: string
   zoom?: number
-  /**
-   * 0-1 progress along the route. Pass this from a parent (e.g. driven by
-   * useRouteAnimation, or by real GPS progress later) to get the
-   * traveled/remaining split + moving marker. Omit for a static preview
-   * that still shows the flowing directional animation.
-   */
+  
   progress?: number
   /** continuous marching-arrow "flow" animation along the route line */
   flowing?: boolean
@@ -32,6 +36,13 @@ export interface RouteMapViewProps {
    * starts rotating under it).
    */
   followMode?: boolean
+  /**
+   * Other route options (e.g. 1-2 alternatives) drawn as thin muted
+   * lines alongside the highlighted `route`. Tap one to select it —
+   * typically wired to swap which route is passed in as `route`.
+   * Omit or leave empty (e.g. during live navigation) to hide these.
+   */
+  secondaryRoutes?: SecondaryRoute[]
 }
 
 /**
@@ -44,6 +55,7 @@ export interface RouteMapViewProps {
  * of those two.
  */
 const NO_MARKERS: MapMarkerSpec[] = []
+const NO_SECONDARY_ROUTES: SecondaryRoute[] = []
 
 export default function RouteMapView({
   route,
@@ -56,6 +68,7 @@ export default function RouteMapView({
   heading = 0,
   interactive = true,
   followMode = false,
+  secondaryRoutes = NO_SECONDARY_ROUTES,
 }: RouteMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null)
 
@@ -73,6 +86,33 @@ export default function RouteMapView({
     [followMode, progress, path, cum]
   )
   const center = liveSample?.position ?? previewCenter
+
+  // Draw each alternative as a thin muted line beneath the highlighted
+  // route (AnimatedRoutePolyline renders above these). Tapping one calls
+  // its onClick — parents typically use that to swap which route is
+  // passed in as the primary `route` prop.
+  useEffect(() => {
+    if (!map || !secondaryRoutes.length) return
+
+    const polylines = secondaryRoutes.map(({ path: altPath, onClick }) => {
+      const polyline = new google.maps.Polyline({
+        path: altPath,
+        strokeColor: '#9CA3AF',
+        strokeOpacity: 0.9,
+        strokeWeight: 5,
+        zIndex: 5,
+        map,
+      })
+      if (onClick) {
+        polyline.addListener('click', onClick)
+      }
+      return polyline
+    })
+
+    return () => {
+      polylines.forEach((p) => p.setMap(null))
+    }
+  }, [map, secondaryRoutes])
 
   return (
     <div className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>

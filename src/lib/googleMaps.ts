@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 
 // ─── Lazy Google Maps script loader ─────────────────────────────────
@@ -10,8 +11,14 @@ import { useEffect, useState } from 'react'
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 const CALLBACK_NAME = '__surdriveGoogleMapsLoaded'
 // 'places' → Autocomplete/Place Details for address search.
+// 'marker' → AdvancedMarkerElement (not yet used, but valid to preload).
+// NOTE: don't add 'maps' here — unlike the newer importLibrary() bootstrap,
+// this legacy `libraries=` URL param doesn't recognize "maps" as a
+// library name (the core Map/StreetView classes are already included by
+// default). Requesting it anyway left google.maps.Map as an unresolved
+// placeholder instead of the real constructor ("is not a constructor").
 // We intentionally do NOT load or call the Geocoding API from the frontend.
-const LIBRARIES = 'places'
+const LIBRARIES = 'places,marker'
 
 declare global {
   interface Window {
@@ -81,3 +88,4 @@ export function useGoogleMaps(): { isLoaded: boolean; error: string | null } {
 
   return { isLoaded, error }
 }
+

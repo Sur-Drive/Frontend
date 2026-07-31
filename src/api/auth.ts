@@ -12,6 +12,31 @@ export interface SendOtpResponse {
     [key: string]: any;
 }
 
+// ─── Google Sign-In ─────────────────────────────────────────────────
+
+export interface GoogleSignInPayload {
+  idToken: string
+  role: string
+}
+
+export interface GoogleSignInResponse {
+  message: string
+  token?: string
+  tokens?: {
+    accessToken: string
+    refreshToken: string
+  }
+  user?: any
+  [key: string]: any
+}
+
+// ─── Onboarding status ──────────────────────────────────────────────
+
+export interface OnboardingStatusResponse {
+  hasCompletedOnboarding: boolean
+  [key: string]: any
+}
+
 export interface VerifyOtpPayload {
     identifier: string; // email or phone number
     otp: string;
