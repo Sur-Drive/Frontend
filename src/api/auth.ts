@@ -234,6 +234,28 @@ export async function sendOtp(
     return parseResponse(res, "Failed to send OTP");
 }
 
+
+export async function getOnboardingStatus(): Promise<OnboardingStatusResponse> {
+    const token = localStorage.getItem("token");
+
+    console.log("📤 Checking onboarding status...");
+
+    const res = await fetch(`${API_BASE}/auth/onboarding-status`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json", 
+            ...authHeaders(token),
+        },
+    });
+
+    const data = await parseResponse(res, "Failed to get onboarding status");
+
+    console.log("📥 Onboarding status:", data);
+
+    return data;
+}
+
 export async function verifyOtp(
     payload: VerifyOtpPayload,
 ): Promise<VerifyOtpResponse> {
@@ -339,6 +361,47 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
     }
 
     return data;
+}
+
+
+
+export async function googleSignIn(
+  payload: GoogleSignInPayload,
+): Promise<GoogleSignInResponse> {
+  console.log("📤 Google Sign-In:", JSON.stringify(payload));
+
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await parseResponse(res, "Google sign-in failed");
+
+  // Save access token
+  const token =
+    data.tokens?.accessToken ||
+    data.token ||
+    data.user?.accessToken;
+
+  if (token) {
+    localStorage.setItem("token", token);
+    console.log("🔑 Google access token saved");
+  }
+
+  // Save refresh token
+  const refreshToken =
+    data.tokens?.refreshToken ||
+    data.refreshToken;
+
+  if (refreshToken) {
+    localStorage.setItem("refreshToken", refreshToken);
+  }
+
+  return data;
 }
 
 export async function refreshToken(): Promise<RefreshTokenResponse> {
