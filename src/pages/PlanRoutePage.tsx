@@ -944,10 +944,12 @@ export default function PlanRoutePage() {
 
   return (
 
-    <div
-      className="fixed inset-0 w-full h-full overflow-hidden bg-gray-100"
-      style={{ overscrollBehavior: 'none' }}
-    >
+    // <div
+    //   className="fixed inset-0 w-full h-full overflow-hidden bg-gray-100"
+    //   style={{ overscrollBehavior: 'none' }}
+    // >
+
+    <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden bg-gray-100">
 
       <div className="absolute inset-0 z-0">
         
@@ -1198,7 +1200,8 @@ export default function PlanRoutePage() {
       )}
 
       {isNavigating && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex sm:justify-center">
+        // <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:flex sm:justify-center">
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-[calc(5.0rem+env(safe-area-inset-bottom))] sm:flex sm:justify-center">
           <div className="sm:w-full sm:max-w-md">
             {navPanelExpanded ? (
               <div className="px-5 pt-3 pb-4 bg-white shadow-lg rounded-2xl">
@@ -1217,17 +1220,18 @@ export default function PlanRoutePage() {
                 <button
                   onClick={() => setNavPanelExpanded(false)}
                   aria-label="Collapse trip card"
-                  className="flex items-center justify-between w-full mb-3"
+                  className="grid grid-cols-3 gap-2 w-full mb-3"
                 >
-                  <div className="text-center">
+                  {/* <div className="text-center"> */}
+                  <div className="text-center min-w-0">
                     <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">ETA</p>
                     <p className="text-lg font-bold text-gray-900 sm:text-xl">{hasArrived ? '0 min' : `${etaMinutes} min`}</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center min-w-0">
                     <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">Remaining</p>
                     <p className="text-lg font-bold text-gray-900 sm:text-xl">{remainingKm.toFixed(1)} km</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center min-w-0">
                     <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">Hazards</p>
                     <p className="text-lg font-bold sm:text-xl text-amber-500">{navHazardCount}</p>
                   </div>
@@ -1420,7 +1424,7 @@ export default function PlanRoutePage() {
               <div className="h-4" />
             </div>
 
-            <div className="flex-shrink-0 px-5 pt-4 pb-8 sm:pb-6">
+            <div className="flex-shrink-0 px-5 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-6">
               {routeError && (
                 <p className="mb-3 text-xs text-center text-red-500 sm:text-sm">{routeError}</p>
               )}
@@ -1451,7 +1455,7 @@ export default function PlanRoutePage() {
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 pt-4 sm:pt-6 pb-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex-1 overflow-y-auto px-5 pt-4 sm:pt-6 pb-[calc(8rem+env(safe-area-inset-bottom))] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {planRouteMutation.isPending && (
                 <div className="flex flex-col items-center justify-center gap-3 py-10">
                   <SpinnerIcon className="w-6 h-6 text-purple-600" />
