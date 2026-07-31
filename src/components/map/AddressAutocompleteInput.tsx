@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, MapPin } from 'lucide-react'
+import { Loader2, MapPin, Mic } from 'lucide-react'
 import { useGoogleMaps } from '../../lib/googleMaps'
 import { getCachedPredictions, setCachedPredictions } from '../../lib/addressCache'
+import { useVoiceSearch } from '../../hooks/useVoiceSearch'
 
 export interface SelectedAddress {
   address: string
@@ -19,6 +20,8 @@ interface AddressAutocompleteInputProps {
   inputClassName?: string
   /** ISO 3166-1 alpha-2 country code to restrict results to. Defaults to Nigeria. */
   countryRestriction?: string
+  /** Show the tap-to-speak mic button (auto-hidden if the browser doesn't support voice input). Defaults to true. */
+  enableVoice?: boolean
 }
 
 interface Prediction {
@@ -38,12 +41,20 @@ export default function AddressAutocompleteInput({
   className = '',
   inputClassName = '',
   countryRestriction = 'ng',
+  enableVoice = true,
 }: AddressAutocompleteInputProps) {
   const { isLoaded, error: loadError } = useGoogleMaps()
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
+
+  const voiceSearch = useVoiceSearch()
+  // Set right before a voice-driven search kicks off, so the predictions
+  // effect below knows to jump straight to the top result — mirroring
+  // how Google Maps' mic search auto-picks the best match instead of
+  // making you tap it again.
+  const autoSelectFromVoiceRef = useRef(false)
 
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null)
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null)
@@ -168,6 +179,27 @@ export default function AddressAutocompleteInput({
     )
   }
 
+  // Once a voice-driven query's predictions come back, jump straight to
+  // the top match instead of leaving the dropdown open — you already said
+  // what you wanted, no need to tap it again.
+  useEffect(() => {
+    if (autoSelectFromVoiceRef.current && predictions.length > 0) {
+      autoSelectFromVoiceRef.current = false
+      handleSelect(predictions[0])
+    }
+  }, [predictions]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleMicClick = () => {
+    if (voiceSearch.isListening) {
+      voiceSearch.stop()
+      return
+    }
+    voiceSearch.start((transcript) => {
+      autoSelectFromVoiceRef.current = true
+      handleInputChange(transcript)
+    })
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || predictions.length === 0) return
 
@@ -192,13 +224,13 @@ export default function AddressAutocompleteInput({
       <input
         type="text"
         value={value}
-        placeholder={loadError ? 'Address search unavailable' : placeholder}
+        placeholder={loadError ? 'Address search unavailable' : voiceSearch.isListening ? 'Listening…' : placeholder}
         onChange={(e) => handleInputChange(e.target.value)}
         onFocus={() => predictions.length > 0 && setIsOpen(true)}
         onKeyDown={handleKeyDown}
         disabled={!!loadError}
         autoComplete="off"
-        className={inputClassName}
+        className={`${inputClassName} ${enableVoice && voiceSearch.isSupported ? 'pr-7' : ''}`}
       />
 
       {isSearching && (
@@ -206,6 +238,23 @@ export default function AddressAutocompleteInput({
           size={14}
           className="absolute -translate-y-1/2 animate-spin right-3 top-1/2 text-gray-400"
         />
+      )}
+
+      {!isSearching && enableVoice && voiceSearch.isSupported && !loadError && (
+        <button
+          type="button"
+          onClick={handleMicClick}
+          aria-label={voiceSearch.isListening ? 'Stop voice search' : 'Search by voice'}
+          className={`absolute -translate-y-1/2 right-2.5 top-1/2 flex items-center justify-center w-5 h-5 rounded-full transition ${
+            voiceSearch.isListening ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-purple-600'
+          }`}
+        >
+          <Mic size={15} />
+        </button>
+      )}
+
+      {voiceSearch.error && (
+        <p className="absolute left-0 mt-1 text-[11px] text-red-500 top-full">{voiceSearch.error}</p>
       )}
 
       {isOpen && predictions.length > 0 && (

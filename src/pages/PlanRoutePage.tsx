@@ -1,35 +1,12 @@
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import LazyGoogleMap from '../components/map/LazyGoogleMap'
 import RouteMapView from '../components/map/RouteMapView'
 import type { MapMarkerSpec } from '../components/map/GoogleMapView'
+import StreetViewModal, { StreetViewPegman } from '../components/map/StreetView'
 import AddressAutocompleteInput, { type SelectedAddress } from '../components/map/AddressAutocompleteInput'
 import {
   reportPinHtml,
@@ -43,12 +20,16 @@ import AuthFlow from '../components/AuthFlow'
 import { getUserProfile } from '../api/profile'
 import { reverseGeocode } from '../api/geocoding'
 import { usePlanRouteOptions } from '../hooks/useRoutePlan'
-import { pickDefaultMode, getRoutePath } from '../api/route'
-import type { RouteModeKey } from '../types/routePlan'
+import { pickDefaultMode, getRoutePath, getRouteAlternatives } from '../api/route'
+import type { RouteModeKey, RouteOption, RouteAlternative } from '../types/routePlan'
 import { useRouteAnimation } from '../hooks/useRouteAnimation'
 import { useTriggerSos, useCancelSos } from '../hooks/useSos'
 import { ApiError } from '../lib/apiClient'
 import { cumulativeDistances, pointAtFraction, projectPointOntoPath, type LatLng } from '../lib/geoPath'
+import { useVoiceGuidance } from '../hooks/useVoiceGuidance'
+import { useWakeWord, useVoiceSearch } from '../hooks/useVoiceSearch'
+import { forwardGeocode } from '../api/geocoding'
+import { Volume2, VolumeX, Mic } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────
 type ReportType = 'wave' | 'hill' | 'pothole' | 'hazard' | 'sos' | 'sign' | 'warning' | 'tractor'
@@ -68,6 +49,47 @@ interface HazardItem {
   title: string
   location: string
   distance: string
+}
+
+
+interface HazardLike {
+  type?: string
+  description?: string
+  distanceLabel?: string
+  location?: { address?: string }
+}
+
+const HAZARD_ICON: Record<string, string> = {
+  POTHOLE: '🕳️',
+  FLOOD: '🌊',
+  ACCIDENT: '⚠️',
+  DEBRIS: '🪨',
+  ROAD_WORKS: '🚜',
+  CHECKPOINT: '🚧',
+  DANGER: '⚠️',
+  SOS: '🆘',
+}
+
+const HAZARD_LABEL: Record<string, string> = {
+  POTHOLE: 'Pothole ahead',
+  FLOOD: 'Flood risk ahead',
+  ACCIDENT: 'Accident reported ahead',
+  DEBRIS: 'Debris in the road ahead',
+  ROAD_WORKS: 'Road works ahead',
+  CHECKPOINT: 'Checkpoint ahead',
+  DANGER: 'Hazard ahead',
+  SOS: 'Emergency reported ahead',
+}
+
+function describeUpcomingHazard(hazards: unknown[] | undefined) {
+  const first = hazards?.[0] as HazardLike | undefined
+  if (!first) return null
+
+  const type = typeof first.type === 'string' ? first.type.toUpperCase() : undefined
+  return {
+    icon: (type && HAZARD_ICON[type]) || '⚠️',
+    label: (type && HAZARD_LABEL[type]) || first.description || first.location?.address || 'Hazard ahead',
+  }
 }
 
 // ─── Data ──────────────────────────────────────────────
@@ -196,6 +218,10 @@ function SpinnerIcon({ className = '' }: { className?: string }) {
   )
 }
 
+
+const WAKE_PHRASE = 'hey driver'
+const WAKE_WORD_STORAGE_KEY = 'wakeWordEnabled'
+
 // ─── Main Component ────────────────────────────────────
 export default function PlanRoutePage() {
   const navigate = useNavigate()
@@ -223,6 +249,7 @@ export default function PlanRoutePage() {
   const [sosHolding, setSosHolding] = useState(false)
   const [sosProgress, setSosProgress] = useState(0)
   const [showUpcomingAlert, setShowUpcomingAlert] = useState(false)
+  const [streetViewOpen, setStreetViewOpen] = useState(false)
 
   const [selectedMode, setSelectedMode] = useState<RouteModeKey>('driving')
 
@@ -247,7 +274,90 @@ export default function PlanRoutePage() {
 
   const routePlan = planRouteMutation.data
   const activeRoute = routePlan?.routes[selectedMode]
-  const routePath = useMemo(() => getRoutePath(activeRoute), [activeRoute])
+
+  // ── Alternative routes (1-2, shown alongside the recommended one) ──
+  const alternativeRoutes = useMemo(() => getRouteAlternatives(activeRoute, 2), [activeRoute])
+
+  // null = the backend's recommended route for this mode; otherwise an
+  // index into alternativeRoutes.
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null)
+
+  // A fresh scan or a mode switch invalidates whatever was selected before.
+  useEffect(() => {
+    setSelectedRouteIndex(null)
+  }, [routePlan, selectedMode])
+
+  type RouteChoice = {
+    key: string
+    label: string
+    index: number | null
+    distance: number
+    duration: number
+    path: RouteOption['path']
+  }
+
+  const routeChoices = useMemo<RouteChoice[]>(() => {
+    if (!activeRoute) return []
+    const choices: RouteChoice[] = [
+      {
+        key: 'primary',
+        label: 'Recommended',
+        index: null,
+        distance: activeRoute.distance,
+        duration: activeRoute.duration,
+        path: activeRoute.path,
+      },
+    ]
+    alternativeRoutes.forEach((alt, i) => {
+      choices.push({
+        key: `alt-${i}`,
+        label: `Alternative ${i + 1}`,
+        index: i,
+        distance: alt.distance,
+        duration: alt.duration,
+        path: alt.path,
+      })
+    })
+    return choices
+  }, [activeRoute, alternativeRoutes])
+
+  const selectedChoice = routeChoices.find((c) => c.index === selectedRouteIndex) ?? routeChoices[0]
+
+  // The route actually driven/displayed: activeRoute as-is when the
+  // recommendation is selected, or activeRoute with the chosen
+  // alternative's path/stats spliced in otherwise.
+  const effectiveRoute = useMemo<RouteOption | undefined>(() => {
+    if (!activeRoute || !selectedChoice || selectedChoice.index === null) return activeRoute
+    const alt: RouteAlternative | undefined = alternativeRoutes[selectedChoice.index]
+    if (!alt) return activeRoute
+    return {
+      ...activeRoute,
+      path: alt.path,
+      distance: alt.distance || activeRoute.distance,
+      duration: alt.duration || activeRoute.duration,
+      durationInSeconds: (alt.duration || activeRoute.duration) * 60,
+      durationFormatted: alt.durationFormatted ?? activeRoute.durationFormatted,
+      summary: alt.summary ?? activeRoute.summary,
+      safetyScore: alt.safetyScore ?? activeRoute.safetyScore,
+      safetyLevel: alt.safetyLevel ?? activeRoute.safetyLevel,
+    }
+  }, [activeRoute, selectedChoice, alternativeRoutes])
+
+  const routePath = useMemo(() => getRoutePath(effectiveRoute), [effectiveRoute])
+
+  // The routes NOT currently selected, drawn as tappable muted lines on
+  // the map so the user can switch between recommended/alternatives.
+  const secondaryRoutes = useMemo(
+    () =>
+      routeChoices
+        .filter((c) => c.key !== selectedChoice?.key)
+        .map((c) => ({
+          path: getRoutePath({ ...activeRoute, path: c.path } as RouteOption),
+          onClick: () => setSelectedRouteIndex(c.index),
+        })),
+    [routeChoices, selectedChoice, activeRoute]
+  )
+
   const availableModes = useMemo<RouteModeKey[]>(
     () => (routePlan ? (Object.keys(routePlan.routes) as RouteModeKey[]) : []),
     [routePlan]
@@ -262,10 +372,10 @@ export default function PlanRoutePage() {
 
 
   const tripDurationMs = useMemo(() => {
-    if (!activeRoute) return 30000
+    if (!effectiveRoute) return 30000
 
-    return Math.min(90000, Math.max(20000, activeRoute.durationInSeconds * 60))
-  }, [activeRoute])
+    return Math.min(90000, Math.max(20000, effectiveRoute.durationInSeconds * 60))
+  }, [effectiveRoute])
 
   const trip = useRouteAnimation({
     path: routePath,
@@ -306,27 +416,45 @@ export default function PlanRoutePage() {
     setGpsStatus('waiting')
     setGpsErrorMessage(null)
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude }
-        const projection = projectPointOntoPath(routePath, routeCum, raw)
-        const sample = pointAtFraction(routePath, routeCum, projection.fraction)
+    let watchId: number
+    let usingFallback = false
 
-        setGpsStatus('active')
-        setLiveProgress(projection.fraction)
-        setLiveHeading(sample.heading)
-        setRouteDeviationMeters(projection.distanceMeters)
-        setUserLocation([raw.lat, raw.lng])
-      },
-      (err) => {
-        console.warn('[gps] watchPosition error:', err.message)
-        setGpsStatus('error')
-        setGpsErrorMessage(err.message || 'Unable to get your location')
+    const onPosition = (position: GeolocationPosition) => {
+      const raw: LatLng = { lat: position.coords.latitude, lng: position.coords.longitude }
+      const projection = projectPointOntoPath(routePath, routeCum, raw)
+      const sample = pointAtFraction(routePath, routeCum, projection.fraction)
 
-        trip.play()
-      },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
-    )
+      setGpsStatus('active')
+      setLiveProgress(projection.fraction)
+      setLiveHeading(sample.heading)
+      setRouteDeviationMeters(projection.distanceMeters)
+      setUserLocation([raw.lat, raw.lng])
+    }
+
+    
+    const startWatch = (options: PositionOptions) => {
+      watchId = navigator.geolocation.watchPosition(
+        onPosition,
+        (err) => {
+          console.warn('[gps] watchPosition error:', err.message)
+
+          if (!usingFallback && err.code === err.TIMEOUT) {
+            usingFallback = true
+            navigator.geolocation.clearWatch(watchId)
+            startWatch({ enableHighAccuracy: false, maximumAge: 5000, timeout: 20000 })
+            return
+          }
+
+          setGpsStatus('error')
+          setGpsErrorMessage(err.message || 'Unable to get your location')
+
+          trip.play()
+        },
+        options
+      )
+    }
+
+    startWatch({ enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 })
 
     return () => navigator.geolocation.clearWatch(watchId)
 
@@ -425,7 +553,7 @@ export default function PlanRoutePage() {
     }
   }, [])
 
-  // ── Geolocation on mount ─────────────────────────────
+  
   useEffect(() => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation not supported by your browser')
@@ -433,31 +561,41 @@ export default function PlanRoutePage() {
       return
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
-        setUserLocation(loc)
-        setMapReady(true)
-        reverseGeocodeStartPoint(position.coords.latitude, position.coords.longitude)
-      },
-      (error) => {
-        let message = 'Unable to retrieve your location'
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = 'Location permission denied. Please enable it in settings.'
-            break
-          case error.POSITION_UNAVAILABLE:
-            message = 'Location information unavailable.'
-            break
-          case error.TIMEOUT:
-            message = 'Location request timed out.'
-            break
-        }
-        setLocationError(message)
+    const onSuccess = (position: GeolocationPosition) => {
+      const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
+      setUserLocation(loc)
+      setMapReady(true)
+      reverseGeocodeStartPoint(position.coords.latitude, position.coords.longitude)
+    }
 
-        setMapReady(true)
+    const onFinalError = (error: GeolocationPositionError) => {
+      let message = 'Unable to retrieve your location'
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          message = 'Location permission denied. Please enable it in settings.'
+          break
+        case error.POSITION_UNAVAILABLE:
+          message = 'Location information unavailable.'
+          break
+        case error.TIMEOUT:
+          message = 'Location request timed out.'
+          break
+      }
+      setLocationError(message)
+      setMapReady(true)
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      () => {
+        // Fast attempt failed/timed out — retry with GPS + longer timeout.
+        navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
     )
   }, [])
 
@@ -469,7 +607,7 @@ export default function PlanRoutePage() {
     }
   }, [])
 
-  // ── Handle Use My Location ──────────────────────────
+  
   const handleUseMyLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation not supported by your browser')
@@ -478,29 +616,40 @@ export default function PlanRoutePage() {
     setIsGettingLocation(true)
     setLocationError(null)
 
+    const onSuccess = (position: GeolocationPosition) => {
+      const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
+      setUserLocation(loc)
+      reverseGeocodeStartPoint(position.coords.latitude, position.coords.longitude)
+    }
+
+    const onFinalError = (error: GeolocationPositionError) => {
+      let message = 'Unable to retrieve your location'
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          message = 'Location permission denied. Please enable it in settings.'
+          break
+        case error.POSITION_UNAVAILABLE:
+          message = 'Location information unavailable.'
+          break
+        case error.TIMEOUT:
+          message = 'Location request timed out.'
+          break
+      }
+      setLocationError(message)
+      setIsGettingLocation(false)
+    }
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const loc: [number, number] = [position.coords.latitude, position.coords.longitude]
-        setUserLocation(loc)
-        reverseGeocodeStartPoint(position.coords.latitude, position.coords.longitude)
+      onSuccess,
+      () => {
+        // Fast attempt failed/timed out — retry with GPS + longer timeout.
+        navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        })
       },
-      (error) => {
-        let message = 'Unable to retrieve your location'
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = 'Location permission denied. Please enable it in settings.'
-            break
-          case error.POSITION_UNAVAILABLE:
-            message = 'Location information unavailable.'
-            break
-          case error.TIMEOUT:
-            message = 'Location request timed out.'
-            break
-        }
-        setLocationError(message)
-        setIsGettingLocation(false)
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
     )
   }, [reverseGeocodeStartPoint])
 
@@ -565,10 +714,25 @@ export default function PlanRoutePage() {
     setGpsErrorMessage(null)
     trip.reset()
 
+    announcedArrivalRef.current = false
+    announcedOffRouteRef.current = false
+    lastMilestoneKmRef.current = null
+
+    const distanceLabel = effectiveRoute ? `${effectiveRoute.distance.toFixed(1)} kilometers` : ''
+    const etaLabel = effectiveRoute ? `about ${Math.round(effectiveRoute.duration)} minutes` : ''
+    voiceGuidance.speak(
+      `Starting navigation${destination ? ' to ' + destination : ''}.${distanceLabel ? ' ' + distanceLabel : ''}${etaLabel ? ', ' + etaLabel : ''}.`,
+      { interrupt: true }
+    )
+
     setTimeout(() => setShowUpcomingAlert(true), 2000)
+    // The alert behaves like a toast, not a permanent fixture — it clears
+    // itself so it can't sit there covering the map for the rest of the trip.
+    setTimeout(() => setShowUpcomingAlert(false), 9000)
   }
 
   const handleEndTrip = () => {
+    voiceGuidance.stop()
     setIsNavigating(false)
     setShowUpcomingAlert(false)
     setStartPoint('')
@@ -587,17 +751,126 @@ export default function PlanRoutePage() {
   const hasArrived =
     isNavigating && displayProgress >= 0.995 && (liveProgress != null || !trip.isPlaying)
 
-  // ── Upcoming hazard (mock) ──────────────────────────
-  const upcomingHazard = {
-    type: 'tractor' as ReportType,
-    label: 'Road Works ahead — Independence',
-    distance: '0.9 KM',
-  }
-
+  // ── Upcoming hazard — real, not mock. `null` when the route has no
+  // hazard data, in which case no banner is shown at all.
+  const upcomingHazard = describeUpcomingHazard(effectiveRoute?.hazards)
 
   const navHazardCount = (activeRoute?.hazards?.length || scanHazards.length)
-  const remainingKm = activeRoute ? Math.max(0, activeRoute.distance * (1 - displayProgress)) : 0
-  const etaMinutes = activeRoute ? Math.max(0, Math.round(activeRoute.duration * (1 - displayProgress))) : 0
+  const remainingKm = effectiveRoute ? Math.max(0, effectiveRoute.distance * (1 - displayProgress)) : 0
+  const etaMinutes = effectiveRoute ? Math.max(0, Math.round(effectiveRoute.duration * (1 - displayProgress))) : 0
+
+  // ── Turn-by-turn voice guidance ──────────────────────
+  // The backend doesn't give us street-level maneuver text (no "turn left
+  // onto X"), only path/distance/duration/hazards — so guidance is framed
+  // around what we actually know: distance/ETA milestones, hazard
+  // proximity, off-route detection, and arrival. Built on the browser's
+  // native SpeechSynthesis, so it needs no API key and works offline.
+  const voiceGuidance = useVoiceGuidance()
+  const announcedArrivalRef = useRef(false)
+  const announcedOffRouteRef = useRef(false)
+  const lastMilestoneKmRef = useRef<number | null>(null)
+
+  const remainingKmFloor = isNavigating && effectiveRoute && !hasArrived ? Math.floor(remainingKm) : null
+
+  // Distance/ETA call-outs, once per whole kilometer crossed.
+  useEffect(() => {
+    if (remainingKmFloor == null) return
+    if (lastMilestoneKmRef.current === remainingKmFloor) return
+    const isFirstReading = lastMilestoneKmRef.current === null
+    lastMilestoneKmRef.current = remainingKmFloor
+    // The very first reading right after trip start is already covered by
+    // the "Starting navigation…" announcement in handleStartTrip.
+    if (isFirstReading || remainingKmFloor <= 0) return
+    voiceGuidance.speak(
+      `${remainingKmFloor} kilometer${remainingKmFloor === 1 ? '' : 's'} remaining. E.T.A. ${etaMinutes} minute${etaMinutes === 1 ? '' : 's'}.`
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingKmFloor])
+
+  // Off-route warning — announced once per departure, resets once you're back on track.
+  useEffect(() => {
+    if (!isNavigating) {
+      announcedOffRouteRef.current = false
+      return
+    }
+    if (isOffRoute && !announcedOffRouteRef.current) {
+      announcedOffRouteRef.current = true
+      voiceGuidance.speak("You've gone off route. Recalculating.", { interrupt: true })
+    } else if (!isOffRoute) {
+      announcedOffRouteRef.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOffRoute, isNavigating])
+
+  // Arrival — announced once.
+  useEffect(() => {
+    if (hasArrived && !announcedArrivalRef.current) {
+      announcedArrivalRef.current = true
+      voiceGuidance.speak("You've arrived at your destination.", { interrupt: true })
+    }
+    if (!isNavigating) announcedArrivalRef.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasArrived, isNavigating])
+
+  // Upcoming hazard alert — mirrors the visual "Upcoming" card.
+  useEffect(() => {
+    if (showUpcomingAlert && isNavigating && !hasArrived && upcomingHazard) {
+      voiceGuidance.speak(`Caution: ${upcomingHazard.label} ahead.`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showUpcomingAlert])
+
+  
+  const [wakeWordEnabled, setWakeWordEnabled] = useState(
+    () => typeof window !== 'undefined' && window.localStorage.getItem(WAKE_WORD_STORAGE_KEY) === '1'
+  )
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WAKE_WORD_STORAGE_KEY, wakeWordEnabled ? '1' : '0')
+    } catch {
+      // ignore — non-fatal, just means the preference won't persist
+    }
+  }, [wakeWordEnabled])
+
+  const destinationVoiceSearch = useVoiceSearch()
+  const [voiceCaptureStatus, setVoiceCaptureStatus] = useState<'idle' | 'listening' | 'searching'>('idle')
+
+  const captureDestinationByVoice = useCallback(() => {
+    setRouteError(null)
+    setShowPlanModal(true)
+    setVoiceCaptureStatus('listening')
+    voiceGuidance.speak('Where would you like to go?', { interrupt: true })
+
+    // Give the prompt a moment to finish before opening the mic, so the
+    // recognizer doesn't try to transcribe our own voice.
+    window.setTimeout(() => {
+      destinationVoiceSearch.start(async (transcript) => {
+        setDestination(transcript)
+        setVoiceCaptureStatus('searching')
+        try {
+          const result = await forwardGeocode(transcript)
+          if (typeof result.lat === 'number' && typeof result.lng === 'number') {
+            setDestination(result.address || transcript)
+            setDestinationCoords({ lat: result.lat, lng: result.lng })
+            voiceGuidance.speak(`Got it — ${result.address || transcript}. Tap Scan Route when you're ready.`)
+          } else {
+            voiceGuidance.speak("I couldn't find that place. Please pick it from the list.")
+          }
+        } catch {
+          voiceGuidance.speak("I couldn't find that place. Please pick it from the list.")
+        } finally {
+          setVoiceCaptureStatus('idle')
+        }
+      })
+    }, 1200)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destinationVoiceSearch])
+
+  const wakeWord = useWakeWord({
+    phrase: WAKE_PHRASE,
+    enabled: wakeWordEnabled && !isNavigating && !showPlanModal,
+    onWake: captureDestinationByVoice,
+  })
 
   // Memoize map center
   const mapCenter = useMemo<[number, number]>(
@@ -672,16 +945,16 @@ export default function PlanRoutePage() {
   return (
 
     <div
-      className="relative h-[100dvh] w-full overflow-hidden bg-gray-100"
+      className="fixed inset-0 w-full h-full overflow-hidden bg-gray-100"
       style={{ overscrollBehavior: 'none' }}
     >
 
       <div className="absolute inset-0 z-0">
         
 
-        {activeRoute ? (
+        {effectiveRoute ? (
   <RouteMapView
-    route={activeRoute}
+    route={effectiveRoute}
     markers={mapMarkers}
     zoom={isNavigating ? 17 : 15}
     progress={isNavigating ? displayProgress : undefined}
@@ -689,6 +962,7 @@ export default function PlanRoutePage() {
     heading={isNavigating ? displayHeading : 0}
     interactive={!isNavigating}
     followMode={isNavigating}
+    secondaryRoutes={isNavigating ? undefined : secondaryRoutes}
     className="w-full h-full"
   />
 ) : (
@@ -740,23 +1014,58 @@ export default function PlanRoutePage() {
             </button>
 
             {/* Search bar */}
-            <button
-              onClick={() => {
-                setRouteError(null)
-                setShowPlanModal(true)
-              }}
-              className="w-full flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 shadow-sm text-left"
-            >
-              <svg viewBox="0 0 24 24" className="flex-shrink-0 w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-              <span className="flex-1 text-xs text-gray-400 sm:text-sm">Where are you going?</span>
-              <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setRouteError(null)
+                  setShowPlanModal(true)
+                }}
+                className="flex items-center flex-1 gap-3 px-4 py-3.5 text-left bg-white shadow-sm rounded-2xl"
+              >
+                <svg viewBox="0 0 24 24" className="flex-shrink-0 w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <span className="flex-1 text-xs text-gray-400 truncate sm:text-sm">
+                  {voiceCaptureStatus === 'listening' ? 'Listening…' : voiceCaptureStatus === 'searching' ? 'Finding that place…' : 'Where are you going?'}
+                </span>
+              </button>
+
+              {destinationVoiceSearch.isSupported && (
+                <button
+                  onClick={captureDestinationByVoice}
+                  aria-label="Search by voice"
+                  className={`flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-2xl shadow-sm transition ${
+                    voiceCaptureStatus !== 'idle' ? 'bg-purple-600 text-white animate-pulse' : 'bg-white text-purple-600'
+                  }`}
+                >
+                  <Mic size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Hands-free "Hey Driver" wake word toggle */}
+            {wakeWord.isSupported && !wakeWord.permissionDenied && (
+              <button
+                onClick={() => setWakeWordEnabled((v) => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 mt-2 bg-white rounded-full shadow-sm w-fit"
+              >
+                <span
+                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition flex-shrink-0 ${
+                    wakeWordEnabled ? 'bg-purple-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition ${
+                      wakeWordEnabled ? 'translate-x-3.5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </span>
+                <span className="text-[11px] font-medium text-gray-700">
+                  {wakeWordEnabled ? `Listening for "Hey Driver"${wakeWord.isListening ? '' : '…'}` : 'Hands-free "Hey Driver" — off'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -795,7 +1104,7 @@ export default function PlanRoutePage() {
 
 
       {isNavigating && (
-        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2 sm:flex sm:justify-center">
+        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2 sm:flex sm:justify-center">
           <div className="space-y-2 sm:w-full sm:max-w-md">
             <div className={`flex items-center gap-3 px-4 py-3 shadow-sm rounded-2xl ${hasArrived ? 'bg-purple-600' : 'bg-emerald-500'}`}>
               <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20">
@@ -803,7 +1112,7 @@ export default function PlanRoutePage() {
                   {hasArrived ? <path d="M20 6L9 17l-5-5" /> : <path d="M12 19V5M5 12l7-7 7 7" />}
                 </svg>
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-[10px] sm:text-xs font-medium tracking-wide uppercase text-white/80">
                   {hasArrived ? 'Trip complete' : `${remainingKm.toFixed(1)} KM left`}
                 </p>
@@ -811,6 +1120,15 @@ export default function PlanRoutePage() {
                   {hasArrived ? "You've arrived" : 'Head out and follow the route'}
                 </p>
               </div>
+              {voiceGuidance.isSupported && (
+                <button
+                  onClick={voiceGuidance.toggleMuted}
+                  aria-label={voiceGuidance.muted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+                  className="flex items-center justify-center flex-shrink-0 text-white w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20"
+                >
+                  {voiceGuidance.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+              )}
             </div>
 
             {gpsStatus === 'waiting' && (
@@ -855,18 +1173,24 @@ export default function PlanRoutePage() {
               </div>
             )}
 
-            {showUpcomingAlert && !hasArrived && (
+            {showUpcomingAlert && !hasArrived && upcomingHazard && (
               <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-amber-100">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 19V5M5 12l7-7 7 7" />
-                  </svg>
+                  <span className="text-sm leading-none sm:text-base">{upcomingHazard.icon}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium uppercase tracking-wide">Upcoming</p>
-                  <p className="text-xs font-medium text-gray-900 truncate sm:text-sm">🚜 {upcomingHazard.label}</p>
+                  <p className="text-xs font-medium text-gray-900 truncate sm:text-sm">{upcomingHazard.label}</p>
                 </div>
-                <span className="text-[11px] sm:text-xs font-medium text-gray-500">{upcomingHazard.distance}</span>
+                <button
+                  onClick={() => setShowUpcomingAlert(false)}
+                  aria-label="Dismiss"
+                  className="flex items-center justify-center flex-shrink-0 w-6 h-6 text-gray-400 rounded-full active:bg-gray-100"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
               </div>
             )}
           </div>
@@ -881,13 +1205,20 @@ export default function PlanRoutePage() {
                 {/* Collapse handle — tap to shrink the card and see the full map */}
                 <button
                   onClick={() => setNavPanelExpanded(false)}
-                  className="flex items-center justify-center w-full py-1 mb-2 -mt-1 group"
+                  className="flex items-center justify-center w-full gap-1.5 py-1.5 mb-2 -mt-1 group"
                   aria-label="Collapse trip card"
                 >
-                  <span className="w-10 h-1 transition bg-gray-300 rounded-full group-active:bg-gray-400" />
+                  <span className="w-8 h-1 transition bg-gray-300 rounded-full group-active:bg-gray-400" />
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
                 </button>
 
-                <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() => setNavPanelExpanded(false)}
+                  aria-label="Collapse trip card"
+                  className="flex items-center justify-between w-full mb-3"
+                >
                   <div className="text-center">
                     <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">ETA</p>
                     <p className="text-lg font-bold text-gray-900 sm:text-xl">{hasArrived ? '0 min' : `${etaMinutes} min`}</p>
@@ -900,7 +1231,7 @@ export default function PlanRoutePage() {
                     <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">Hazards</p>
                     <p className="text-lg font-bold sm:text-xl text-amber-500">{navHazardCount}</p>
                   </div>
-                </div>
+                </button>
                 <button
                   onClick={handleEndTrip}
                   className="w-full h-11 sm:h-12 bg-red-500 hover:bg-red-600 text-white text-sm sm:text-base font-semibold rounded-xl transition active:scale-[0.98]"
@@ -938,6 +1269,24 @@ export default function PlanRoutePage() {
           </div>
         </div>
       )}
+
+      
+      {!showSOS && !showPlanModal && !showScanResults && (
+        <StreetViewPegman
+          onClick={() => setStreetViewOpen(true)}
+          className={`absolute z-[999] left-4 sm:left-8 transition-[bottom] ${
+            isNavigating ? (navPanelExpanded ? 'bottom-56' : 'bottom-24') : 'bottom-32'
+          }`}
+        />
+      )}
+
+      <StreetViewModal
+        isOpen={streetViewOpen}
+        onClose={() => setStreetViewOpen(false)}
+        lat={(destinationCoords ?? routePath[routePath.length - 1] ?? { lat: mapCenter[0], lng: mapCenter[1] }).lat}
+        lng={(destinationCoords ?? routePath[routePath.length - 1] ?? { lat: mapCenter[0], lng: mapCenter[1] }).lng}
+        label={destination || 'Current location'}
+      />
 
       {/* SOS Floating Button */}
       {!showSOS && (
@@ -1134,22 +1483,49 @@ export default function PlanRoutePage() {
                     </div>
                   )}
 
+                  {alternativeRoutes.length > 0 && (
+                    <div className="flex gap-2 mb-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {routeChoices.map((choice) => (
+                        <button
+                          key={choice.key}
+                          onClick={() => setSelectedRouteIndex(choice.index)}
+                          className={`flex-shrink-0 min-w-[104px] px-3.5 py-2 rounded-xl text-left transition border ${
+                            choice.key === selectedChoice?.key
+                              ? 'bg-purple-50 border-purple-600'
+                              : 'bg-gray-50 border-transparent'
+                          }`}
+                        >
+                          <p
+                            className={`text-[11px] sm:text-xs font-semibold whitespace-nowrap ${
+                              choice.key === selectedChoice?.key ? 'text-purple-700' : 'text-gray-600'
+                            }`}
+                          >
+                            {choice.label}
+                          </p>
+                          <p className="text-xs font-bold text-gray-900 sm:text-sm whitespace-nowrap">
+                            {choice.distance.toFixed(1)} km · {Math.round(choice.duration)} min
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     <div className="p-3 text-center bg-gray-50 rounded-2xl">
                       <p className="text-base font-bold text-gray-900 sm:text-lg">
-                        {activeRoute ? `${activeRoute.distance.toFixed(1)} km` : '9.5 km'}
+                        {effectiveRoute ? `${effectiveRoute.distance.toFixed(1)} km` : '9.5 km'}
                       </p>
                       <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Distance</p>
                     </div>
                     <div className="p-3 text-center bg-gray-50 rounded-2xl">
                       <p className="text-base font-bold text-gray-900 sm:text-lg">
-                        {activeRoute ? `${Math.round(activeRoute.duration)} min` : '23 min'}
+                        {effectiveRoute ? `${Math.round(effectiveRoute.duration)} min` : '23 min'}
                       </p>
                       <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">ETA</p>
                     </div>
                     <div className="p-3 text-center bg-gray-50 rounded-2xl">
                       <p className="text-base font-bold sm:text-lg text-emerald-500">
-                        {activeRoute ? Math.round(activeRoute.safetyScore) : 91}
+                        {effectiveRoute ? Math.round(effectiveRoute.safetyScore) : 91}
                       </p>
                       <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Safety</p>
                     </div>

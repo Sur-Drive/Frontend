@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import RouteMapView from '../components/map/RouteMapView'
+import StreetViewModal, { StreetViewPegman } from '../components/map/StreetView'
 import { getRoutePath, pickDefaultMode } from '../api/route'
 import type { RouteModeKey, RoutePlanResponse } from '../types/routePlan'
 import { ROUTE_MODE_ORDER } from '../types/routePlan'
@@ -19,6 +21,51 @@ const MODE_ICON: Record<RouteModeKey, string> = {
   motorcycle: '🏍️',
   cycling: '🚴',
   walking: '🚶',
+}
+
+// Hazards come back from the backend as `unknown[]` (see RouteOption) —
+// this is a defensive, best-effort read of whatever shape actually shows
+// up, so the banner reflects the real upcoming hazard instead of a
+// hardcoded string.
+interface HazardLike {
+  type?: string
+  description?: string
+  title?: string
+  location?: { address?: string }
+}
+
+const HAZARD_ICON: Record<string, string> = {
+  POTHOLE: '🕳️',
+  FLOOD: '🌊',
+  ACCIDENT: '⚠️',
+  DEBRIS: '🪨',
+  ROAD_WORKS: '🚜',
+  CHECKPOINT: '🚧',
+  DANGER: '⚠️',
+  SOS: '🆘',
+}
+
+const HAZARD_LABEL: Record<string, string> = {
+  POTHOLE: 'Pothole ahead',
+  FLOOD: 'Flood risk ahead',
+  ACCIDENT: 'Accident reported ahead',
+  DEBRIS: 'Debris in the road ahead',
+  ROAD_WORKS: 'Road works ahead',
+  CHECKPOINT: 'Checkpoint ahead',
+  DANGER: 'Hazard ahead',
+  SOS: 'Emergency reported ahead',
+}
+
+function describeUpcomingHazard(hazards: unknown[] | undefined): { icon: string; title: string; subtitle?: string } | null {
+  const first = hazards?.[0] as HazardLike | undefined
+  if (!first) return null
+
+  const type = typeof first.type === 'string' ? first.type.toUpperCase() : undefined
+  const icon = (type && HAZARD_ICON[type]) || '⚠️'
+  const title = (type && HAZARD_LABEL[type]) || first.title || 'Hazard ahead'
+  const subtitle = first.description || first.location?.address
+
+  return { icon, title, subtitle }
 }
 
 interface RouteResultsNavState {
@@ -46,6 +93,7 @@ export default function RouteResultsPage() {
 
   const activeRoute = selectedMode ? routePlan.routes[selectedMode] : undefined
   const path = useMemo(() => getRoutePath(activeRoute), [activeRoute])
+  const destinationPoint = path[path.length - 1]
 
   // Full loop of the route in ~20s for a visible demo of the moving line;
   // a real trip would drive `progress` from GPS instead of this simulation.
@@ -61,14 +109,26 @@ export default function RouteResultsPage() {
     loop: true,
   })
 
-  const [showUpcoming, setShowUpcoming] = useState(false)
+  const upcomingHazard = useMemo(() => describeUpcomingHazard(activeRoute?.hazards), [activeRoute])
+
+  // The hazard alert behaves like Google Maps' incident toast: it slides
+  // in, sits for a few seconds (or until dismissed), then slides back out
+  // — it never permanently occupies space over the route.
+  const [hazardToastVisible, setHazardToastVisible] = useState(false)
+  const [tripSheetExpanded, setTripSheetExpanded] = useState(false)
   const [sosArmed, setSosArmed] = useState(false)
   const [sosActive, setSosActive] = useState(false)
+  const [streetViewOpen, setStreetViewOpen] = useState(false)
 
   useEffect(() => {
-    const t = setTimeout(() => setShowUpcoming(true), 3500)
-    return () => clearTimeout(t)
-  }, [])
+    if (!upcomingHazard) return
+    const showTimer = setTimeout(() => setHazardToastVisible(true), 2000)
+    const hideTimer = setTimeout(() => setHazardToastVisible(false), 9000)
+    return () => {
+      clearTimeout(showTimer)
+      clearTimeout(hideTimer)
+    }
+  }, [upcomingHazard])
 
   const handleEndTrip = () => navigate('/home')
 
@@ -90,8 +150,9 @@ export default function RouteResultsPage() {
   const hazardCount = activeRoute?.hazards?.length ?? 0
 
   return (
-    <div className="relative h-[100dvh] w-full max-w-[430px] mx-auto bg-[#e4e4e4] overflow-hidden">
-      {/* Live map with the animated route */}
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-[#e4e4e4]">
+      {/* Live map — always full-bleed behind every panel below, on any
+          screen size, so nothing here can ever crop or block the route. */}
       <div className="absolute inset-0">
         {activeRoute ? (
           <RouteMapView route={activeRoute} zoom={15} progress={progress} className="w-full h-full" />
@@ -102,65 +163,140 @@ export default function RouteResultsPage() {
         )}
       </div>
 
-      {/* Mode switcher — same route plan, any of the modes the backend priced out */}
-      {availableModes.length > 1 && (
-        <div className="absolute z-20 flex gap-2 px-4 mx-4 mt-24 overflow-x-auto left-0 right-0">
-          {availableModes.map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setSelectedMode(mode)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap transition ${
-                mode === selectedMode ? 'bg-emerald-500 text-white' : 'bg-white text-gray-700'
-              }`}
-            >
-              <span>{MODE_ICON[mode]}</span>
-              {MODE_LABEL[mode]}
-            </button>
-          ))}
+      {/* Top instruction banner + mode switcher — constrained to a
+          phone-card width on mobile, centered as a floating panel on
+          larger screens, same pattern used across the rest of the app. */}
+      <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-4 mx-auto max-w-[430px] lg:max-w-md">
+        <div className="flex items-center gap-3 px-5 py-4 shadow-lg bg-emerald-500 rounded-2xl">
+          <div className="flex items-center justify-center flex-shrink-0 w-9 h-9 bg-white/25 rounded-xl">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-white/80">
+              {activeRoute ? `${remainingKm.toFixed(1)} KM LEFT` : ''}
+            </p>
+            <p className="text-[17px] font-bold leading-tight text-white">Head out and follow the route</p>
+          </div>
         </div>
-      )}
 
-      {/* Top instruction banner */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-3 px-5 py-4 mx-4 mt-4 shadow-lg bg-emerald-500 rounded-2xl">
-        <div className="flex items-center justify-center flex-shrink-0 w-9 h-9 bg-white/25 rounded-xl">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 19V5M5 12l7-7 7 7" />
-          </svg>
-        </div>
-        <div>
-          <p className="text-xs font-semibold tracking-wide text-white/80">
-            {activeRoute ? `${remainingKm.toFixed(1)} KM LEFT` : ''}
-          </p>
-          <p className="text-[17px] font-bold leading-tight text-white">Head out and follow the route</p>
-        </div>
-      </div>
-
-      {/* Upcoming hazard + trip card */}
-      <div className="absolute left-0 right-0 z-20 mx-4 top-28">
-        {showUpcoming && hazardCount > 0 && (
-          <div className="flex items-center gap-3 px-5 py-3 mb-3 bg-white shadow-lg rounded-2xl">
-            <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full bg-amber-100">
-              <span className="text-base leading-none">🚜</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold tracking-wide text-gray-400">UPCOMING</p>
-              <p className="text-[14px] font-semibold text-gray-900 truncate">Road works ahead — {destination}</p>
-            </div>
+        {availableModes.length > 1 && (
+          <div className="flex gap-2 mt-3 overflow-x-auto">
+            {availableModes.map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setSelectedMode(mode)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap transition ${
+                  mode === selectedMode ? 'bg-emerald-500 text-white' : 'bg-white text-gray-700'
+                }`}
+              >
+                <span>{MODE_ICON[mode]}</span>
+                {MODE_LABEL[mode]}
+              </button>
+            ))}
           </div>
         )}
+      </div>
 
-        <div className="px-5 py-4 bg-white shadow-lg rounded-2xl">
-          <div className="grid grid-cols-3 text-center">
-            <Stat label="ETA" value={`${etaMin} min`} />
-            <Stat label="Remaining" value={`${remainingKm.toFixed(1)} km`} />
-            <Stat label="Hazards" value={String(hazardCount)} accent />
-          </div>
+      {/* Upcoming hazard toast — floats over the map, auto-dismisses, and
+          is swipe/tap dismissible. It never reserves permanent layout
+          space, so it can't block the route line underneath it. */}
+      <div className="absolute left-0 right-0 z-30 px-4 mx-auto max-w-[430px] lg:max-w-md top-32 pointer-events-none">
+        <AnimatePresence>
+          {upcomingHazard && hazardToastVisible && (
+            <motion.div
+              initial={{ y: -24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -24, opacity: 0 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.2, bottom: 0 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y < -20) setHazardToastVisible(false)
+              }}
+              className="flex items-center gap-3 px-5 py-3 bg-white shadow-lg pointer-events-auto rounded-2xl"
+            >
+              <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full bg-amber-100">
+                <span className="text-base leading-none">{upcomingHazard.icon}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold tracking-wide text-gray-400">UPCOMING</p>
+                <p className="text-[14px] font-semibold text-gray-900 truncate">
+                  {upcomingHazard.title}
+                  {upcomingHazard.subtitle ? ` — ${upcomingHazard.subtitle}` : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setHazardToastVisible(false)}
+                aria-label="Dismiss"
+                className="flex items-center justify-center flex-shrink-0 text-gray-400 rounded-full w-7 h-7 active:bg-gray-100"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Street View pegman — opens Google's own panorama at the
+          destination. Placed clear of the SOS button and the trip sheet. */}
+      {destinationPoint && (
+        <StreetViewPegman
+          onClick={() => setStreetViewOpen(true)}
+          className="absolute z-30 bottom-[calc(env(safe-area-inset-bottom)+7rem)] left-4 lg:left-6"
+        />
+      )}
+
+      {/* Bottom trip sheet — collapsible like Google Maps' own bottom
+          sheet, so it can be minimized to a slim strip instead of
+          permanently covering a chunk of the map. */}
+      <div className="absolute left-0 right-0 z-20 px-4 mx-auto max-w-[430px] lg:max-w-md bottom-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <div className="overflow-hidden bg-white shadow-lg rounded-2xl">
           <button
-            onClick={handleEndTrip}
-            className="w-full h-12 mt-4 font-semibold text-white bg-red-500 rounded-full active:scale-[0.98] transition"
+            onClick={() => setTripSheetExpanded((v) => !v)}
+            className="flex items-center justify-between w-full px-5 py-3"
           >
-            End Trip
+            <div className="flex items-center gap-4">
+              <MiniStat label="ETA" value={`${etaMin} min`} />
+              <MiniStat label="Left" value={`${remainingKm.toFixed(1)} km`} />
+              <MiniStat label="Hazards" value={String(hazardCount)} accent />
+            </div>
+            <svg
+              viewBox="0 0 24 24"
+              className={`w-5 h-5 text-gray-400 transition-transform ${tripSheetExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
+
+          <AnimatePresence initial={false}>
+            {tripSheetExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="px-5 pb-5">
+                  <button
+                    onClick={handleEndTrip}
+                    className="w-full h-12 font-semibold text-white bg-red-500 rounded-full active:scale-[0.98] transition"
+                  >
+                    End Trip
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -169,7 +305,7 @@ export default function RouteResultsPage() {
         onPointerDown={startHold}
         onPointerUp={cancelHold}
         onPointerLeave={cancelHold}
-        className={`absolute z-30 flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-lg bottom-8 right-4 bg-red-500/90 ring-4 ring-red-300/50 active:scale-95 ${
+        className={`absolute z-30 flex flex-col items-center justify-center w-20 h-20 text-white transition rounded-full shadow-lg bottom-[calc(env(safe-area-inset-bottom)+2rem)] right-4 lg:right-6 bg-red-500/90 ring-4 ring-red-300/50 active:scale-95 ${
           sosArmed ? 'scale-105' : ''
         }`}
       >
@@ -177,16 +313,26 @@ export default function RouteResultsPage() {
         <span className="text-[10px] leading-tight">Hold 3 secs</span>
       </button>
 
+      {destinationPoint && (
+        <StreetViewModal
+          isOpen={streetViewOpen}
+          onClose={() => setStreetViewOpen(false)}
+          lat={destinationPoint.lat}
+          lng={destinationPoint.lng}
+          label={destination}
+        />
+      )}
+
       {sosActive && <SosActiveOverlay onClose={() => setSosActive(false)} />}
     </div>
   )
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function MiniStat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-400">{label}</p>
-      <p className={`text-lg font-extrabold ${accent ? 'text-amber-500' : 'text-gray-900'}`}>{value}</p>
+      <p className="text-[10px] font-medium text-gray-400">{label}</p>
+      <p className={`text-sm font-extrabold ${accent ? 'text-amber-500' : 'text-gray-900'}`}>{value}</p>
     </div>
   )
 }

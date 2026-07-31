@@ -1,3 +1,8 @@
+
+
+
+
+
 const API_BASE = 'https://backend-production-01de.up.railway.app'
 
 // ─── Interfaces ─────────────────────────────────────────────────────
@@ -9,6 +14,31 @@ export interface SendOtpPayload {
 
 export interface SendOtpResponse {
   message: string
+  [key: string]: any
+}
+
+// ─── Google Sign-In ─────────────────────────────────────────────────
+
+export interface GoogleSignInPayload {
+  idToken: string
+  role: string
+}
+
+export interface GoogleSignInResponse {
+  message: string
+  token?: string
+  tokens?: {
+    accessToken: string
+    refreshToken: string
+  }
+  user?: any
+  [key: string]: any
+}
+
+// ─── Onboarding status ──────────────────────────────────────────────
+
+export interface OnboardingStatusResponse {
+  hasCompletedOnboarding: boolean
   [key: string]: any
 }
 
@@ -195,6 +225,50 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<VerifyOtpRes
   }
 
   return data
+}
+
+export async function googleSignIn(payload: GoogleSignInPayload): Promise<GoogleSignInResponse> {
+  console.log('📤 Signing in with Google, role:', payload.role)
+
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await parseResponse(res, 'Google sign-in failed')
+
+  const token = data.tokens?.accessToken || data.token || data.user?.accessToken
+  const refreshTokenValue = data.tokens?.refreshToken
+
+  if (token) {
+    localStorage.setItem('token', token)
+    console.log('🔑 Google sign-in token saved:', token.substring(0, 30) + '...')
+  } else {
+    console.warn('⚠️ No token found in google sign-in response. Keys:', Object.keys(data))
+  }
+
+  if (refreshTokenValue) {
+    localStorage.setItem('refreshToken', refreshTokenValue)
+  }
+
+  return data
+}
+
+export async function getOnboardingStatus(): Promise<OnboardingStatusResponse> {
+  const token = localStorage.getItem('token')
+
+  console.log('📤 Fetching onboarding status...')
+
+  const res = await fetch(`${API_BASE}/auth/onboarding-status`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      ...authHeaders(token),
+    },
+  })
+
+  return parseResponse(res, 'Failed to fetch onboarding status')
 }
 
 export async function sendPersonalInfo(payload: PersonalInfoPayload): Promise<PersonalInfoResponse> {

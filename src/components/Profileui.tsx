@@ -40,6 +40,77 @@ interface ModalSheetProps {
   footer?: ReactNode
 }
 
+// export function ModalSheet({ title, onClose, onBack, children, footer }: ModalSheetProps) {
+//   // Lock body scroll so the page behind doesn't scroll on iOS
+//   useEffect(() => {
+//     const original = document.body.style.overflow
+//     document.body.style.overflow = 'hidden'
+//     return () => {
+//       document.body.style.overflow = original
+//     }
+//   }, [])
+
+//   return (
+//     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 overscroll-contain">
+//       <div
+//         className="relative flex w-full max-w-md flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl h-[85vh] max-h-[85vh] [@supports(height:100dvh)]:h-[min(92dvh,92svh)] [@supports(height:100dvh)]:max-h-[100dvh]"
+//       >
+//         {/* Header */}
+//         <div className="flex items-center justify-between px-6 pb-2 pt-[calc(1.5rem+env(safe-area-inset-top))] shrink-0">
+//           {onBack ? (
+//             <button
+//               onClick={onBack}
+//               className="flex items-center justify-center w-10 h-10 text-white rounded-full bg-purple-950"
+//             >
+//               <ChevronLeft size={18} />
+//             </button>
+//           ) : (
+//             <h2 className="text-xl font-extrabold text-gray-900 sm:text-2xl">{title}</h2>
+//           )}
+//           {onClose && !onBack && (
+//             <button
+//               onClick={onClose}
+//               className="flex items-center justify-center w-8 h-8 text-gray-500 bg-gray-100 rounded-full"
+//             >
+//               <X size={16} />
+//             </button>
+//           )}
+//         </div>
+
+//         {onBack && (
+//           <div className="px-6 pb-1 shrink-0">
+//             <h2 className="text-xl font-extrabold text-gray-900 sm:text-2xl">{title}</h2>
+//           </div>
+//         )}
+
+//         {/* Content — min-h-0 is the critical fix for flexbox truncation */}
+//         <div className="flex-1 min-h-0 px-6 pb-4 overflow-y-auto [-webkit-overflow-scrolling:touch]">
+//           {children}
+//         </div>
+
+//         {/* Footer */}
+//         {footer && (
+//           <div className="px-6 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shrink-0 bg-white border-t border-gray-100">
+//             {footer}
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   )
+// }
+
+// ---------- SuccessScreen ----------
+
+// ... keep your existing imports (useEffect, ReactNode, X, ChevronLeft, Check, Toggle, SuccessScreen)
+
+interface ModalSheetProps {
+  title: string
+  onClose?: () => void
+  onBack?: () => void
+  children: ReactNode
+  footer?: ReactNode
+}
+
 export function ModalSheet({ title, onClose, onBack, children, footer }: ModalSheetProps) {
   // Lock body scroll so the page behind doesn't scroll on iOS
   useEffect(() => {
@@ -53,10 +124,14 @@ export function ModalSheet({ title, onClose, onBack, children, footer }: ModalSh
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 overscroll-contain">
       <div
-        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl h-[85vh] max-h-[85vh] [@supports(height:100dvh)]:h-[min(92dvh,92svh)] [@supports(height:100dvh)]:max-h-[100dvh]"
+        className="relative flex w-full max-w-md flex-col overflow-hidden rounded-t-[40px] bg-white shadow-2xl
+          h-[85vh] max-h-[85vh]
+          [@media(max-height:600px)]:h-[95vh]
+          [@supports(height:100dvh)]:h-[min(92dvh,92svh)]
+          [@supports(height:100dvh)]:max-h-[100dvh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pb-2 pt-[calc(1.5rem+env(safe-area-inset-top))] shrink-0">
+        <div className="flex items-center justify-between px-4 pb-2 pt-[calc(1.25rem+env(safe-area-inset-top))] shrink-0 sm:px-6 sm:pt-[calc(1.5rem+env(safe-area-inset-top))]">
           {onBack ? (
             <button
               onClick={onBack}
@@ -65,7 +140,7 @@ export function ModalSheet({ title, onClose, onBack, children, footer }: ModalSh
               <ChevronLeft size={18} />
             </button>
           ) : (
-            <h2 className="text-xl font-extrabold text-gray-900 sm:text-2xl">{title}</h2>
+            <h2 className="text-lg font-extrabold text-gray-900 sm:text-xl sm:text-2xl">{title}</h2>
           )}
           {onClose && !onBack && (
             <button
@@ -78,19 +153,19 @@ export function ModalSheet({ title, onClose, onBack, children, footer }: ModalSh
         </div>
 
         {onBack && (
-          <div className="px-6 pb-1 shrink-0">
-            <h2 className="text-xl font-extrabold text-gray-900 sm:text-2xl">{title}</h2>
+          <div className="px-4 pb-1 shrink-0 sm:px-6">
+            <h2 className="text-lg font-extrabold text-gray-900 sm:text-xl sm:text-2xl">{title}</h2>
           </div>
         )}
 
         {/* Content — min-h-0 is the critical fix for flexbox truncation */}
-        <div className="flex-1 min-h-0 px-6 pb-4 overflow-y-auto [-webkit-overflow-scrolling:touch]">
+        <div className="flex-1 min-h-0 px-4 pb-4 overflow-y-auto sm:px-6 [-webkit-overflow-scrolling:touch]">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shrink-0 bg-white border-t border-gray-100">
+          <div className="px-4 pt-2 shrink-0 bg-white border-t border-gray-100 sm:px-6 pb-[calc(7.25rem+env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}
@@ -99,8 +174,7 @@ export function ModalSheet({ title, onClose, onBack, children, footer }: ModalSh
   )
 }
 
-// ---------- SuccessScreen ----------
-
+// ... keep your existing Toggle and SuccessScreen components below
 interface SuccessScreenProps {
   title: string
   description: string
@@ -140,7 +214,7 @@ export function SuccessScreen({
         </div>
 
         {/* Buttons — always visible, never squashed */}
-        <div className="w-full max-w-md pt-4 shrink-0">
+        <div className="w-full max-w-md pt-4 shrink-0 pb-14">
           <button
             onClick={onPrimary}
             className="w-full rounded-2xl bg-white py-4 text-[16px] font-semibold text-emerald-700 active:scale-[0.98] transition"
