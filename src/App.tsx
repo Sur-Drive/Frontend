@@ -98,6 +98,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function AppRoutes() {
     const location = useLocation();
+
     const pathname = location.pathname;
 
     // Check if current page is an app route (should show splash and nav)
@@ -314,8 +315,8 @@ function AppRoutes() {
                 </Routes>
             </div>
 
-            {/* BottomNav only shows on app pages */}
-            {showNav && <BottomNav />}
+            {/* BottomNav only shows on app pages, and never underneath the splash overlay */}
+            {showNav && !showSplash && <BottomNav />}
 
             {/* Splash screen overlay - only on app routes */}
             {showSplash && (

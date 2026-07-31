@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import {
   Smartphone,
   Mail,
   MessageSquare,
+  MessageCircle,
   Plus,
   Minus,
   Users,
@@ -16,10 +17,19 @@ import {
   EyeOff,
   AlertCircle,
   BellRing,
+  Building2,
+  Phone,
+  Car,
+  Activity,
+  Wrench,
+  Calendar,
+  ShieldCheck,
+  X,
+  ChevronLeft,
 } from 'lucide-react'
-import { ModalSheet, SuccessScreen, Toggle } from './Profileui'
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '../hooks/useNotifications'
 import type { NotificationPreferences } from '../hooks/useNotifications'
+import { usePushSubscription } from '../hooks/usePushSubscription'
 import { ApiError } from '../lib/apiClient'
 import {
   useEmergencyContacts,
@@ -30,6 +40,153 @@ import {
 } from '../hooks/useEmergencyContacts'
 import type { EmergencyContactDto, EmergencyContactInput } from '../api/emergencyContacts'
 import { useUpdatePassword } from '../hooks/useAuth'
+import { useFleet } from '../hooks/useFleet'
+import type { FleetManager } from '../hooks/useFleet'
+
+
+
+
+const IOS_SAFE_INPUT =
+  'w-full rounded-2xl bg-gray-100 px-4 py-3.5 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none'
+const IOS_SAFE_INPUT_BORDER =
+  'w-full rounded-2xl border-2 border-purple-200 bg-white px-4 py-3.5 text-base text-gray-800 focus:border-purple-500 focus:outline-none'
+
+
+export function Toggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-7 w-[52px] shrink-0 items-center rounded-full transition ${
+        checked ? 'bg-purple-700' : 'bg-gray-300'
+      } ${disabled ? 'opacity-50' : ''}`}
+    >
+      <span
+        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${
+          checked ? 'translate-x-[26px]' : 'translate-x-[2px]'
+        }`}
+      />
+    </button>
+  )
+}
+
+export function SuccessScreen({
+  title,
+  description,
+  onPrimary,
+  secondaryLabel,
+  onSecondary,
+}: {
+  title: string
+  description: string
+  onPrimary: () => void
+  secondaryLabel: string
+  onSecondary: () => void
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 pt-10 pb-6 text-center">
+      <div className="flex items-center justify-center w-16 h-16 mb-5 bg-green-100 rounded-full">
+        <ShieldCheck size={32} className="text-green-600" />
+      </div>
+      <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+      <p className="mt-2 text-[15px] leading-relaxed text-gray-500">{description}</p>
+      <div className="flex flex-col w-full gap-3 mt-8">
+        <button
+          onClick={onPrimary}
+          className="w-full rounded-2xl bg-purple-700 py-4 text-[16px] font-semibold text-white active:scale-[0.98] transition"
+        >
+          Done
+        </button>
+        <button
+          onClick={onSecondary}
+          className="w-full rounded-2xl bg-gray-100 py-4 text-[16px] font-semibold text-gray-700 active:scale-[0.98] transition"
+        >
+          {secondaryLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function ModalSheet({
+  title,
+  children,
+  onClose,
+  onBack,
+  footer,
+}: {
+  title: string
+  children: ReactNode
+  onClose?: () => void
+  onBack?: () => void
+  footer?: ReactNode
+}) {
+  // Lock body scroll when modal opens
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
+      {/* Sheet */}
+      {/* <div
+        className="relative z-10 flex flex-col w-full max-w-full bg-white shadow-2xl sm:max-w-md sm:rounded-3xl rounded-t-3xl"
+        style={{ maxHeight: '78vh' }}
+      > */}
+
+            <div
+        className="relative flex flex-col w-full max-w-full mb-16 bg-white shadow-2xl z-14 sm:max-w-md sm:rounded-3xl rounded-t-3xl"
+        style={{ maxHeight: '82vh', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            {onBack && (
+              <button onClick={onBack} className="p-1 -ml-1 text-gray-500">
+                <ChevronLeft size={24} />
+              </button>
+            )}
+            <h2 className="text-[17px] font-bold text-gray-900">{title}</h2>
+          </div>
+          {onClose && (
+            <button onClick={onClose} className="p-1 -mr-1 text-gray-400">
+              <X size={22} />
+            </button>
+          )}
+        </div>
+
+        
+        <div className="flex-1 px-5 pb-8 overflow-y-auto overscroll-contain">
+          {children}
+        </div>
+
+        {/* Footer */}
+        {/* {footer && <div className="px-5 pt-3 pb-5 border-t border-gray-100 shrink-0">{footer}</div>} */}
+                {footer && <div className="px-5 pt-3 pb-5 border-t border-gray-100 shrink-0" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>{footer}</div>}
+      </div>
+    </div>
+  )
+}
+
+
 
 const HAZARD_TYPES = [
   'POTHOLE',
@@ -54,18 +211,44 @@ interface NotificationsModalProps {
 export function NotificationsModal({ onClose }: NotificationsModalProps) {
   const { data: preferences, isLoading, isError, error } = useNotificationPreferences()
   const { mutate: updatePreferences, isPending } = useUpdateNotificationPreferences()
+  const { subscribe, status: pushStatus } = usePushSubscription()
 
-  const toggle = (key: keyof Pick<NotificationPreferences, 'push' | 'email' | 'sms'>) => {
+  const [pushBanner, setPushBanner] = useState<
+    { type: 'error' | 'denied'; message: string } | null
+  >(null)
+
+  const toggle = async (key: keyof Pick<NotificationPreferences, 'push' | 'email' | 'sms'>) => {
     if (!preferences) return
-    updatePreferences({ [key]: !preferences[key] })
+    const turningOn = !preferences[key]
+
+    if (key !== 'push' || !turningOn) {
+      updatePreferences({ [key]: turningOn })
+      return
+    }
+
+    setPushBanner(null)
+    const result = await subscribe()
+
+    if (result.ok) {
+      updatePreferences({ push: true })
+    } else if (result.reason === 'denied') {
+      setPushBanner({
+        type: 'denied',
+        message:
+          "Notifications are blocked for this site. Enable them in your browser's site settings, then try again.",
+      })
+    } else {
+      setPushBanner({
+        type: 'error',
+        message: 'Could not enable push notifications on this device. Please try again.',
+      })
+    }
   }
 
   const toggleHazardType = (type: string) => {
     if (!preferences) return
     const current = preferences.hazardTypes ?? []
-    const next = current.includes(type)
-      ? current.filter((t) => t !== type)
-      : [...current, type]
+    const next = current.includes(type) ? current.filter((t) => t !== type) : [...current, type]
     updatePreferences({ hazardTypes: next })
   }
 
@@ -81,7 +264,7 @@ export function NotificationsModal({ onClose }: NotificationsModalProps) {
   if (isNotYetAvailable) {
     return (
       <ModalSheet title="Notifications Settings" onClose={onClose}>
-        <div className="flex flex-col items-center px-2 pt-10 text-center">
+        <div className="flex flex-col items-center px-2 pt-10 pb-10 text-center">
           <div className="flex items-center justify-center w-16 h-16 mb-5 bg-purple-100 rounded-full">
             <BellRing size={28} className="text-purple-700" />
           </div>
@@ -97,7 +280,7 @@ export function NotificationsModal({ onClose }: NotificationsModalProps) {
   if (isError) {
     return (
       <ModalSheet title="Notifications Settings" onClose={onClose}>
-        <div className="flex flex-col items-center px-2 pt-10 text-center">
+        <div className="flex flex-col items-center px-2 pt-10 pb-10 text-center">
           <AlertCircle size={36} className="mb-3 text-red-400" />
           <p className="text-[15px] text-gray-500">
             {error instanceof Error ? error.message : 'Could not load your notification settings.'}
@@ -109,17 +292,30 @@ export function NotificationsModal({ onClose }: NotificationsModalProps) {
 
   return (
     <ModalSheet title="Notifications Settings" onClose={onClose}>
+      {pushBanner && (
+        <div
+          className={`mb-4 flex items-start gap-2 rounded-2xl px-4 py-3 text-[13px] ${
+            pushBanner.type === 'denied'
+              ? 'bg-amber-50 text-amber-700'
+              : 'bg-red-50 text-red-600'
+          }`}
+        >
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <p>{pushBanner.message}</p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         <ToggleRow
           icon={<Smartphone size={18} className="text-purple-700" />}
           title="Push Notification"
-          subtitle="Updates & promos"
+          subtitle={pushStatus === 'subscribing' ? 'Requesting permission…' : 'Updates & promos'}
           loading={isLoading}
         >
           <Toggle
             checked={preferences?.push ?? false}
             onChange={() => toggle('push')}
-            disabled={isLoading || isPending}
+            disabled={isLoading || isPending || pushStatus === 'subscribing'}
           />
         </ToggleRow>
         <ToggleRow
@@ -166,7 +362,7 @@ export function NotificationsModal({ onClose }: NotificationsModalProps) {
                   key={type}
                   onClick={() => toggleHazardType(type)}
                   disabled={isPending}
-                  className={`rounded-full px-4 py-2 text-[13px] font-semibold transition ${
+                  className={`rounded-full px-3 py-2 text-[12px] font-semibold transition sm:px-4 sm:text-[13px] ${
                     active ? 'bg-purple-700 text-white' : 'bg-gray-100 text-gray-500'
                   }`}
                 >
@@ -230,13 +426,13 @@ function ToggleRow({
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-4 bg-gray-100 rounded-2xl">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full">
+      <div className="flex items-center min-w-0 gap-3">
+        <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full shrink-0">
           {icon}
         </div>
-        <div>
-          <p className="text-[15px] font-semibold text-gray-900">{title}</p>
-          <p className="text-[13px] text-gray-400">{subtitle}</p>
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-gray-900 truncate">{title}</p>
+          <p className="text-[13px] text-gray-400 truncate">{subtitle}</p>
         </div>
       </div>
       {loading ? <div className="h-7 w-[52px] animate-pulse rounded-full bg-gray-200" /> : children}
@@ -253,7 +449,6 @@ interface EmergencyContactModalProps {
 }
 
 type ContactStep = 'list' | 'add' | 'success'
-
 
 const RELATIONSHIPS = ['Parent', 'Sibling', 'Spouse', 'Child', 'Friend', 'Colleague', 'Other']
 
@@ -308,33 +503,45 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
 
   const canSubmit = form.fullName.trim() !== '' && form.phoneNumber.trim() !== ''
 
- const handleSubmit = () => {
-  if (!canSubmit) return
+  const handleSubmit = () => {
+    if (!canSubmit) return
 
-  const payload = {
-    ...form,
-    phoneNumber: toE164Nigeria(form.phoneNumber),
-    email: form.email?.trim() ? form.email.trim() : undefined,
+    const payload = {
+      ...form,
+      phoneNumber: toE164Nigeria(form.phoneNumber),
+      email: form.email?.trim() ? form.email.trim() : undefined,
+    }
+
+    const onSuccess = () => setStep('success')
+    if (editingId) {
+      updateContact.mutate({ id: editingId, ...payload }, { onSuccess })
+    } else {
+      createContact.mutate(payload, { onSuccess })
+    }
   }
 
-  const onSuccess = () => setStep('success')
-  if (editingId) {
-    updateContact.mutate({ id: editingId, ...payload }, { onSuccess })
-  } else {
-    createContact.mutate(payload, { onSuccess })
-  }
-}
-
-  
   if (step === 'success') {
     return (
-      <SuccessScreen
-        title="Emergency Contact Added Successfully"
-        description="Your emergency contact has been added successfully, and they can now be reached quickly in case of an emergency."
-        onPrimary={() => setStep('list')}
-        secondaryLabel="Add Another Contact"
-        onSecondary={startAdd}
-      />
+      <ModalSheet
+        title="Emergency Contact"
+        onClose={onClose}
+        footer={
+          <button
+            onClick={startAdd}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-700 py-4 text-[16px] font-semibold text-white transition active:scale-[0.98]"
+          >
+            <Plus size={18} /> Add Another Contact
+          </button>
+        }
+      >
+        <SuccessScreen
+          title="Emergency Contact Added Successfully"
+          description="Your emergency contact has been added successfully, and they can now be reached quickly in case of an emergency."
+          onPrimary={() => setStep('list')}
+          secondaryLabel="Add Another Contact"
+          onSecondary={startAdd}
+        />
+      </ModalSheet>
     )
   }
 
@@ -373,7 +580,7 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
             autoFocus
             value={form.fullName}
             onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
-            className="w-full rounded-2xl border-2 border-purple-200 bg-white px-4 py-3.5 text-[15px] text-gray-800 focus:border-purple-500 focus:outline-none"
+            className={IOS_SAFE_INPUT_BORDER}
           />
         </Field>
 
@@ -382,7 +589,7 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
             value={form.phoneNumber}
             onChange={(e) => setForm((f) => ({ ...f, phoneNumber: e.target.value }))}
             placeholder="Enter Mobile Number"
-            className="w-full rounded-2xl bg-gray-100 px-4 py-3.5 text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+            className={IOS_SAFE_INPUT}
           />
         </Field>
 
@@ -391,7 +598,7 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
             value={form.email}
             onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             placeholder="Enter contact email address"
-            className="w-full rounded-2xl bg-gray-100 px-4 py-3.5 text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+            className={IOS_SAFE_INPUT}
           />
         </Field>
 
@@ -414,7 +621,7 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
         <select
           value={form.relationship}
           onChange={(e) => setForm((f) => ({ ...f, relationship: e.target.value }))}
-          className="w-full appearance-none rounded-2xl bg-gray-100 px-4 py-3.5 text-[15px] text-gray-500 focus:outline-none"
+          className={`${IOS_SAFE_INPUT} appearance-none`}
         >
           <option value="">Select</option>
           {RELATIONSHIPS.map((r) => (
@@ -425,8 +632,8 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
         </select>
 
         <div className="flex items-center justify-between px-4 py-4 mt-5 bg-gray-100 rounded-2xl">
-          <div>
-            <p className="text-[15px] font-medium text-gray-800">Set as primary contact</p>
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-gray-900">Set as primary contact</p>
             <p className="text-[13px] text-gray-400">Contacted first in an emergency</p>
           </div>
           <Toggle
@@ -453,7 +660,7 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
       }
     >
       {isError && (
-        <div className="flex flex-col items-center px-2 pt-10 text-center">
+        <div className="flex flex-col items-center px-2 pt-10 pb-10 text-center">
           <AlertCircle size={36} className="mb-3 text-red-400" />
           <p className="text-[15px] text-gray-500">
             {error instanceof Error ? error.message : 'Could not load your emergency contacts.'}
@@ -470,7 +677,7 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
       )}
 
       {!isError && !isLoading && (contacts?.length ?? 0) === 0 && (
-        <div className="flex flex-col items-center px-2 pt-10 text-center">
+        <div className="flex flex-col items-center px-2 pt-10 pb-10 text-center">
           <div className="relative flex items-center justify-center mb-8 h-36 w-36">
             <div className="absolute w-32 h-24 rounded-full bg-gray-50" />
             <span className="absolute text-lg text-gray-300 -left-1 top-4">✦</span>
@@ -493,11 +700,11 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-purple-700 text-[15px] font-bold text-white">
                   {initials(c.fullName)}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[17px] font-bold text-gray-900">{c.fullName}</p>
+                    <p className="text-[17px] font-bold text-gray-900 truncate">{c.fullName}</p>
                     {c.isPrimary && (
-                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700 shrink-0">
                         Primary
                       </span>
                     )}
@@ -507,13 +714,13 @@ export function EmergencyContactModal({ onClose }: EmergencyContactModalProps) {
               </div>
 
               <div className="flex gap-6 mt-4">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-gray-800">Phone Number</p>
-                  <p className="text-[14px] text-gray-500">{c.phoneNumber || '—'}</p>
+                  <p className="text-[14px] text-gray-500 truncate">{c.phoneNumber || '—'}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-gray-800">Email</p>
-                  <p className="text-[14px] text-gray-500">{c.email || '—'}</p>
+                  <p className="text-[14px] text-gray-500 truncate">{c.email || '—'}</p>
                 </div>
               </div>
 
@@ -572,9 +779,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-// ============================================================
-// Privacy
-// ============================================================
 
 interface PrivacyModalProps {
   onClose: () => void
@@ -603,33 +807,34 @@ export function PrivacyModal({ onClose }: PrivacyModalProps) {
     setRetypePassword('')
   }
 
-
   const handleUpdatePassword = () => {
-  if (!canUpdatePassword) return
+    if (!canUpdatePassword) return
 
-  updatePasswordMutation.mutate(
-    {
-      password: newPassword,
-      confirmPassword: retypePassword,
-    },
-    {
-      onSuccess: () => setStep('password-success'),
-    }
-  )
-}
+    updatePasswordMutation.mutate(
+      {
+        password: newPassword,
+        confirmPassword: retypePassword,
+      },
+      {
+        onSuccess: () => setStep('password-success'),
+      }
+    )
+  }
 
   if (step === 'password-success') {
     return (
-      <SuccessScreen
-        title="Password Updated Successfully"
-        description="Your password has been updated successfully. You can now sign in using your new password."
-        onPrimary={() => {
-          resetPasswordFields()
-          setStep('main')
-        }}
-        secondaryLabel="Sign In"
-        onSecondary={onClose}
-      />
+      <ModalSheet title="Privacy" onClose={onClose}>
+        <SuccessScreen
+          title="Password Updated Successfully"
+          description="Your password has been updated successfully. You can now sign in using your new password."
+          onPrimary={() => {
+            resetPasswordFields()
+            setStep('main')
+          }}
+          secondaryLabel="Sign In"
+          onSecondary={onClose}
+        />
+      </ModalSheet>
     )
   }
 
@@ -722,11 +927,11 @@ export function PrivacyModal({ onClose }: PrivacyModalProps) {
     <ModalSheet title="Privacy" onClose={onClose}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-4 py-4 bg-gray-100 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full">
+          <div className="flex items-center min-w-0 gap-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full shrink-0">
               <MapPin size={18} className="text-purple-700" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[15px] font-semibold text-gray-900">Location</p>
               <p className="text-[13px] text-gray-400">Allow location service</p>
             </div>
@@ -738,29 +943,29 @@ export function PrivacyModal({ onClose }: PrivacyModalProps) {
           onClick={() => setStep('password')}
           className="flex items-center justify-between px-4 py-4 text-left bg-gray-100 rounded-2xl"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full">
+          <div className="flex items-center min-w-0 gap-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full shrink-0">
               <Lock size={18} className="text-purple-700" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[15px] font-semibold text-gray-900">Security Settings</p>
               <p className="text-[13px] text-gray-400">Change account password</p>
             </div>
           </div>
-          <span className="text-gray-300">›</span>
+          <span className="text-gray-300 shrink-0">›</span>
         </button>
 
         <button
           onClick={() => setStep('terms')}
           className="flex items-center justify-between px-4 py-4 text-left bg-gray-100 rounded-2xl"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full">
+          <div className="flex items-center min-w-0 gap-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full shrink-0">
               <FileText size={18} className="text-purple-700" />
             </div>
             <p className="text-[15px] font-semibold text-gray-900">Terms & privacy</p>
           </div>
-          <span className="text-gray-300">›</span>
+          <span className="text-gray-300 shrink-0">›</span>
         </button>
       </div>
     </ModalSheet>
@@ -791,12 +996,248 @@ function PasswordField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+          className="flex-1 text-base text-gray-800 bg-transparent placeholder:text-gray-400 focus:outline-none"
         />
-        <button onClick={onToggleVisible} className="text-gray-400">
+        <button onClick={onToggleVisible} className="ml-2 text-gray-400 shrink-0">
           {visible ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
     </div>
   )
 }
+
+
+
+interface FleetModalProps {
+  onClose: () => void
+}
+
+export function FleetModal({ onClose }: FleetModalProps) {
+  const { data: fleet, isLoading, isError, error } = useFleet()
+
+  const handleCall = (phone: string) => {
+    window.location.href = `tel:${phone.replace(/\s+/g, '')}`
+  }
+
+  const handleMessage = (phone: string) => {
+    window.location.href = `sms:${phone.replace(/\s+/g, '')}`
+  }
+
+  if (isError) {
+    return (
+      <ModalSheet title="My Fleet" onClose={onClose}>
+        <div className="flex flex-col items-center px-2 pt-10 pb-10 text-center">
+          <AlertCircle size={36} className="mb-3 text-red-400" />
+          <p className="text-[15px] text-gray-500">
+            {error instanceof Error ? error.message : 'Could not load your fleet details.'}
+          </p>
+        </div>
+      </ModalSheet>
+    )
+  }
+
+  return (
+    <ModalSheet title="My Fleet" onClose={onClose}>
+      <p className="mt-1 mb-6 text-[15px] text-gray-500">
+        View the fleet, vehicle, and Fleet Manager assigned to you.
+      </p>
+
+      {isLoading ? (
+        <div className="flex flex-col gap-4">
+          <div className="h-24 bg-gray-100 rounded-3xl animate-pulse" />
+          <div className="bg-gray-100 h-14 animate-pulse rounded-2xl" />
+          <div className="h-24 bg-gray-100 rounded-3xl animate-pulse" />
+        </div>
+      ) : fleet ? (
+        <>
+          {/* Company card */}
+          <div className="flex items-center justify-between p-4 rounded-3xl bg-gradient-to-br from-purple-950 to-purple-900">
+            <div className="flex items-center min-w-0 gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 shrink-0">
+                <Building2 size={22} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold tracking-wide text-purple-300">COMPANY</p>
+                <p className="text-[17px] font-extrabold text-white truncate">{fleet.companyName}</p>
+                <p className="text-[13px] text-purple-300">{fleet.companyCode}</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-purple-700 px-3 py-1.5 text-[12px] font-semibold text-white whitespace-nowrap shrink-0">
+              {fleet.tier}
+            </span>
+          </div>
+
+          {/* Sub-fleet */}
+          <div className="mt-6">
+            <p className="mb-2 text-[12px] font-semibold tracking-wide text-gray-400">SUB-FLEET</p>
+            <div className="flex items-center justify-between px-4 py-4 bg-gray-100 rounded-2xl">
+              <div className="min-w-0">
+                <p className="text-[15px] font-bold text-gray-900 truncate">{fleet.subFleet.name}</p>
+                <p className="flex items-center gap-1 text-[13px] text-gray-400">
+                  <MapPin size={13} /> <span className="truncate">{fleet.subFleet.location}</span>
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-[12px] font-semibold shrink-0 ${
+                  fleet.subFleet.status === 'ACTIVE'
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : 'bg-gray-200 text-gray-500'
+                }`}
+              >
+                {fleet.subFleet.status}
+              </span>
+            </div>
+          </div>
+
+          {/* Managers */}
+          <div className="mt-6">
+            <p className="mb-2 text-[12px] font-semibold tracking-wide text-gray-400">MANAGERS</p>
+            <div className="flex flex-col gap-3">
+              {fleet.managers.map((m) => (
+                <ManagerCard
+                  key={m.id}
+                  manager={m}
+                  onCall={() => handleCall(m.phoneNumber)}
+                  onMessage={() => handleMessage(m.phoneNumber)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Assigned vehicle */}
+          <div className="mt-6">
+            <p className="mb-2 text-[12px] font-semibold tracking-wide text-gray-400">
+              ASSIGNED VEHICLE
+            </p>
+            <div className="p-4 rounded-3xl bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center min-w-0 gap-3">
+                  <div className="flex items-center justify-center bg-purple-100 w-11 h-11 rounded-2xl shrink-0">
+                    <Car size={20} className="text-purple-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-bold text-gray-900 truncate">{fleet.vehicle.name}</p>
+                    <p className="text-[13px] text-gray-400 truncate">
+                      {fleet.vehicle.type} · {fleet.vehicle.vehicleCode}
+                    </p>
+                  </div>
+                </div>
+                <span className="flex items-center gap-1 rounded-full bg-purple-100 px-3 py-1 text-[12px] font-semibold text-purple-700 shrink-0">
+                  <ShieldCheck size={13} /> {fleet.vehicle.plateNumber}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <VehicleStat
+                  icon={<Activity size={15} />}
+                  label="TRIPS"
+                  value={fleet.vehicle.trips.toLocaleString()}
+                />
+                <VehicleStat
+                  icon={<MapPin size={15} />}
+                  label="KILOMETER"
+                  value={`${fleet.vehicle.kilometers.toLocaleString()} km`}
+                />
+                <VehicleStat
+                  icon={<Wrench size={15} />}
+                  label="LAST SERVICE"
+                  value={fleet.vehicle.lastServiceDate}
+                />
+                <VehicleStat
+                  icon={<Calendar size={15} />}
+                  label="NEXT SERVICE"
+                  value={fleet.vehicle.nextServiceDate}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
+    </ModalSheet>
+  )
+}
+
+function ManagerCard({
+  manager,
+  onCall,
+  onMessage,
+}: {
+  manager: FleetManager
+  onCall: () => void
+  onMessage: () => void
+}) {
+  const managerInitials = manager.fullName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0]?.toUpperCase())
+    .join('')
+
+  return (
+    <div className="p-4 rounded-3xl bg-gray-50">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center min-w-0 gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-purple-700 text-[14px] font-bold text-white">
+            {managerInitials}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[15px] font-bold text-gray-900 truncate">{manager.fullName}</p>
+            <p className="text-[13px] text-gray-400 truncate">{manager.role}</p>
+          </div>
+        </div>
+        <span className="rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-semibold text-purple-700 whitespace-nowrap shrink-0">
+          {manager.badge}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 mt-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-[13px] text-gray-500">
+            <Phone size={13} className="shrink-0" />{' '}
+            <span className="truncate">{manager.phoneNumber}</span>
+          </p>
+          <p className="flex items-center gap-1.5 mt-1 text-[13px] text-gray-500">
+            <Mail size={13} className="shrink-0" />{' '}
+            <span className="truncate">{manager.email}</span>
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={onCall}
+            className="flex items-center justify-center text-purple-700 bg-purple-100 w-9 h-9 rounded-xl"
+            aria-label={`Call ${manager.fullName}`}
+          >
+            <Phone size={15} />
+          </button>
+          <button
+            onClick={onMessage}
+            className="flex items-center justify-center text-purple-700 bg-purple-100 w-9 h-9 rounded-xl"
+            aria-label={`Message ${manager.fullName}`}
+          >
+            <MessageCircle size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function VehicleStat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-gray-400">
+        {icon} {label}
+      </p>
+      <p className="mt-1 text-[15px] font-bold text-gray-900 truncate">{value}</p>
+    </div>
+  )
+}
+
+
+
+
+
+
+
+
+

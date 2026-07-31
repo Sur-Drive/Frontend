@@ -154,7 +154,7 @@ export default function OTP({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 flex items-end justify-center z-60 sm:items-center"
+        className="fixed inset-0 flex items-end justify-center z-[60] sm:items-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

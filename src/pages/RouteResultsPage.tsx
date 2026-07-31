@@ -1,37 +1,70 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import RouteMapView from '../components/map/RouteMapView'
+import { getRoutePath, pickDefaultMode } from '../api/route'
+import type { RouteModeKey, RoutePlanResponse } from '../types/routePlan'
+import { ROUTE_MODE_ORDER } from '../types/routePlan'
+import { sampleRoutePlan } from '../fixtures/sampleRoutePlan'
+import { useRouteAnimation } from '../hooks/useRouteAnimation'
 
-type RouteHazard = {
-  id: string
-  top: string
-  left: string
-  color: string
-  icon: 'pothole' | 'hazard' | 'sos' | 'warning' | 'tractor' | 'hill' | 'wave'
+const MODE_LABEL: Record<RouteModeKey, string> = {
+  driving: 'Drive',
+  motorcycle: 'Ride',
+  cycling: 'Cycle',
+  walking: 'Walk',
 }
 
-const ROUTE_HAZARDS: RouteHazard[] = [
-  { id: 'h1', top: '19.5%', left: '8.3%', color: 'bg-red-500', icon: 'sos' },
-  { id: 'h2', top: '30.8%', left: '26.5%', color: 'bg-amber-500', icon: 'pothole' },
-  { id: 'h3', top: '29.6%', left: '63.6%', color: 'bg-red-500', icon: 'hazard' },
-  { id: 'h4', top: '21.7%', left: '81.7%', color: 'bg-amber-500', icon: 'hill' },
-  { id: 'h5', top: '44.5%', left: '60.6%', color: 'bg-red-500', icon: 'warning' },
-  { id: 'h6', top: '46.2%', left: '87.3%', color: 'bg-amber-500', icon: 'tractor' },
-  { id: 'h7', top: '62%', left: '32.8%', color: 'bg-amber-500', icon: 'pothole' },
-  { id: 'h8', top: '70.7%', left: '13.5%', color: 'bg-red-500', icon: 'sos' },
-  { id: 'h9', top: '83.6%', left: '47.3%', color: 'bg-red-500', icon: 'warning' },
-]
+const MODE_ICON: Record<RouteModeKey, string> = {
+  driving: '🚗',
+  motorcycle: '🏍️',
+  cycling: '🚴',
+  walking: '🚶',
+}
+
+interface RouteResultsNavState {
+  destination?: string
+  routePlan?: RoutePlanResponse
+  mode?: RouteModeKey
+}
 
 export default function RouteResultsPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const destination = (location.state as { destination?: string })?.destination ?? 'your destination'
+  const navState = (location.state as RouteResultsNavState | null) ?? null
+
+  const destination = navState?.destination ?? 'your destination'
+  const routePlan = navState?.routePlan ?? sampleRoutePlan
+
+  const availableModes = useMemo(
+    () => ROUTE_MODE_ORDER.filter((m) => routePlan.routes[m]),
+    [routePlan]
+  )
+
+  const [selectedMode, setSelectedMode] = useState<RouteModeKey | undefined>(
+    navState?.mode ?? pickDefaultMode(routePlan)
+  )
+
+  const activeRoute = selectedMode ? routePlan.routes[selectedMode] : undefined
+  const path = useMemo(() => getRoutePath(activeRoute), [activeRoute])
+
+  // Full loop of the route in ~20s for a visible demo of the moving line;
+  // a real trip would drive `progress` from GPS instead of this simulation.
+  const simulationDurationMs = useMemo(
+    () => Math.max(8000, Math.min(40000, (activeRoute?.durationInSeconds ?? 60) * 40)),
+    [activeRoute]
+  )
+
+  const { progress } = useRouteAnimation({
+    path,
+    durationMs: simulationDurationMs,
+    autoPlay: true,
+    loop: true,
+  })
 
   const [showUpcoming, setShowUpcoming] = useState(false)
   const [sosArmed, setSosArmed] = useState(false)
   const [sosActive, setSosActive] = useState(false)
 
-  // After a few seconds on the road, surface the next hazard ahead —
-  // mirrors the "Road works ahead" callout in the walkthrough.
   useEffect(() => {
     const t = setTimeout(() => setShowUpcoming(true), 3500)
     return () => clearTimeout(t)
@@ -39,7 +72,6 @@ export default function RouteResultsPage() {
 
   const handleEndTrip = () => navigate('/home')
 
-  // Press-and-hold SOS, matching the "Hold 3 secs" affordance.
   let holdTimer: ReturnType<typeof setTimeout>
   const startHold = () => {
     setSosArmed(true)
@@ -53,59 +85,40 @@ export default function RouteResultsPage() {
     setSosArmed(false)
   }
 
+  const remainingKm = activeRoute ? Math.max(0, activeRoute.distance * (1 - progress)) : 0
+  const etaMin = activeRoute ? Math.max(0, Math.round(activeRoute.duration * (1 - progress))) : 0
+  const hazardCount = activeRoute?.hazards?.length ?? 0
+
   return (
     <div className="relative h-[100dvh] w-full max-w-[430px] mx-auto bg-[#e4e4e4] overflow-hidden">
-      {/* Map */}
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 500 1000" preserveAspectRatio="none">
-        <rect x="0" y="0" width="500" height="1000" fill="#e4e4e4" />
-        {[70, 150, 230, 310, 390, 460].map((x) => (
-          <rect key={`v${x}`} x={x - 6} y="0" width="12" height="1000" fill="#fafafa" />
-        ))}
-        {[130, 260, 390, 520, 650, 780, 910].map((y) => (
-          <rect key={`h${y}`} x="0" y={y - 6} width="500" height="12" fill="#fafafa" />
-        ))}
-        <g stroke="#fafafa" strokeWidth="16" fill="none" strokeLinecap="round">
-          <path d="M10,110 L460,300" />
-          <path d="M340,260 L475,620" />
-          <path d="M10,960 L400,1075" />
-        </g>
-        <rect x="378" y="330" width="38" height="90" rx="10" fill="#bfe3c8" />
-        <rect x="330" y="590" width="95" height="26" rx="8" fill="#bfe3c8" />
-        <rect x="55" y="655" width="20" height="90" rx="8" fill="#bfe3c8" />
-        <rect x="35" y="1050" width="70" height="60" rx="10" fill="#bfe3c8" />
-        <path d="M-20,970 C120,930 260,1005 500,945 L500,1000 L-20,1000 Z" fill="#8bd3f0" />
-
-        {/* Turn-by-turn route */}
-        <path
-          d="M60,398 L164,398 L164,561 L251,561 L251,682 L326,682"
-          fill="none"
-          stroke="#3b82f6"
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-
-      {/* Hazard pins along the route */}
-      {ROUTE_HAZARDS.map((h) => (
-        <div
-          key={h.id}
-          style={{ top: h.top, left: h.left }}
-          className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full shadow-md z-[5] ${h.color}`}
-        >
-          <HazardIcon type={h.icon} />
-        </div>
-      ))}
-
-      {/* Live position marker */}
-      <div className="absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ top: '65%', left: '65.2%' }}>
-        <div className="absolute inset-0 -m-3 rounded-full bg-blue-400/40 animate-ping" />
-        <div className="relative flex items-center justify-center w-10 h-10 bg-blue-500 border-2 border-white rounded-full shadow-lg">
-          <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor">
-            <path d="M4 4l16 8-16 8 4-8z" />
-          </svg>
-        </div>
+      {/* Live map with the animated route */}
+      <div className="absolute inset-0">
+        {activeRoute ? (
+          <RouteMapView route={activeRoute} zoom={15} progress={progress} className="w-full h-full" />
+        ) : (
+          <div className="flex items-center justify-center w-full h-full text-sm text-gray-400">
+            No route available
+          </div>
+        )}
       </div>
+
+      {/* Mode switcher — same route plan, any of the modes the backend priced out */}
+      {availableModes.length > 1 && (
+        <div className="absolute z-20 flex gap-2 px-4 mx-4 mt-24 overflow-x-auto left-0 right-0">
+          {availableModes.map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setSelectedMode(mode)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap transition ${
+                mode === selectedMode ? 'bg-emerald-500 text-white' : 'bg-white text-gray-700'
+              }`}
+            >
+              <span>{MODE_ICON[mode]}</span>
+              {MODE_LABEL[mode]}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Top instruction banner */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-3 px-5 py-4 mx-4 mt-4 shadow-lg bg-emerald-500 rounded-2xl">
@@ -115,14 +128,16 @@ export default function RouteResultsPage() {
           </svg>
         </div>
         <div>
-          <p className="text-xs font-semibold tracking-wide text-white/80">IN 3.6 KM</p>
+          <p className="text-xs font-semibold tracking-wide text-white/80">
+            {activeRoute ? `${remainingKm.toFixed(1)} KM LEFT` : ''}
+          </p>
           <p className="text-[17px] font-bold leading-tight text-white">Head out and follow the route</p>
         </div>
       </div>
 
       {/* Upcoming hazard + trip card */}
       <div className="absolute left-0 right-0 z-20 mx-4 top-28">
-        {showUpcoming && (
+        {showUpcoming && hazardCount > 0 && (
           <div className="flex items-center gap-3 px-5 py-3 mb-3 bg-white shadow-lg rounded-2xl">
             <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-full bg-amber-100">
               <span className="text-base leading-none">🚜</span>
@@ -131,15 +146,14 @@ export default function RouteResultsPage() {
               <p className="text-[11px] font-semibold tracking-wide text-gray-400">UPCOMING</p>
               <p className="text-[14px] font-semibold text-gray-900 truncate">Road works ahead — {destination}</p>
             </div>
-            <span className="text-[13px] font-semibold text-gray-500 flex-shrink-0">0.9 km</span>
           </div>
         )}
 
         <div className="px-5 py-4 bg-white shadow-lg rounded-2xl">
           <div className="grid grid-cols-3 text-center">
-            <Stat label="ETA" value="17 min" />
-            <Stat label="Remaining" value="7.1 km" />
-            <Stat label="Hazards" value="2" accent />
+            <Stat label="ETA" value={`${etaMin} min`} />
+            <Stat label="Remaining" value={`${remainingKm.toFixed(1)} km`} />
+            <Stat label="Hazards" value={String(hazardCount)} accent />
           </div>
           <button
             onClick={handleEndTrip}
@@ -163,9 +177,7 @@ export default function RouteResultsPage() {
         <span className="text-[10px] leading-tight">Hold 3 secs</span>
       </button>
 
-      {sosActive && (
-        <SosActiveOverlay onClose={() => setSosActive(false)} />
-      )}
+      {sosActive && <SosActiveOverlay onClose={() => setSosActive(false)} />}
     </div>
   )
 }
@@ -177,50 +189,6 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <p className={`text-lg font-extrabold ${accent ? 'text-amber-500' : 'text-gray-900'}`}>{value}</p>
     </div>
   )
-}
-
-function HazardIcon({ type }: { type: RouteHazard['icon'] }) {
-  switch (type) {
-    case 'sos':
-      return (
-        <div className="bg-white rounded-[3px] px-1 py-0.5 flex items-center justify-center">
-          <span className="text-red-600 font-extrabold text-[8px] leading-none">SOS</span>
-        </div>
-      )
-    case 'pothole':
-      return (
-        <svg viewBox="0 0 24 24" className="w-5 h-5">
-          <ellipse cx="12" cy="12" rx="8" ry="4.5" fill="#1a1a1a" />
-        </svg>
-      )
-    case 'hazard':
-      return <div className="w-5 h-4 rounded-[2px]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #f6c400 0 4px, #1a1a1a 4px 8px)' }} />
-    case 'hill':
-      return (
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#3a2e1f">
-          <path d="M2 18 L9 8 L13 13 L16 9 L22 18 Z" />
-        </svg>
-      )
-    case 'warning':
-      return (
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
-          <path d="M12 3 L22 20 L2 20 Z" fill="white" />
-          <rect x="11" y="10" width="2" height="5" fill="#e02424" />
-          <rect x="11" y="16" width="2" height="2" fill="#e02424" />
-        </svg>
-      )
-    case 'tractor':
-      return (
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#2b2b2b">
-          <rect x="8" y="8" width="7" height="5" rx="1" />
-          <rect x="4" y="12" width="5" height="4" rx="1" />
-          <circle cx="7" cy="18" r="3" fill="none" stroke="#2b2b2b" strokeWidth="2" />
-          <circle cx="17" cy="18" r="4" fill="none" stroke="#2b2b2b" strokeWidth="2" />
-        </svg>
-      )
-    default:
-      return null
-  }
 }
 
 function SosActiveOverlay({ onClose }: { onClose: () => void }) {

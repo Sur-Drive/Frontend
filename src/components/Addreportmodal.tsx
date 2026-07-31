@@ -1,6 +1,9 @@
-
 import { useRef, useState } from 'react'
 import { X, Camera, MapPin, Check, Loader2, Navigation } from 'lucide-react'
+import { useCreateHazard, useCreateHazardWithPhoto } from '../hooks/useHazards'
+import AddressAutocompleteInput, { type SelectedAddress } from './map/AddressAutocompleteInput'
+import { reverseGeocode, forwardGeocode } from '../api/geocoding'
+import type { BackendHazardType, Severity } from '../types/hazard'
 
 // ---------- Types ----------
 
@@ -14,16 +17,20 @@ export type HazardType =
   | 'Danger'
   | 'SOS'
 
-export interface NewReportPayload {
-  type: HazardType
-  description: string
-  photos: string[]
-  location: string
+const HAZARD_TYPE_MAP: Record<HazardType, BackendHazardType> = {
+  Pothole: 'POTHOLE',
+  Flood: 'FLOOD',
+  Accident: 'ACCIDENT',
+  Debris: 'DEBRIS',
+  Road: 'ROAD_WORKS',
+  Checkpoint: 'CHECKPOINT',
+  Danger: 'DANGER',
+  SOS: 'SOS',
 }
 
 interface AddReportModalProps {
   onClose: () => void
-  onSubmit: (report: NewReportPayload) => void
+  onSuccess?: () => void
 }
 
 const HAZARD_TYPES: { type: HazardType; emoji: string }[] = [
@@ -37,35 +44,61 @@ const HAZARD_TYPES: { type: HazardType; emoji: string }[] = [
   { type: 'SOS', emoji: '🆘' },
 ]
 
+const SEVERITIES: Severity[] = ['LOW', 'MEDIUM', 'HIGH']
+
 type Step = 'form' | 'success'
 
-export default function AddReportModal({ onClose, onSubmit }: AddReportModalProps) {
+interface PhotoItem {
+  file: File
+  previewUrl: string
+}
+
+export default function AddReportModal({ onClose, onSuccess }: AddReportModalProps) {
   const [step, setStep] = useState<Step>('form')
   const [hazardType, setHazardType] = useState<HazardType | null>(null)
   const [description, setDescription] = useState('')
-  const [photos, setPhotos] = useState<string[]>([])
-  const [location, setLocation] = useState('')
+  const [photos, setPhotos] = useState<PhotoItem[]>([])
+  const [severity, setSeverity] = useState<Severity>('MEDIUM')
+  const [isAnonymous, setIsAnonymous] = useState(false)
+
+  const [locationAddress, setLocationAddress] = useState('')
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const canSubmit = hazardType !== null
+  const createHazard = useCreateHazard()
+  const createHazardWithPhoto = useCreateHazardWithPhoto()
+  const isSubmitting = createHazard.isPending || createHazardWithPhoto.isPending
+
+  // A user can either pick a suggestion (coords already known) or type a
+  // free-form address and let handleSubmit resolve it via forwardGeocode.
+  const canSubmit =
+    hazardType !== null &&
+    (coords !== null || locationAddress.trim().length > 0) &&
+    !isSubmitting &&
+    !isResolvingAddress
 
   const resetForm = () => {
     setHazardType(null)
     setDescription('')
     setPhotos([])
-    setLocation('')
+    setSeverity('MEDIUM')
+    setIsAnonymous(false)
+    setLocationAddress('')
+    setCoords(null)
     setLocationError(null)
   }
 
   const handlePhotoPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-    const urls = Array.from(files)
+    const items = Array.from(files)
       .slice(0, 4 - photos.length)
-      .map((file) => URL.createObjectURL(file))
-    setPhotos((prev) => [...prev, ...urls].slice(0, 4))
+      .map((file) => ({ file, previewUrl: URL.createObjectURL(file) }))
+    setPhotos((prev) => [...prev, ...items].slice(0, 4))
     e.target.value = ''
   }
 
@@ -73,54 +106,45 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
     setPhotos((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // ── Reverse Geocode (OpenStreetMap Nominatim) ──────
-  const reverseGeocode = async (lat: number, lng: number) => {
+  // ── Reverse geocode via backend (never call Geocoding API from the frontend) ──
+  const reverseGeocodeCoords = async (lat: number, lng: number) => {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-      )
-      const data = await response.json()
-
-      const address = data.address
-      const suburb = address.suburb || address.neighbourhood || address.district || ''
-      const road = address.road || address.street || ''
-      const city = address.city || address.town || address.village || address.state || ''
-
-      const shortAddress = suburb
-        ? `${suburb}, ${city}`
-        : road
-          ? `${road}, ${city}`
-          : data.display_name?.split(',')[0] || 'Current Location'
-
-      setLocation(shortAddress)
-    } catch (err) {
-      setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+      const { address } = await reverseGeocode(lat, lng)
+      setLocationAddress(address)
+      setCoords({ lat, lng })
+    } catch {
+      setLocationAddress(`${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+      setCoords({ lat, lng })
     } finally {
       setIsGettingLocation(false)
     }
   }
 
+  // ── Address selected from the autocomplete dropdown ──
+  // Places Autocomplete + Place Details already return lat/lng directly —
+  // no geocoding call needed for this path at all.
+  const handleAddressSelect = (result: SelectedAddress) => {
+    setLocationAddress(result.address)
+    setCoords({ lat: result.lat, lng: result.lng })
+    setLocationError(null)
+  }
+
   const handleUseMyLocation = () => {
-    console.log('handleUseMyLocation clicked')
     setIsGettingLocation(true)
     setLocationError(null)
 
     if (!navigator.geolocation) {
-      console.log('Geolocation not supported')
       setLocationError('Geolocation not supported')
       setIsGettingLocation(false)
       return
     }
 
-    console.log('Requesting geolocation...')
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        console.log('Position received:', position.coords)
         const { latitude, longitude } = position.coords
-        reverseGeocode(latitude, longitude)
+        reverseGeocodeCoords(latitude, longitude)
       },
       (error) => {
-        console.log('Geolocation error:', error.code, error.message)
         let message = 'Unable to get location'
         switch (error.code) {
           case error.PERMISSION_DENIED:
@@ -136,18 +160,60 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
         setLocationError(message)
         setIsGettingLocation(false)
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!hazardType) return
-    onSubmit({ type: hazardType, description, photos, location })
-    setStep('success')
+
+    let finalCoords = coords
+
+    if (!finalCoords) {
+      const trimmed = locationAddress.trim()
+      if (!trimmed) return
+
+      setIsResolvingAddress(true)
+      setLocationError(null)
+      try {
+        const result = await forwardGeocode(trimmed)
+        finalCoords = { lat: result.lat, lng: result.lng }
+        setCoords(finalCoords)
+      } catch (err) {
+        console.error('Failed to geocode address', err)
+        setLocationError('Could not find that address — try picking a suggestion from the dropdown.')
+        return
+      } finally {
+        setIsResolvingAddress(false)
+      }
+    }
+
+    const basePayload = {
+      type: HAZARD_TYPE_MAP[hazardType],
+      description,
+      latitude: finalCoords.lat,
+      longitude: finalCoords.lng,
+      locationAddress,
+      severity,
+      isAnonymous,
+    }
+
+    try {
+      if (photos.length > 0) {
+        // multipart/form-data — backend only shown taking a single photo field
+        await createHazardWithPhoto.mutateAsync({
+          ...basePayload,
+          photo: photos[0].file,
+        })
+      } else {
+        await createHazard.mutateAsync(basePayload)
+      }
+      setStep('success')
+      onSuccess?.()
+    } catch (err) {
+      console.error('Failed to submit report', err)
+      setLocationError('Failed to submit report. Please try again.')
+    }
   }
 
   const handleReportAnother = () => {
@@ -156,8 +222,8 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40">
-      <div className="relative flex h-[92dvh] sm:h-auto sm:max-h-[85vh] w-full sm:max-w-[420px] flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40">
+      <div className="relative flex h-[92dvh] sm:h-auto sm:max-h-[85vh] w-full sm:max-w-[420px] flex-col overflow-hidden rounded-t-[40px] sm:rounded-3xl bg-white shadow-2xl">
         {step === 'form' ? (
           <>
             {/* Header */}
@@ -171,7 +237,8 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
               </button>
             </div>
 
-            <div className="flex-1 px-5 pb-5 overflow-y-auto sm:px-6 sm:pb-6">
+            {/* <div className="flex-1 px-5 pb-5 overflow-y-auto sm:px-6 sm:pb-6"> */}
+            <div className="flex-1 min-h-0 px-5 pb-5 overflow-y-auto sm:px-6 sm:pb-6">
               {/* Hazard type */}
               <p className="mb-2 text-sm sm:text-[15px] font-medium text-gray-500">Hazard type</p>
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 sm:gap-2.5">
@@ -182,9 +249,7 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
                       key={type}
                       onClick={() => setHazardType(type)}
                       className={`flex flex-col items-center gap-1 rounded-xl sm:rounded-2xl border py-2.5 sm:py-3.5 transition ${
-                        selected
-                          ? 'border-purple-700 bg-purple-50'
-                          : 'border-gray-200 bg-white'
+                        selected ? 'border-purple-700 bg-purple-50' : 'border-gray-200 bg-white'
                       }`}
                     >
                       <span className="text-xl sm:text-2xl">{emoji}</span>
@@ -195,6 +260,27 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
                       >
                         {type}
                       </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Severity */}
+              <p className="mb-2 mt-4 text-sm sm:text-[15px] font-medium text-gray-500 sm:mt-6">Severity</p>
+              <div className="flex gap-2">
+                {SEVERITIES.map((s) => {
+                  const selected = severity === s
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSeverity(s)}
+                      className={`flex-1 rounded-xl border py-2 text-[13px] sm:text-[14px] font-medium transition ${
+                        selected
+                          ? 'border-purple-700 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 bg-white text-gray-600'
+                      }`}
+                    >
+                      {s.charAt(0) + s.slice(1).toLowerCase()}
                     </button>
                   )
                 })}
@@ -231,9 +317,9 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
 
               {photos.length > 0 && (
                 <div className="grid grid-cols-4 gap-2 mt-3">
-                  {photos.map((src, i) => (
-                    <div key={src} className="relative overflow-hidden rounded-lg aspect-square sm:rounded-xl">
-                      <img src={src} alt="" className="object-cover w-full h-full" />
+                  {photos.map((p, i) => (
+                    <div key={p.previewUrl} className="relative overflow-hidden rounded-lg aspect-square sm:rounded-xl">
+                      <img src={p.previewUrl} alt="" className="object-cover w-full h-full" />
                       <button
                         onClick={() => removePhoto(i)}
                         className="absolute flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 text-white bg-red-500 rounded-full -right-0.5 -top-0.5 sm:-right-1 sm:-top-1"
@@ -251,11 +337,13 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
                 Location
               </div>
               <div className="flex items-center gap-2 rounded-xl sm:rounded-2xl bg-gray-100 px-3.5 sm:px-4 py-3 sm:py-3.5">
-                <input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                <AddressAutocompleteInput
+                  value={locationAddress}
+                  onChange={setLocationAddress}
+                  onSelect={handleAddressSelect}
                   placeholder="Search location"
-                  className="flex-1 bg-transparent text-sm sm:text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                  className="flex-1"
+                  inputClassName="w-full bg-transparent text-sm sm:text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -276,9 +364,25 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
                   )}
                 </button>
               </div>
+              {!coords && !locationAddress.trim() && (
+                <p className="mt-1.5 ml-1 text-[11px] sm:text-xs text-gray-400">
+                  Search an address, pick a suggestion, or tap "Use my location".
+                </p>
+              )}
               {locationError && (
                 <p className="mt-1.5 ml-1 text-[11px] sm:text-xs text-red-500">{locationError}</p>
               )}
+
+              {/* Anonymous toggle */}
+              <label className="mt-4 sm:mt-6 flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="w-4 h-4 accent-purple-700"
+                />
+                <span className="text-sm sm:text-[15px] text-gray-700">Report anonymously</span>
+              </label>
             </div>
 
             {/* Submit */}
@@ -286,11 +390,12 @@ export default function AddReportModal({ onClose, onSubmit }: AddReportModalProp
               <button
                 onClick={handleSubmit}
                 disabled={!canSubmit}
-                className={`w-full rounded-xl sm:rounded-2xl py-3.5 sm:py-4 text-sm sm:text-[16px] font-semibold text-white transition ${
+                className={`w-full rounded-xl sm:rounded-2xl py-3.5 sm:py-4 text-sm sm:text-[16px] font-semibold text-white transition flex items-center justify-center gap-2 ${
                   canSubmit ? 'bg-purple-700 active:scale-[0.98]' : 'bg-purple-300'
                 }`}
               >
-                Submit report
+                {(isSubmitting || isResolvingAddress) && <Loader2 size={16} className="animate-spin" />}
+                {isResolvingAddress ? 'Finding location...' : isSubmitting ? 'Submitting...' : 'Submit report'}
               </button>
             </div>
           </>

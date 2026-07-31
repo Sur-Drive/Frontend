@@ -1,86 +1,135 @@
+
+
+
+
+
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createHazard,
   createHazardWithPhoto,
+  getMyHazards,
+  confirmHazard,
+  getHazardFeed,
   getNearbyHazards,
-  voteHazard,
 } from '../api/hazards'
 import type {
-  CreateHazardInput,
-  CreateHazardWithPhotoInput,
-  NearbyHazardsParams,
-  HazardVoteInput,
-} from '../api/hazards'
+  CreateHazardPayload,
+  CreateHazardWithPhotoPayload,
+  ConfirmHazardPayload,
+  Hazard,
+  HazardLocationQuery,
+} from '../types/hazard'
 
 export const hazardKeys = {
   all: ['hazards'] as const,
-  nearby: (params: NearbyHazardsParams) => ['hazards', 'nearby', params] as const,
+  my: () => [...hazardKeys.all, 'my'] as const,
+  feed: (params: HazardLocationQuery) => [...hazardKeys.all, 'feed', params] as const,
+  nearby: (params: HazardLocationQuery) => [...hazardKeys.all, 'nearby', params] as const,
 }
 
-// ---------- Fetch nearby hazards ----------
-
-export function useNearbyHazards(params: NearbyHazardsParams | null) {
-  const query = useQuery({
-    queryKey: params ? hazardKeys.nearby(params) : ['hazards', 'nearby', 'disabled'],
-    queryFn: () => getNearbyHazards(params!),
-    enabled: !!params,
-    staleTime: 30_000,
+export function useMyHazards() {
+  return useQuery({
+    queryKey: hazardKeys.my(),
+    queryFn: getMyHazards,
   })
-
-  if (query.data) {
-    console.log('[useNearbyHazards] data:', query.data)
-  }
-  if (query.error) {
-    console.log('[useNearbyHazards] error:', query.error)
-  }
-
-  return query
 }
-
-// ---------- Create hazard (JSON only, no photo) ----------
 
 export function useCreateHazard() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CreateHazardInput) => createHazard(data),
-    onSuccess: (result) => {
-      console.log('[useCreateHazard] success:', result)
+    mutationFn: (payload: CreateHazardPayload) => createHazard(payload),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: hazardKeys.all })
-    },
-    onError: (err) => {
-      console.log('[useCreateHazard] error:', err)
     },
   })
 }
-
-// ---------- Create hazard with photo (multipart) ----------
 
 export function useCreateHazardWithPhoto() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CreateHazardWithPhotoInput) => createHazardWithPhoto(data),
-    onSuccess: (result) => {
-      console.log('[useCreateHazardWithPhoto] success:', result)
+    mutationFn: (payload: CreateHazardWithPhotoPayload) => createHazardWithPhoto(payload),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: hazardKeys.all })
-    },
-    onError: (err) => {
-      console.log('[useCreateHazardWithPhoto] error:', err)
     },
   })
 }
 
-// ---------- Confirm / mark incorrect ----------
+export function useHazardFeed(params: HazardLocationQuery | null) {
+  return useQuery({
+    queryKey: params ? hazardKeys.feed(params) : hazardKeys.all,
+    queryFn: () => getHazardFeed(params as HazardLocationQuery),
+    enabled: params !== null,
+  })
+}
 
-export function useVoteHazard() {
+export function useNearbyHazards(params: HazardLocationQuery | null) {
+  return useQuery({
+    queryKey: params ? hazardKeys.nearby(params) : hazardKeys.all,
+    queryFn: () => getNearbyHazards(params as HazardLocationQuery),
+    enabled: params !== null,
+  })
+}
+
+type HazardsSnapshot = [readonly unknown[], Hazard[] | undefined][]
+
+export function useConfirmHazard() {
   const queryClient = useQueryClient()
+
   return useMutation({
-    mutationFn: (data: HazardVoteInput) => voteHazard(data),
-    onSuccess: (result) => {
-      console.log('[useVoteHazard] success:', result)
+    mutationFn: (payload: ConfirmHazardPayload) => confirmHazard(payload),
+
+    // Optimistically flip the card the instant the user taps.
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: hazardKeys.all })
+
+      const previous: HazardsSnapshot = queryClient.getQueriesData<Hazard[]>({
+        queryKey: hazardKeys.all,
+      })
+
+      // FIX: backend's userConfirmation is 'CONFIRM' | 'INCORRECT' | null,
+      // not a boolean — payload.type already matches that shape exactly.
+      const newVote = payload.type
+
+      queryClient.setQueriesData<Hazard[] | undefined>(
+        { queryKey: hazardKeys.all },
+        (old) => {
+          if (!old) return old
+          return old.map((hazard) => {
+            if (hazard.id !== payload.hazardId) return hazard
+
+            const prevVote = hazard.confirmations.userConfirmation
+            let confirms = hazard.confirmations.confirms
+
+            if (newVote === 'CONFIRM' && prevVote !== 'CONFIRM') confirms += 1
+            if (newVote !== 'CONFIRM' && prevVote === 'CONFIRM') confirms -= 1
+
+            return {
+              ...hazard,
+              confirmations: {
+                ...hazard.confirmations,
+                confirms,
+                userConfirmation: newVote,
+              },
+            }
+          })
+        }
+      )
+
+      return { previous }
+    },
+
+    onError: (_err, _payload, context) => {
+      context?.previous?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data)
+      })
       queryClient.invalidateQueries({ queryKey: hazardKeys.all })
     },
-    onError: (err) => {
-      console.log('[useVoteHazard] error:', err)
+
+    // Always resync with the server after the mutation settles,
+    // so the UI reflects what actually got persisted.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: hazardKeys.all })
     },
   })
 }

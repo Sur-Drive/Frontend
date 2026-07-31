@@ -54,7 +54,7 @@ export default function CreateNewPassword({ onComplete }: CreateNewPasswordProps
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 flex items-end justify-center z-60"
+        className="fixed inset-0 flex items-end justify-center z-[60]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

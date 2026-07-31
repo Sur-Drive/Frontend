@@ -1,5 +1,10 @@
-const API_BASE = 'https://backend-production-01de.up.railway.app'
 
+
+
+
+
+
+const API_BASE = 'https://backend-production-01de.up.railway.app'
 
 export interface DriverProfile {
   id: string
@@ -29,6 +34,17 @@ export interface UserProfileResponse {
   driverProfile: DriverProfile | null
 }
 
+// ── Update payload ──────────────────────────────────────────
+
+export interface UpdateProfileInput {
+  firstName: string
+  lastName: string
+  gender: string
+  dateOfBirth: string // "YYYY-MM-DD"
+  occupation: string
+  address: string
+}
+
 // ── Token Helpers ───────────────────────────────────────────
 
 function getToken(): string | null {
@@ -42,45 +58,60 @@ function isTokenExpired(token: string): boolean {
     if (!exp) return false
     return Date.now() >= exp * 1000
   } catch {
-    return true // Treat malformed tokens as expired
+    return true
   }
 }
 
-function clearAuthAndRedirect() {
-  localStorage.removeItem('token')
-  window.location.href = '/home'
-}
-
-// ── API Call ────────────────────────────────────────────────
-
-export async function getUserProfile(): Promise<UserProfileResponse> {
+function authHeaders(): HeadersInit {
   const token = getToken()
 
   if (!token) {
-    clearAuthAndRedirect()
     throw new Error('No authentication token found')
   }
 
   if (isTokenExpired(token)) {
-    clearAuthAndRedirect()
     throw new Error('Session expired. Please log in again.')
   }
 
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  }
+}
+
+export async function getUserProfile(): Promise<UserProfileResponse> {
   const res = await fetch(`${API_BASE}/users/profile`, {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(),
   })
 
   if (res.status === 401) {
-    clearAuthAndRedirect()
     throw new Error('Session expired. Please log in again.')
   }
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}))
     throw new Error(errBody.message || `Failed to fetch profile (${res.status})`)
+  }
+
+  return res.json()
+}
+
+export async function updateUserProfile(
+  input: UpdateProfileInput
+): Promise<UserProfileResponse> {
+  const res = await fetch(`${API_BASE}/users/profile`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(input),
+  })
+
+  if (res.status === 401) {
+    throw new Error('Session expired. Please log in again.')
+  }
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}))
+    throw new Error(errBody.message || `Failed to update profile (${res.status})`)
   }
 
   return res.json()
