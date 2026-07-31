@@ -45,6 +45,13 @@ import ManagerDriver from "./pages/Fleet/Manager/ManagerDriver";
 import ManagerSidebar from "./pages/Fleet/Manager/ManagerSidebar";
 import ManagerForgotPassword from "./pages/Fleet/Manager/ManagerForgotPassword";
 import ManagerVehicles from "./pages/Fleet/Manager/ManagerVehicles";
+import ManagerTrips from "./pages/Fleet/Manager/ManagerTrips";
+import FleetTrips from "./pages/Fleet/Dashboard/FleetTrips";
+import FleetReports from "./pages/Fleet/Dashboard/FleetReports";
+import ManagerReports from "./pages/Fleet/Manager/ManagerReport";
+import FleetSettings from "./pages/Fleet/Dashboard/FleetSettings";
+import ManagerSettings from "./pages/Fleet/Manager/ManagerSettings";
+import PlanGuard from "./components/PlanGuard";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -86,6 +93,12 @@ const NO_NAV_PAGES = [
     "/manager/drivers",
     "/manager/forgot-password",
     "/manager/vehicles",
+    "/manager/trips",
+    "/fleet/trips",
+    "/fleet/report",
+    "/manager/report",
+    "/fleet/settings",
+    "/manager/settings",
 ];
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -173,6 +186,16 @@ function AppRoutes() {
                         element={<ManagerDashboard />}
                     />
 
+                    <Route path="/fleet/trips" element={<FleetTrips />} />
+                    <Route
+                        path="/fleet/report"
+                        element={
+                            <PlanGuard requiredPlans={["pro", "enterprise"]}>
+                                <FleetReports />
+                            </PlanGuard>
+                        }
+                    />
+
                     <Route
                         path="/manager/drivers"
                         element={
@@ -192,6 +215,14 @@ function AppRoutes() {
                     />
 
                     <Route path="/manager" element={<ManagerSignIn />} />
+                    <Route
+                        path="/manager/report"
+                        element={
+                            <PlanGuard requiredPlans={["pro", "enterprise"]}>
+                                <ManagerReports />
+                            </PlanGuard>
+                        }
+                    />
                     <Route path="/payment/*" element={<PaymentCallback />} />
                     <Route path="/plan-route" element={<PlanRoutePage />} />
                     <Route path="/admin/login" element={<AdminLogin />} />
@@ -204,6 +235,7 @@ function AppRoutes() {
                         path="/manager/forgot-password"
                         element={<ManagerForgotPassword />}
                     />
+                    <Route path="/manager/trips" element={<ManagerTrips />} />
                     <Route
                         path="/fleet/kyc"
                         element={
@@ -214,6 +246,11 @@ function AppRoutes() {
                     />
 
                     <Route path="/fleet/kyc-pending" element={<KYCPending />} />
+                    <Route path="/fleet/settings" element={<FleetSettings />} />
+                    <Route
+                        path="/manager/settings"
+                        element={<ManagerSettings />}
+                    />
                     <Route
                         path="/fleet/subscription/renew"
                         element={<SubscriptionRenew />}
