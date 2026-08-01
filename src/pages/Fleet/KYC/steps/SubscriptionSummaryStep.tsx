@@ -16,7 +16,7 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
     // Calculate costs based on plan
     const getPlanDetails = () => {
         switch (data.plan) {
-            case "free":
+            case "free_trial":
                 return { price: 0, label: "Free Trial" };
             case "starter":
                 return { price: 2250, label: "Starter Fleet" };
@@ -34,7 +34,7 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
     const monthlyCost = planDetails.price * vehicleCount;
     const totalCost = monthlyCost;
 
-    const isFreePlan = data.plan === "free" || data.plan === "enterprise";
+    const isFreePlan = data.plan === "free_trial" || data.plan === "enterprise";
 
     return (
         <div className="flex w-full flex-col" style={{ gap: "40px" }}>

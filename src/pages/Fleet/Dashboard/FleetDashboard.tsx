@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    LayoutDashboard,
     Truck,
-    User,
     MapPin,
     AlertTriangle,
-    Bell,
-    TrendingUp,
     Users,
-    Car,
     Activity,
-    ChevronRight,
-    Plus,
+    Navigation,
+    AlertCircle,
+    CheckCircle,
+    ArrowRight,
 } from "lucide-react";
 import DashSidebar from "./DashSidebar";
+import BroadcastButton from "../components/BroadcastButton";
 
 const API_BASE = "https://backend-production-01de.up.railway.app";
 
@@ -37,11 +35,26 @@ interface CompanyData {
     plan: string;
 }
 
-interface RecentActivity {
+interface RecentTrip {
     id: string;
-    type: "vehicle" | "driver" | "trip" | "alert";
-    message: string;
+    vehicle: string;
+    driver: string;
+    route: string;
+    hazards: number;
+    distance: string;
+    status: string;
     timestamp: string;
+}
+
+interface SessionLog {
+    id: string;
+    type: "sos" | "hazard" | "trip" | "alert";
+    message: string;
+    time: string;
+    driver: string;
+    location: string;
+    date: string;
+    distance?: string;
 }
 
 const FleetDashboard: React.FC = () => {
@@ -58,10 +71,13 @@ const FleetDashboard: React.FC = () => {
         unreadNotifications: 0,
     });
     const [company, setCompany] = useState<CompanyData | null>(null);
-    const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
-        [],
-    );
+    const [recentTrips, setRecentTrips] = useState<RecentTrip[]>([]);
+    const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
     const [userName, setUserName] = useState("");
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    const [hazardCount, setHazardCount] = useState(0);
+
+    const [showBroadcastModal, setShowBroadcastModal] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -69,7 +85,6 @@ const FleetDashboard: React.FC = () => {
             navigate("/fleet");
             return;
         }
-
         fetchDashboardData();
     }, [navigate]);
 
@@ -85,8 +100,6 @@ const FleetDashboard: React.FC = () => {
             if (companyRes.ok) {
                 const companyData = await companyRes.json();
                 setCompany(companyData);
-
-                // Set user name from company data
                 if (companyData.user?.firstName && companyData.user?.lastName) {
                     setUserName(
                         `${companyData.user.firstName} ${companyData.user.lastName}`,
@@ -98,15 +111,15 @@ const FleetDashboard: React.FC = () => {
             const vehiclesRes = await fetch(`${API_BASE}/fleet/vehicles`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
+            let vehicles = [];
             if (vehiclesRes.ok) {
-                const vehicles = await vehiclesRes.json();
+                vehicles = await vehiclesRes.json();
                 const total = vehicles.length || 0;
                 const active =
                     vehicles.filter(
                         (v: any) =>
                             v.status === "AVAILABLE" || v.status === "IN_USE",
                     ).length || 0;
-
                 setStats((prev) => ({
                     ...prev,
                     totalVehicles: total,
@@ -118,13 +131,13 @@ const FleetDashboard: React.FC = () => {
             const driversRes = await fetch(`${API_BASE}/fleet/drivers`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
+            let drivers = [];
             if (driversRes.ok) {
-                const drivers = await driversRes.json();
+                drivers = await driversRes.json();
                 const total = drivers.length || 0;
                 const active =
                     drivers.filter((d: any) => d.status === "active").length ||
                     0;
-
                 setStats((prev) => ({
                     ...prev,
                     totalDrivers: total,
@@ -132,76 +145,128 @@ const FleetDashboard: React.FC = () => {
                 }));
             }
 
-            // Fetch trips (if endpoint exists)
+            // Fetch trips
             try {
-                const tripsRes = await fetch(`${API_BASE}/fleet/trips`, {
+                const tripsRes = await fetch(`${API_BASE}/sessions/trips`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (tripsRes.ok) {
-                    const trips = await tripsRes.json();
-                    const total = trips.length || 0;
+                    const data = await tripsRes.json();
+                    const items = data.items || [];
+                    const total = items.length || 0;
                     const active =
-                        trips.filter(
+                        items.filter(
                             (t: any) =>
-                                t.status === "in_progress" ||
-                                t.status === "active",
+                                t.tripStatus === "in_progress" ||
+                                t.tripStatus === "active",
                         ).length || 0;
+
+                    // Get recent trips
+                    const recent = items.slice(0, 3).map((t: any) => ({
+                        id: t.id,
+                        vehicle: t.vehicle?.registrationNumber || "V-1045",
+                        driver: t.driver?.name || "Tunde A.",
+                        route: `${t.loginLocation?.split(",").slice(0, 3).join(", ") || "Lagos"} → ${t.logoutLocation?.split(",").slice(0, 3).join(", ") || "Ibadan"}`,
+                        hazards: t.stats?.hazardsReported || 0,
+                        distance: t.stats?.totalDistance
+                            ? `${t.stats.totalDistance} km`
+                            : "214 km",
+                        status:
+                            t.tripStatus === "in_progress"
+                                ? "In Transit"
+                                : "Completed",
+                        timestamp: t.loginTime,
+                    }));
+                    setRecentTrips(recent);
+
+                    // Count total hazards
+                    const totalHazards = items.reduce(
+                        (acc: number, t: any) =>
+                            acc + (t.stats?.hazardsReported || 0),
+                        0,
+                    );
+                    setHazardCount(totalHazards);
 
                     setStats((prev) => ({
                         ...prev,
                         totalTrips: total,
                         activeTrips: active,
                     }));
+
+                    // Generate session logs
+                    const logs: SessionLog[] = items
+                        .slice(0, 5)
+                        .map((t: any) => {
+                            const isSos = t.stats?.sosAlerts > 0;
+                            const hasHazards = t.stats?.hazardsReported > 0;
+                            const type = isSos
+                                ? "sos"
+                                : hasHazards
+                                  ? "hazard"
+                                  : "trip";
+
+                            let message = "";
+                            if (isSos)
+                                message = `SOS triggered · ${t.vehicle?.registrationNumber || "V-1045"}`;
+                            else if (hasHazards)
+                                message = `${t.stats.hazardsReported} hazard${t.stats.hazardsReported > 1 ? "s" : ""} reported on route`;
+                            else
+                                message = `Trip completed · ${t.vehicle?.registrationNumber || "V-1042"}`;
+
+                            const timeDiff =
+                                Date.now() - new Date(t.loginTime).getTime();
+                            const minutes = Math.floor(timeDiff / 60000);
+                            const time =
+                                minutes < 1
+                                    ? "Just now"
+                                    : minutes < 60
+                                      ? `${minutes}m ago`
+                                      : `${Math.floor(minutes / 60)}h ago`;
+
+                            return {
+                                id: t.id,
+                                type: type,
+                                message: message,
+                                time: time,
+                                driver: t.driver?.name || "Unknown",
+                                location:
+                                    t.loginLocation?.split(",")[0] || "Unknown",
+                                date: new Date(t.loginTime).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                        month: "2-digit",
+                                        day: "2-digit",
+                                        year: "numeric",
+                                    },
+                                ),
+                                distance: t.stats?.totalDistance
+                                    ? `${t.stats.totalDistance} km`
+                                    : undefined,
+                            };
+                        });
+                    setSessionLogs(logs);
                 }
             } catch (e) {
-                // Trips endpoint might not exist yet
                 console.log("Trips endpoint not available yet");
             }
 
-            // Fetch alerts from subscription or other endpoints
+            // Set alerts
+            const vehiclesWithIssues = vehicles.filter((v: any) => {
+                if (!v.nextService) return false;
+                const serviceDate = new Date(v.nextService);
+                const today = new Date();
+                const diffDays = Math.ceil(
+                    (serviceDate.getTime() - today.getTime()) /
+                        (1000 * 60 * 60 * 24),
+                );
+                return diffDays <= 7;
+            }).length;
+
             setStats((prev) => ({
                 ...prev,
-                alerts: 2,
-                unreadNotifications: 3,
+                alerts: vehiclesWithIssues + hazardCount,
+                unreadNotifications: vehiclesWithIssues + hazardCount,
             }));
-
-            // Generate mock recent activities based on real data
-            const activities: RecentActivity[] = [];
-            if (vehiclesRes.ok) {
-                const vehicles = await vehiclesRes.json();
-                if (vehicles.length > 0) {
-                    activities.push({
-                        id: "1",
-                        type: "vehicle",
-                        message: `Vehicle ${vehicles[0]?.registrationNumber || "New"} added to fleet`,
-                        timestamp: new Date(Date.now() - 120000).toISOString(),
-                    });
-                }
-            }
-            if (driversRes.ok) {
-                const drivers = await driversRes.json();
-                if (drivers.length > 0) {
-                    activities.push({
-                        id: "2",
-                        type: "driver",
-                        message: `Driver ${drivers[0]?.fullName || "New"} joined the fleet`,
-                        timestamp: new Date(Date.now() - 300000).toISOString(),
-                    });
-                }
-            }
-            activities.push({
-                id: "3",
-                type: "trip",
-                message: "Trip #TRP-001 completed successfully",
-                timestamp: new Date(Date.now() - 600000).toISOString(),
-            });
-            activities.push({
-                id: "4",
-                type: "alert",
-                message: "Vehicle maintenance due for XYZ-123",
-                timestamp: new Date(Date.now() - 900000).toISOString(),
-            });
-            setRecentActivities(activities.slice(0, 4));
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
         } finally {
@@ -256,330 +321,932 @@ const FleetDashboard: React.FC = () => {
         </div>
     );
 
-    const getInitials = (name: string) => {
-        if (!name) return "JD";
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
-    };
-
-    const formatTimeAgo = (timestamp: string) => {
-        const diff = Date.now() - new Date(timestamp).getTime();
-        const minutes = Math.floor(diff / 60000);
-        if (minutes < 1) return "Just now";
-        if (minutes < 60) return `${minutes} minutes ago`;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours} hours ago`;
-        return `${Math.floor(hours / 24)} days ago`;
-    };
-
-    const getActivityIcon = (type: string) => {
+    const getLogIcon = (type: string) => {
         switch (type) {
-            case "vehicle":
-                return <Car size={18} className="text-[#6E43A3]" />;
-            case "driver":
-                return <User size={18} className="text-[#1565C0]" />;
+            case "sos":
+                return <AlertCircle size={18} className="text-[#FE3F21]" />;
+            case "hazard":
+                return <AlertTriangle size={18} className="text-[#F2A618]" />;
             case "trip":
-                return <MapPin size={18} className="text-[#D4AF37]" />;
-            case "alert":
-                return <AlertTriangle size={18} className="text-[#C62828]" />;
+                return <CheckCircle size={18} className="text-[#2E7D32]" />;
             default:
                 return <Activity size={18} className="text-[#8E98A8]" />;
         }
     };
 
-    return (
-        <div className="p-8">
-            {/* Welcome Section */}
-            <div className="mb-8">
-                <h1
-                    className="text-3xl font-bold text-[#1F083B]"
-                    style={{ fontFamily: "Outfit" }}
-                >
-                    Welcome back, {userName || "Fleet Manager"}! 👋
-                </h1>
-                <p
-                    className="mt-1 text-[#8E98A8]"
-                    style={{ fontFamily: "Outfit" }}
-                >
-                    Here's what's happening with your fleet today.
-                </p>
-                {company && (
-                    <div className="mt-2 flex items-center gap-4">
-                        <span
-                            className="text-sm text-[#6E43A3] font-medium"
+    if (loading) {
+        return (
+            <DashSidebar>
+                <div className="flex items-center justify-center min-h-[600px]">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6E43A3] mx-auto" />
+                        <p
+                            className="mt-4 text-[#8E98A8]"
                             style={{ fontFamily: "Outfit" }}
                         >
-                            {company.fleetName || company.companyName}
-                        </span>
-                        <span className="text-xs px-2 py-1 rounded-full bg-[#6E43A310] text-[#6E43A3]">
-                            {company.plan?.charAt(0).toUpperCase() +
-                                company.plan?.slice(1) || "Starter"}{" "}
-                            Plan
-                        </span>
+                            Loading dashboard...
+                        </p>
                     </div>
-                )}
-            </div>
+                </div>
+            </DashSidebar>
+        );
+    }
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-                <StatCard
-                    title="Total Vehicles"
-                    value={stats.totalVehicles}
-                    icon={Truck}
-                    color="#6E43A3"
-                    subtext={`${stats.activeVehicles} active`}
-                />
-                <StatCard
-                    title="Total Drivers"
-                    value={stats.totalDrivers}
-                    icon={Users}
-                    color="#2E7D32"
-                    subtext={`${stats.activeDrivers} active`}
-                />
-                <StatCard
-                    title="Active Trips"
-                    value={stats.activeTrips}
-                    icon={MapPin}
-                    color="#D4AF37"
-                    subtext={`${stats.totalTrips} total trips`}
-                />
-                <StatCard
-                    title="Alerts"
-                    value={stats.alerts}
-                    icon={AlertTriangle}
-                    color="#C62828"
-                    subtext={`${stats.unreadNotifications} unread notifications`}
-                />
-            </div>
-
-            {/* Recent Activity & Quick Actions */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                {/* Recent Activity */}
-                <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                    <h2
-                        className="text-lg font-semibold text-[#1F083B] mb-4"
+    return (
+        <DashSidebar>
+            <div className="p-8">
+                {/* Welcome Section */}
+                <div className="mb-8">
+                    <h1
+                        className="text-3xl font-bold text-[#1F083B]"
                         style={{ fontFamily: "Outfit" }}
                     >
-                        Recent Activity
-                    </h2>
-                    <div className="space-y-4">
-                        {recentActivities.length > 0 ? (
-                            recentActivities.map((activity) => (
-                                <div
-                                    key={activity.id}
-                                    className="flex items-center gap-4 rounded-lg p-3 hover:bg-[#F8F9FA] transition"
-                                >
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3E5F5]">
-                                        {getActivityIcon(activity.type)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
+                        Welcome back, {userName || "Fleet Manager"}!
+                    </h1>
+                    <p
+                        className="mt-1 text-[#8E98A8]"
+                        style={{ fontFamily: "Outfit" }}
+                    >
+                        Here's what's happening with your fleet today.
+                    </p>
+                    {company && (
+                        <div className="mt-2 flex items-center gap-4">
+                            <span
+                                className="text-sm text-[#6E43A3] font-medium"
+                                style={{ fontFamily: "Outfit" }}
+                            >
+                                {company.fleetName || company.companyName}
+                            </span>
+                            <span className="text-xs px-2 py-1 rounded-full bg-[#6E43A310] text-[#6E43A3]">
+                                {company.plan?.charAt(0).toUpperCase() +
+                                    company.plan?.slice(1) || "Starter"}{" "}
+                                Plan
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                    <StatCard
+                        title="Total Vehicles"
+                        value={stats.totalVehicles}
+                        icon={Truck}
+                        color="#6E43A3"
+                        subtext={`${stats.activeVehicles} active`}
+                    />
+                    <StatCard
+                        title="Total Drivers"
+                        value={stats.totalDrivers}
+                        icon={Users}
+                        color="#2E7D32"
+                        subtext={`${stats.activeDrivers} active`}
+                    />
+                    <StatCard
+                        title="Active Trips"
+                        value={stats.activeTrips}
+                        icon={MapPin}
+                        color="#D4AF37"
+                        subtext={`${stats.totalTrips} total trips`}
+                    />
+                    <StatCard
+                        title="Alerts"
+                        value={stats.alerts}
+                        icon={AlertTriangle}
+                        color="#C62828"
+                        subtext={`${stats.unreadNotifications} unread notifications`}
+                    />
+                </div>
+
+                {/* Two Columns */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Column 1: Chart + Recent Trips (2/3 width) */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Chart */}
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
+                            <h3
+                                className="text-lg font-semibold text-[#1F083B] mb-4"
+                                style={{ fontFamily: "Outfit" }}
+                            >
+                                Trips & Alerts Rate
+                            </h3>
+                            <div className="relative h-[350px] rounded-lg border border-[#E5E7EB] p-4 overflow-hidden">
+                                {/* Legend */}
+                                <div className="flex items-center justify-center gap-8 mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-[#00BC7B]"></div>
+                                        <span
+                                            className="text-sm text-[#8E98A8]"
                                             style={{ fontFamily: "Outfit" }}
                                         >
-                                            {activity.message}
-                                        </p>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
+                                            Trips
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-[#F2A618]"></div>
+                                        <span
+                                            className="text-sm text-[#8E98A8]"
                                             style={{ fontFamily: "Outfit" }}
                                         >
-                                            {formatTimeAgo(activity.timestamp)}
-                                        </p>
+                                            Alerts
+                                        </span>
                                     </div>
-                                    <ChevronRight
-                                        size={16}
-                                        className="text-[#8E98A8]"
-                                    />
                                 </div>
-                            ))
-                        ) : (
-                            <p
-                                className="text-center text-[#8E98A8] py-8"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                No recent activity
-                            </p>
-                        )}
-                    </div>
-                </div>
 
-                {/* Quick Actions */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                    <h2
-                        className="text-lg font-semibold text-[#1F083B] mb-4"
-                        style={{ fontFamily: "Outfit" }}
-                    >
-                        Quick Actions
-                    </h2>
-                    <div className="flex flex-col gap-3">
-                        <button
-                            onClick={() => navigate("/fleet/vehicles")}
-                            className="flex items-center gap-3 rounded-lg px-4 py-3 transition hover:bg-[#F3E5F5]"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-[#6E43A310] flex items-center justify-center">
-                                <Plus size={16} className="text-[#6E43A3]" />
+                                {/* Chart Container */}
+                                <div className="relative h-[270px] w-full">
+                                    {(() => {
+                                        const months = [
+                                            "Jan",
+                                            "Feb",
+                                            "Mar",
+                                            "Apr",
+                                            "May",
+                                            "Jun",
+                                            "Jul",
+                                            "Aug",
+                                            "Sep",
+                                            "Oct",
+                                            "Nov",
+                                            "Dec",
+                                        ];
+                                        const years = [
+                                            "2024",
+                                            "2024",
+                                            "2024",
+                                            "2024",
+                                            "2024",
+                                            "2024",
+                                            "2025",
+                                            "2025",
+                                            "2025",
+                                            "2025",
+                                            "2025",
+                                            "2025",
+                                        ];
+
+                                        const baseTrips = Math.min(
+                                            stats.totalTrips || 8,
+                                            10,
+                                        );
+                                        const tripData = [
+                                            3.2,
+                                            4.0,
+                                            5.2,
+                                            3.6,
+                                            6.0,
+                                            4.8,
+                                            baseTrips,
+                                            5.6,
+                                            6.8,
+                                            4.4,
+                                            3.6,
+                                            7.2,
+                                        ];
+
+                                        const baseAlerts = Math.min(
+                                            hazardCount || 5,
+                                            10,
+                                        );
+                                        const alertData = [
+                                            1.8,
+                                            2.8,
+                                            3.8,
+                                            1.5,
+                                            4.5,
+                                            3.0,
+                                            baseAlerts,
+                                            3.5,
+                                            4.3,
+                                            2.3,
+                                            1.5,
+                                            5.5,
+                                        ];
+
+                                        const maxVal = 10;
+                                        const padding = {
+                                            top: 10,
+                                            bottom: 35,
+                                            left: 50,
+                                            right: 20,
+                                        };
+                                        const chartWidth =
+                                            900 - padding.left - padding.right;
+                                        const chartHeight =
+                                            270 - padding.top - padding.bottom;
+                                        const stepX =
+                                            chartWidth / (tripData.length - 1);
+
+                                        const tripPoints = tripData.map(
+                                            (v, i) => ({
+                                                x: padding.left + i * stepX,
+                                                y:
+                                                    padding.top +
+                                                    chartHeight -
+                                                    (v / maxVal) * chartHeight,
+                                                value: v,
+                                                index: i,
+                                            }),
+                                        );
+
+                                        const alertPoints = alertData.map(
+                                            (v, i) => ({
+                                                x: padding.left + i * stepX,
+                                                y:
+                                                    padding.top +
+                                                    chartHeight -
+                                                    (v / maxVal) * chartHeight,
+                                                value: v,
+                                                index: i,
+                                            }),
+                                        );
+
+                                        const tripPath = tripPoints
+                                            .map(
+                                                (p, i) =>
+                                                    `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`,
+                                            )
+                                            .join(" ");
+                                        const alertPath = alertPoints
+                                            .map(
+                                                (p, i) =>
+                                                    `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`,
+                                            )
+                                            .join(" ");
+                                        const tripAreaPath =
+                                            tripPath +
+                                            ` L ${tripPoints[tripPoints.length - 1].x} ${padding.top + chartHeight} L ${tripPoints[0].x} ${padding.top + chartHeight} Z`;
+                                        const alertAreaPath =
+                                            alertPath +
+                                            ` L ${alertPoints[alertPoints.length - 1].x} ${padding.top + chartHeight} L ${alertPoints[0].x} ${padding.top + chartHeight} Z`;
+
+                                        const yAxisValues = [10, 8, 6, 4, 2, 0];
+                                        const hoverIndex =
+                                            hoveredIndex !== null
+                                                ? hoveredIndex
+                                                : tripData.length - 1;
+
+                                        return (
+                                            <svg
+                                                className="w-full h-full"
+                                                viewBox="0 0 900 270"
+                                                preserveAspectRatio="none"
+                                            >
+                                                {/* Grid Lines */}
+                                                {yAxisValues.map((val, i) => {
+                                                    const y =
+                                                        padding.top +
+                                                        (i /
+                                                            (yAxisValues.length -
+                                                                1)) *
+                                                            chartHeight;
+                                                    return (
+                                                        <g key={`grid-${i}`}>
+                                                            <line
+                                                                x1={
+                                                                    padding.left
+                                                                }
+                                                                y1={y}
+                                                                x2={
+                                                                    padding.left +
+                                                                    chartWidth
+                                                                }
+                                                                y2={y}
+                                                                stroke="#E5E7EB"
+                                                                strokeWidth="1"
+                                                                strokeDasharray="4 4"
+                                                            />
+                                                            <text
+                                                                x={
+                                                                    padding.left -
+                                                                    10
+                                                                }
+                                                                y={y + 4}
+                                                                textAnchor="end"
+                                                                fontSize="10"
+                                                                fill="#8E98A8"
+                                                                fontFamily="Outfit"
+                                                            >
+                                                                {val}
+                                                            </text>
+                                                        </g>
+                                                    );
+                                                })}
+
+                                                {/* Areas */}
+                                                <path
+                                                    d={tripAreaPath}
+                                                    fill="url(#tripGradient)"
+                                                    opacity="0.3"
+                                                />
+                                                <path
+                                                    d={alertAreaPath}
+                                                    fill="url(#alertGradient)"
+                                                    opacity="0.3"
+                                                />
+
+                                                {/* Lines */}
+                                                <path
+                                                    d={tripPath}
+                                                    stroke="#00BC7B"
+                                                    strokeWidth="2.5"
+                                                    fill="none"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                                <path
+                                                    d={alertPath}
+                                                    stroke="#F2A618"
+                                                    strokeWidth="2.5"
+                                                    fill="none"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+
+                                                {/* Hover Areas */}
+                                                {tripPoints.map((p, i) => (
+                                                    <circle
+                                                        key={`hover-${i}`}
+                                                        cx={p.x}
+                                                        cy={p.y}
+                                                        r="15"
+                                                        fill="transparent"
+                                                        style={{
+                                                            cursor: "pointer",
+                                                        }}
+                                                        onMouseEnter={() =>
+                                                            setHoveredIndex(i)
+                                                        }
+                                                        onMouseLeave={() =>
+                                                            setHoveredIndex(
+                                                                null,
+                                                            )
+                                                        }
+                                                    />
+                                                ))}
+
+                                                {/* Data Points */}
+                                                {tripPoints.map((p, i) => {
+                                                    const isHovered =
+                                                        hoveredIndex === i;
+                                                    return (
+                                                        <circle
+                                                            key={`trip-${i}`}
+                                                            cx={p.x}
+                                                            cy={p.y}
+                                                            r={
+                                                                isHovered
+                                                                    ? "6"
+                                                                    : "3.5"
+                                                            }
+                                                            fill="#00BC7B"
+                                                            stroke="white"
+                                                            strokeWidth={
+                                                                isHovered
+                                                                    ? "2.5"
+                                                                    : "1.5"
+                                                            }
+                                                            style={{
+                                                                transition:
+                                                                    "all 0.2s",
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+                                                {alertPoints.map((p, i) => {
+                                                    const isHovered =
+                                                        hoveredIndex === i;
+                                                    return (
+                                                        <circle
+                                                            key={`alert-${i}`}
+                                                            cx={p.x}
+                                                            cy={p.y}
+                                                            r={
+                                                                isHovered
+                                                                    ? "6"
+                                                                    : "3.5"
+                                                            }
+                                                            fill="#F2A618"
+                                                            stroke="white"
+                                                            strokeWidth={
+                                                                isHovered
+                                                                    ? "2.5"
+                                                                    : "1.5"
+                                                            }
+                                                            style={{
+                                                                transition:
+                                                                    "all 0.2s",
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+
+                                                {/* X-Axis Labels */}
+                                                {months.map((month, i) => {
+                                                    const x =
+                                                        padding.left +
+                                                        i * stepX;
+                                                    const isHovered =
+                                                        hoveredIndex === i;
+                                                    return (
+                                                        <text
+                                                            key={i}
+                                                            x={x}
+                                                            y={
+                                                                padding.top +
+                                                                chartHeight +
+                                                                20
+                                                            }
+                                                            textAnchor="middle"
+                                                            fontSize={
+                                                                isHovered
+                                                                    ? "11"
+                                                                    : "9"
+                                                            }
+                                                            fill={
+                                                                isHovered
+                                                                    ? "#1F083B"
+                                                                    : "#8E98A8"
+                                                            }
+                                                            fontFamily="Outfit"
+                                                            fontWeight={
+                                                                isHovered
+                                                                    ? "600"
+                                                                    : "400"
+                                                            }
+                                                            style={{
+                                                                transition:
+                                                                    "all 0.2s",
+                                                            }}
+                                                        >
+                                                            {month}
+                                                        </text>
+                                                    );
+                                                })}
+
+                                                {/* Tooltip */}
+                                                {hoveredIndex !== null && (
+                                                    <g
+                                                        transform={`translate(${tripPoints[hoveredIndex].x - 40}, ${tripPoints[hoveredIndex].y - 75})`}
+                                                    >
+                                                        <rect
+                                                            x="0"
+                                                            y="0"
+                                                            width="80"
+                                                            height="70"
+                                                            rx="8"
+                                                            fill="#1F083B"
+                                                            opacity="0.95"
+                                                            filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.15))"
+                                                        />
+                                                        <text
+                                                            x="40"
+                                                            y="16"
+                                                            textAnchor="middle"
+                                                            fontSize="8"
+                                                            fill="#FFFFFF"
+                                                            fontFamily="Outfit"
+                                                            fontWeight="600"
+                                                        >
+                                                            {
+                                                                months[
+                                                                    hoveredIndex
+                                                                ]
+                                                            }{" "}
+                                                            {
+                                                                years[
+                                                                    hoveredIndex
+                                                                ]
+                                                            }
+                                                        </text>
+                                                        <line
+                                                            x1="10"
+                                                            y1="22"
+                                                            x2="70"
+                                                            y2="22"
+                                                            stroke="#E5E7EB"
+                                                            strokeWidth="0.5"
+                                                        />
+                                                        <text
+                                                            x="10"
+                                                            y="38"
+                                                            fontSize="8"
+                                                            fill="#00BC7B"
+                                                            fontFamily="Outfit"
+                                                        >
+                                                            ● Trips
+                                                        </text>
+                                                        <text
+                                                            x="70"
+                                                            y="38"
+                                                            textAnchor="end"
+                                                            fontSize="10"
+                                                            fill="#FFFFFF"
+                                                            fontFamily="Outfit"
+                                                            fontWeight="600"
+                                                        >
+                                                            {
+                                                                tripData[
+                                                                    hoveredIndex
+                                                                ]
+                                                            }
+                                                        </text>
+                                                        <text
+                                                            x="10"
+                                                            y="55"
+                                                            fontSize="8"
+                                                            fill="#F2A618"
+                                                            fontFamily="Outfit"
+                                                        >
+                                                            ● Alerts
+                                                        </text>
+                                                        <text
+                                                            x="70"
+                                                            y="55"
+                                                            textAnchor="end"
+                                                            fontSize="10"
+                                                            fill="#FFFFFF"
+                                                            fontFamily="Outfit"
+                                                            fontWeight="600"
+                                                        >
+                                                            {
+                                                                alertData[
+                                                                    hoveredIndex
+                                                                ]
+                                                            }
+                                                        </text>
+                                                    </g>
+                                                )}
+
+                                                <defs>
+                                                    <linearGradient
+                                                        id="tripGradient"
+                                                        x1="0"
+                                                        y1="0"
+                                                        x2="0"
+                                                        y2="1"
+                                                    >
+                                                        <stop
+                                                            offset="0%"
+                                                            stopColor="#00BC7B"
+                                                            stopOpacity="0.4"
+                                                        />
+                                                        <stop
+                                                            offset="100%"
+                                                            stopColor="#00BC7B"
+                                                            stopOpacity="0"
+                                                        />
+                                                    </linearGradient>
+                                                    <linearGradient
+                                                        id="alertGradient"
+                                                        x1="0"
+                                                        y1="0"
+                                                        x2="0"
+                                                        y2="1"
+                                                    >
+                                                        <stop
+                                                            offset="0%"
+                                                            stopColor="#F2A618"
+                                                            stopOpacity="0.4"
+                                                        />
+                                                        <stop
+                                                            offset="100%"
+                                                            stopColor="#F2A618"
+                                                            stopOpacity="0"
+                                                        />
+                                                    </linearGradient>
+                                                </defs>
+                                            </svg>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* Gradient Labels */}
+                                <div className="flex items-center justify-center gap-6 mt-1 text-xs text-[#8E98A8]">
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-16 h-2 rounded"
+                                            style={{
+                                                background:
+                                                    "linear-gradient(to right, #00BC7B00, #00BC7B)",
+                                            }}
+                                        ></div>
+                                        <span>Trips</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-16 h-2 rounded"
+                                            style={{
+                                                background:
+                                                    "linear-gradient(to right, #F2A61800, #F2A618)",
+                                            }}
+                                        ></div>
+                                        <span>Alerts</span>
+                                    </div>
+                                </div>
                             </div>
-                            <span
-                                className="text-sm font-medium text-[#1F083B]"
+                        </div>
+
+                        {/* Recent Trips - Under Chart */}
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2
+                                    className="text-lg font-semibold text-[#1F083B]"
+                                    style={{ fontFamily: "Outfit" }}
+                                >
+                                    Recent Trips
+                                </h2>
+                                <button
+                                    onClick={() => navigate("/fleet/trips")}
+                                    className="text-sm hover:underline flex items-center gap-2 px-3 py-1.5 rounded-full"
+                                    style={{
+                                        fontFamily: "Outfit",
+                                        color: "#4A148C",
+                                        backgroundColor: "#EDE8F4",
+                                    }}
+                                >
+                                    Manage all
+                                    <ArrowRight
+                                        size={14}
+                                        style={{ color: "#4A148C" }}
+                                    />
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                {recentTrips.length > 0 ? (
+                                    recentTrips.map((trip) => {
+                                        const isCompleted =
+                                            trip.status === "Completed";
+                                        const statusColor = isCompleted
+                                            ? "#2E7D32"
+                                            : "#F0C040";
+                                        const statusBg = isCompleted
+                                            ? "#2E7D3224"
+                                            : "#F0C04024";
+
+                                        return (
+                                            <div
+                                                key={trip.id}
+                                                className="flex items-center justify-between rounded-lg p-4 border border-[#F3F4F6] hover:shadow-md transition"
+                                            >
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <p
+                                                            className="text-sm font-medium text-[#1F083B]"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "Outfit",
+                                                            }}
+                                                        >
+                                                            {trip.vehicle} -{" "}
+                                                            {trip.driver}
+                                                        </p>
+                                                    </div>
+                                                    <p
+                                                        className="text-xs text-[#8E98A8] mt-0.5 truncate"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Outfit",
+                                                            maxWidth: "350px",
+                                                        }}
+                                                        title={trip.route}
+                                                    >
+                                                        {trip.route}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span
+                                                        className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1.5"
+                                                        style={{
+                                                            color: statusColor,
+                                                            backgroundColor:
+                                                                statusBg,
+                                                            fontFamily:
+                                                                "Outfit",
+                                                        }}
+                                                    >
+                                                        <span
+                                                            className="w-1.5 h-1.5 rounded-full"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    statusColor,
+                                                            }}
+                                                        ></span>
+                                                        {trip.status}
+                                                    </span>
+                                                    <div className="flex items-center gap-3">
+                                                        {trip.hazards > 0 && (
+                                                            <span
+                                                                className="flex items-center gap-1 text-xs font-medium"
+                                                                style={{
+                                                                    color: "#E65100",
+                                                                }}
+                                                            >
+                                                                {trip.hazards}{" "}
+                                                                hazards
+                                                            </span>
+                                                        )}
+                                                        <span
+                                                            className="text-xs"
+                                                            style={{
+                                                                color: "#020B38",
+                                                            }}
+                                                        >
+                                                            {trip.distance}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <p
+                                        className="text-center text-[#8E98A8] py-8"
+                                        style={{ fontFamily: "Outfit" }}
+                                    >
+                                        No recent trips
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Column 2: Quick Actions + Map + Recent Activity (1/3 width) */}
+                    <div className="lg:col-span-1 space-y-6">
+                        {/* Quick Actions */}
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
+                            <h2
+                                className="text-lg font-semibold text-[#1F083B] mb-4"
                                 style={{ fontFamily: "Outfit" }}
                             >
-                                Add Vehicle
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => navigate("/fleet/drivers")}
-                            className="flex items-center gap-3 rounded-lg px-4 py-3 transition hover:bg-[#F3E5F5]"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-[#2E7D3224] flex items-center justify-center">
-                                <Plus size={16} className="text-[#2E7D32]" />
-                            </div>
-                            <span
-                                className="text-sm font-medium text-[#1F083B]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Add Driver
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => navigate("/fleet/sub-fleets")}
-                            className="flex items-center gap-3 rounded-lg px-4 py-3 transition hover:bg-[#F3E5F5]"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-[#1565C020] flex items-center justify-center">
-                                <LayoutDashboard
-                                    size={16}
-                                    className="text-[#1565C0]"
+                                Quick Actions
+                            </h2>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => navigate("/fleet/trips")}
+                                    className="flex items-center justify-start gap-2 rounded-lg py-3 px-3 transition hover:opacity-80 w-full min-w-0"
+                                    style={{ backgroundColor: "#F2A61833" }}
+                                >
+                                    <div
+                                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                                        style={{ backgroundColor: "#F2A61833" }}
+                                    >
+                                        <MapPin
+                                            size={16}
+                                            style={{ color: "#F2A618" }}
+                                        />
+                                    </div>
+                                    <span
+                                        className="text-xs font-medium truncate"
+                                        style={{
+                                            fontFamily: "Outfit",
+                                            color: "#F2A618",
+                                        }}
+                                    >
+                                        Live Tracking
+                                    </span>
+                                </button>
+                                <BroadcastButton
+                                    onBroadcastSent={() => {
+                                        console.log(
+                                            "Broadcast sent successfully!",
+                                        );
+                                    }}
                                 />
                             </div>
-                            <span
-                                className="text-sm font-medium text-[#1F083B]"
+                        </div>
+                        {/* Map */}
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
+                            <h2
+                                className="text-lg font-semibold text-[#1F083B] mb-4"
                                 style={{ fontFamily: "Outfit" }}
                             >
-                                Manage Sub-fleets
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => navigate("/fleet/billing")}
-                            className="flex items-center gap-3 rounded-lg px-4 py-3 transition hover:bg-[#F3E5F5]"
-                        >
-                            <div className="w-8 h-8 rounded-full bg-[#D4AF3724] flex items-center justify-center">
-                                <TrendingUp
-                                    size={16}
-                                    className="text-[#D4AF37]"
-                                />
+                                Live Map
+                            </h2>
+                            <div className="rounded-xl overflow-hidden bg-[#F3F4F6] h-48 flex items-center justify-center">
+                                <div className="text-center">
+                                    <Navigation
+                                        size={28}
+                                        className="text-[#6E43A3] mx-auto"
+                                    />
+                                    <p
+                                        className="text-xs text-[#8E98A8] mt-2"
+                                        style={{ fontFamily: "Outfit" }}
+                                    >
+                                        Live vehicle locations
+                                    </p>
+                                    <p
+                                        className="text-[10px] text-[#8E98A8]"
+                                        style={{ fontFamily: "Outfit" }}
+                                    >
+                                        {stats.activeVehicles} vehicles on the
+                                        road
+                                    </p>
+                                </div>
                             </div>
-                            <span
-                                className="text-sm font-medium text-[#1F083B]"
+                        </div>
+
+                        {/* Recent Activiy */}
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
+                            <h2
+                                className="text-lg font-semibold text-[#1F083B] mb-4"
                                 style={{ fontFamily: "Outfit" }}
                             >
-                                View Billing
-                            </span>
-                        </button>
+                                Recent Activity
+                            </h2>
+                            <div className="space-y-3">
+                                {sessionLogs.slice(0, 4).map((log) => {
+                                    const iconColors = {
+                                        sos: { bg: "#FEE4E0", icon: "#FE3F21" },
+                                        hazard: {
+                                            bg: "#FEF3D9",
+                                            icon: "#F2A618",
+                                        },
+                                        trip: {
+                                            bg: "#E8F5E9",
+                                            icon: "#2E7D32",
+                                        },
+                                        default: {
+                                            bg: "#F3F4F6",
+                                            icon: "#8E98A8",
+                                        },
+                                    };
+                                    const color =
+                                        iconColors[
+                                            log.type as keyof typeof iconColors
+                                        ] || iconColors.default;
+
+                                    return (
+                                        <div
+                                            key={log.id}
+                                            className="flex items-start gap-3 rounded-lg p-2 hover:bg-[#F8F9FA] transition"
+                                        >
+                                            <div
+                                                className="flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0"
+                                                style={{
+                                                    backgroundColor: color.bg,
+                                                }}
+                                            >
+                                                {React.cloneElement(
+                                                    getLogIcon(log.type),
+                                                    {
+                                                        size: 18,
+                                                        style: {
+                                                            color: color.icon,
+                                                        },
+                                                    },
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p
+                                                    className="text-xs font-medium text-[#1F083B]"
+                                                    style={{
+                                                        fontFamily: "Outfit",
+                                                    }}
+                                                >
+                                                    {log.message}
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p
+                                                        className="text-[10px] text-[#8E98A8] whitespace-nowrap"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Outfit",
+                                                        }}
+                                                    >
+                                                        {log.time}
+                                                    </p>
+                                                    <span className="text-[10px] text-[#D1D5DB]">
+                                                        ·
+                                                    </span>
+                                                    <p
+                                                        className="text-[10px] text-[#8E98A8] truncate"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Outfit",
+                                                        }}
+                                                    >
+                                                        {log.driver}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {sessionLogs.length === 0 && (
+                                    <p
+                                        className="text-center text-[#8E98A8] py-4 text-sm"
+                                        style={{ fontFamily: "Outfit" }}
+                                    >
+                                        No recent activity
+                                    </p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            {/* Fleet Stats Summary */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                    <h3
-                        className="text-sm font-semibold text-[#1F083B] mb-4"
-                        style={{ fontFamily: "Outfit" }}
-                    >
-                        Fleet Overview
-                    </h3>
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <span
-                                className="text-sm text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Total Vehicles
-                            </span>
-                            <span
-                                className="text-sm font-medium text-[#1F083B]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                {stats.totalVehicles}
-                            </span>
-                        </div>
-                        <div className="w-full bg-[#F3F4F6] rounded-full h-2">
-                            <div
-                                className="bg-[#6E43A3] h-2 rounded-full"
-                                style={{
-                                    width: `${stats.totalVehicles > 0 ? (stats.activeVehicles / stats.totalVehicles) * 100 : 0}%`,
-                                }}
-                            />
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span
-                                className="text-xs text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                {stats.activeVehicles} active
-                            </span>
-                            <span
-                                className="text-xs text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                {stats.totalVehicles - stats.activeVehicles}{" "}
-                                inactive
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                    <h3
-                        className="text-sm font-semibold text-[#1F083B] mb-4"
-                        style={{ fontFamily: "Outfit" }}
-                    >
-                        Driver Overview
-                    </h3>
-                    <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                            <span
-                                className="text-sm text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Total Drivers
-                            </span>
-                            <span
-                                className="text-sm font-medium text-[#1F083B]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                {stats.totalDrivers}
-                            </span>
-                        </div>
-                        <div className="w-full bg-[#F3F4F6] rounded-full h-2">
-                            <div
-                                className="bg-[#2E7D32] h-2 rounded-full"
-                                style={{
-                                    width: `${stats.totalDrivers > 0 ? (stats.activeDrivers / stats.totalDrivers) * 100 : 0}%`,
-                                }}
-                            />
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span
-                                className="text-xs text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                {stats.activeDrivers} active
-                            </span>
-                            <span
-                                className="text-xs text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                {stats.totalDrivers - stats.activeDrivers}{" "}
-                                inactive
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </DashSidebar>
     );
 };
 

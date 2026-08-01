@@ -262,11 +262,7 @@ function AppRoutes() {
                     <Route element={<PrivateRoute />}>
                         <Route
                             path="/fleet/dashboard"
-                            element={
-                                <DashSidebar>
-                                    <FleetDashboard />
-                                </DashSidebar>
-                            }
+                            element={<FleetDashboard />}
                         />
                         <Route
                             path="/fleet/sub-fleets"
