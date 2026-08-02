@@ -804,10 +804,10 @@ const FleetManagers: React.FC = () => {
                                                             }}
                                                         >
                                                             {manager.user
-                                                                ?.firstName &&
+                                                                ?.firstName ||
                                                             manager.user
                                                                 ?.lastName
-                                                                ? `${manager.user.firstName} ${manager.user.lastName}`
+                                                                ? `${manager.user?.firstName || ""} ${manager.user?.lastName || ""}`.trim()
                                                                 : "Unknown"}
                                                         </div>
                                                         <div

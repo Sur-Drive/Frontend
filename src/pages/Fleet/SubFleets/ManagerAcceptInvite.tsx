@@ -1,4 +1,3 @@
-// src/pages/Fleet/ManagerAcceptInvite.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";

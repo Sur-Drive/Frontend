@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import DashSidebar from "./DashSidebar";
 import BroadcastButton from "../components/BroadcastButton";
+import LiveTrackingButton from "./LiveTrackingButton";
 
 const API_BASE = "https://backend-production-01de.up.railway.app";
 
@@ -361,7 +362,7 @@ const FleetDashboard: React.FC = () => {
                         className="text-3xl font-bold text-[#1F083B]"
                         style={{ fontFamily: "Outfit" }}
                     >
-                        Welcome back, {userName || "Fleet Manager"}!
+                        Welcome back, {userName || "Fleet Owner"}!
                     </h1>
                     <p
                         className="mt-1 text-[#8E98A8]"
@@ -1082,30 +1083,7 @@ const FleetDashboard: React.FC = () => {
                                 Quick Actions
                             </h2>
                             <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={() => navigate("/fleet/trips")}
-                                    className="flex items-center justify-start gap-2 rounded-lg py-3 px-3 transition hover:opacity-80 w-full min-w-0"
-                                    style={{ backgroundColor: "#F2A61833" }}
-                                >
-                                    <div
-                                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                                        style={{ backgroundColor: "#F2A61833" }}
-                                    >
-                                        <MapPin
-                                            size={16}
-                                            style={{ color: "#F2A618" }}
-                                        />
-                                    </div>
-                                    <span
-                                        className="text-xs font-medium truncate"
-                                        style={{
-                                            fontFamily: "Outfit",
-                                            color: "#F2A618",
-                                        }}
-                                    >
-                                        Live Tracking
-                                    </span>
-                                </button>
+                                <LiveTrackingButton />
                                 <BroadcastButton
                                     onBroadcastSent={() => {
                                         console.log(
@@ -1139,8 +1117,7 @@ const FleetDashboard: React.FC = () => {
                                         className="text-[10px] text-[#8E98A8]"
                                         style={{ fontFamily: "Outfit" }}
                                     >
-                                        {stats.activeVehicles} vehicles on the
-                                        road
+                                        {stats.activeVehicles} active vehicles
                                     </p>
                                 </div>
                             </div>
