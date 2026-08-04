@@ -20,6 +20,8 @@ import {
     AlertCircle,
 } from "lucide-react";
 import DashSidebar from "../Dashboard/DashSidebar";
+import ProfilePicture from "../KYC/components/ProfilePicture";
+import { useProfilePicture } from "../../../hooks/useProfilePicture";
 
 const API_BASE = "https://backend-production-01de.up.railway.app";
 
@@ -280,6 +282,35 @@ const FleetSettings: React.FC = () => {
         }));
     };
 
+    // Handle profile picture upload success
+    const handleProfilePictureUpload = (data: {
+        userId: string;
+        profilePicture: string;
+    }) => {
+        // Update user state with new profile picture
+        setUser((prev) => ({
+            ...prev!,
+            profilePicture: data.profilePicture,
+        }));
+        refetch();
+        setSuccessMessage("Profile picture updated successfully!");
+        setShowSuccessModal(true);
+    };
+
+    // Handle profile picture delete
+    const handleProfilePictureDelete = () => {
+        setUser((prev) => ({
+            ...prev!,
+            profilePicture: null,
+        }));
+    };
+
+    const {
+        profilePicture,
+        isLoading: pictureLoading,
+        refetch,
+    } = useProfilePicture(user?.id || "");
+
     const getInitials = (firstName: string, lastName: string) => {
         return (
             `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase() || "U"
@@ -335,15 +366,21 @@ const FleetSettings: React.FC = () => {
                         {/* Profile Avatar */}
                         <div className="bg-white rounded-xl p-6 text-center">
                             <div className="relative inline-block">
-                                <div className="w-24 h-24 rounded-full bg-[#EDE8F4] flex items-center justify-center text-[#6E43A3] text-3xl font-bold mx-auto">
-                                    {getInitials(
-                                        user?.firstName || "",
-                                        user?.lastName || "",
-                                    )}
-                                </div>
-                                <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#6E43A3] text-white flex items-center justify-center hover:opacity-90 transition">
-                                    <Camera size={16} />
-                                </button>
+                                <ProfilePicture
+                                    userId={user?.id || ""}
+                                    firstName={user?.firstName}
+                                    lastName={user?.lastName}
+                                    currentPicture={profilePicture}
+                                    size="xl"
+                                    allowUpload={true}
+                                    allowDelete={true}
+                                    showUploadButton={true}
+                                    showDeleteButton={false}
+                                    loading={pictureLoading}
+                                    className="mx-auto"
+                                    onUploadSuccess={handleProfilePictureUpload}
+                                    onDeleteSuccess={handleProfilePictureDelete}
+                                />
                             </div>
                             <h3
                                 className="mt-3 font-semibold text-[#1F083B]"
