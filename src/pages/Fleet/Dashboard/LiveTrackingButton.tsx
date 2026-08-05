@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, Lock, Locate } from "lucide-react";
+import { Lock, Locate } from "lucide-react";
 
 const API_BASE = "https://backend-production-01de.up.railway.app";
 

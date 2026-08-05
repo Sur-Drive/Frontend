@@ -541,24 +541,6 @@ const BroadcastModal: React.FC<BroadcastModalProps> = ({
                             </div>
                         </div>
                     )}
-
-                    {/* Region Filter */}
-                    <div>
-                        <label
-                            className="block text-sm font-medium text-[#1F083B] mb-1.5"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            Region (Optional)
-                        </label>
-                        <input
-                            type="text"
-                            value={region}
-                            onChange={(e) => setRegion(e.target.value)}
-                            placeholder="e.g. Lagos, SW"
-                            className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                            style={{ fontFamily: "Outfit" }}
-                        />
-                    </div>
                 </div>
 
                 {/* Buttons */}

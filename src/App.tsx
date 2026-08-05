@@ -54,6 +54,7 @@ import ManagerSettings from "./pages/Fleet/Manager/ManagerSettings";
 import PlanGuard from "./components/PlanGuard";
 import LiveTracking from "./pages/Fleet/Dashboard/LiveTracking";
 import DriverAcceptInvite from "./pages/Fleet/SubFleets/DriverAcceptInvite";
+import ManagerLiveTracking from "./pages/Fleet/Manager/ManagerLiveTracking";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -103,6 +104,7 @@ const NO_NAV_PAGES = [
     "/manager/settings",
     "/fleet/live-tracking",
     "/driver/accept-invite",
+    "/manager/live-tracking",
 ];
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -210,6 +212,15 @@ function AppRoutes() {
                         element={
                             <PlanGuard requiredPlans={["pro", "enterprise"]}>
                                 <LiveTracking />
+                            </PlanGuard>
+                        }
+                    />
+
+                    <Route
+                        path="/manager/live-tracking"
+                        element={
+                            <PlanGuard requiredPlans={["pro", "enterprise"]}>
+                                <ManagerLiveTracking />
                             </PlanGuard>
                         }
                     />
