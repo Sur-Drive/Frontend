@@ -1169,20 +1169,14 @@ const FleetDrivers: React.FC = () => {
 
             {/* VIEW DRIVER DETAILS MODAL */}
             {showViewModal && selectedDriver && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-                        <div className="flex justify-between items-start mb-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8">
+                        <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Driver Details
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Driver profile, scope, and assignments.
                                 </p>
                             </div>
@@ -1191,31 +1185,29 @@ const FleetDrivers: React.FC = () => {
                                     setShowViewModal(false);
                                     setSelectedDriver(null);
                                 }}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
-                        <div className="flex items-start justify-between">
+                        {/* Driver Profile */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full bg-[#EDE8F4] flex items-center justify-center text-[#6E43A3] font-semibold text-lg">
+                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#EDE8F4] text-lg font-semibold text-[#6E43A3]">
                                     {getInitials(selectedDriver.fullName)}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className="text-base font-bold text-[#1A2A3F]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-base font-bold text-[#1A2A3F]">
                                             {selectedDriver.fullName}
-                                        </div>
+                                        </span>
                                         <span
-                                            className={`px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getStatusColor(selectedDriver.status)}`}
+                                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(selectedDriver.status)}`}
                                         >
-                                            <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                            <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
                                             {selectedDriver.status
                                                 ? selectedDriver.status
                                                       .charAt(0)
@@ -1224,10 +1216,7 @@ const FleetDrivers: React.FC = () => {
                                                 : "Unknown"}
                                         </span>
                                     </div>
-                                    <div
-                                        className="text-sm text-[#5B646F] flex items-center gap-2"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <div className="flex items-center gap-2 text-sm text-[#5B646F]">
                                         <Phone size={14} />
                                         {selectedDriver.phoneNumber || ""}
                                     </div>
@@ -1235,65 +1224,48 @@ const FleetDrivers: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 mt-4">
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        {/* Stats Grid */}
+                        <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-6 sm:grid-cols-3 sm:gap-3">
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Sub-fleet
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-sm font-bold text-[#1A2A3F] sm:text-base">
                                     {selectedDriver.subFleet?.name || "-"}
                                 </div>
                             </div>
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     License Number
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-sm font-bold text-[#1A2A3F] sm:text-base">
                                     {selectedDriver.licenseNumber || "-"}
                                 </div>
                             </div>
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Vehicle
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-sm font-bold text-[#1A2A3F] sm:text-base">
                                     {selectedDriver.vehicle
                                         ?.registrationNumber || "Unassigned"}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] my-6" />
+                        <div className="my-4 h-px w-full bg-[#E5E7EB] sm:my-6" />
 
-                        <div className="flex gap-3">
+                        {/* Action Buttons */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                             <button
                                 onClick={() => {
                                     setShowViewModal(false);
                                     setSelectedDriver(null);
                                     setShowRemoveModal(true);
                                 }}
-                                className="flex-1 px-6 py-3 rounded-xl text-[#B71C1C] border border-[#B71C1C] hover:bg-[#B71C1C] hover:text-white transition flex items-center justify-center gap-2"
-                                style={{ fontFamily: "Outfit" }}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#B71C1C] px-4 py-3 text-sm text-[#B71C1C] transition hover:bg-[#B71C1C] hover:text-white sm:flex-1 sm:px-6"
                             >
-                                <Trash2 size={18} />
+                                <Trash2 size={16} className="sm:size-[18px]" />
                                 Remove Driver
                             </button>
                         </div>

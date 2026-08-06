@@ -107,13 +107,13 @@ const ForgotPassword: React.FC = () => {
     };
 
     return (
-        <div className="flex h-screen w-full overflow-hidden">
-            {/* Left Panel */}
-            <div className="hidden lg:block lg:w-1/2 h-full flex-shrink-0">
+        <div className="flex h-screen w-full flex-col overflow-hidden md:flex-row">
+            {/* Left Panel - Hidden on mobile, visible on tablet+ */}
+            <div className="hidden md:block md:w-2/5 lg:w-1/2 h-full flex-shrink-0">
                 <LeftPanel logoUrl="/images/logo-white.png" />
             </div>
 
-            {/* Right Panel */}
+            {/* Right Panel - Full width on mobile */}
             <div className="flex-1 h-full overflow-y-auto">
                 <RightPanel
                     progressSteps={steps}
@@ -125,13 +125,13 @@ const ForgotPassword: React.FC = () => {
                 </RightPanel>
             </div>
 
-            {/* Success Modal */}
+            {/* Success Modal - Responsive */}
             {state.isSuccess && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
-                        <div className="w-16 h-16 rounded-full bg-[#D6F5DA] flex items-center justify-center mx-auto mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#D6F5DA]">
                             <svg
-                                className="w-8 h-8 text-[#267F50]"
+                                className="h-8 w-8 text-[#267F50]"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -145,13 +145,13 @@ const ForgotPassword: React.FC = () => {
                             </svg>
                         </div>
                         <h3
-                            className="text-2xl font-bold text-[#1F083B] mb-2"
+                            className="mb-2 text-xl font-bold text-[#1F083B] sm:text-2xl"
                             style={{ fontFamily: "Outfit" }}
                         >
                             Password Reset Successfully
                         </h3>
                         <p
-                            className="text-[#5B646F] mb-6"
+                            className="mb-6 text-sm text-[#5B646F] sm:text-base"
                             style={{ fontFamily: "Outfit" }}
                         >
                             Your password has been reset. You can now login with
@@ -159,7 +159,7 @@ const ForgotPassword: React.FC = () => {
                         </p>
                         <button
                             onClick={handleComplete}
-                            className="w-full bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition"
+                            className="w-full rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90"
                             style={{ fontFamily: "Outfit" }}
                         >
                             Login Now

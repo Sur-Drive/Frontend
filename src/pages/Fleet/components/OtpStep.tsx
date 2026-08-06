@@ -117,29 +117,20 @@ const OtpStep: React.FC<OtpStepProps> = ({
     };
 
     return (
-        <div
-            className="flex w-full flex-col items-center"
-            style={{ width: "520px", height: "395px", gap: "40px" }}
-        >
+        <div className="flex w-full max-w-[520px] flex-col items-center gap-6 px-4 sm:gap-8 md:gap-10">
             {/* Header */}
-            <div className="flex flex-col items-center gap-4 text-center">
-                <h1
-                    className="text-[40px] font-bold leading-[100%] text-black"
-                    style={{ fontFamily: "Outfit" }}
-                >
+            <div className="flex w-full flex-col items-center gap-3 text-center sm:gap-4">
+                <h1 className="text-2xl font-bold leading-[100%] text-black sm:text-3xl md:text-[32px] lg:text-[40px]">
                     Enter verification code
                 </h1>
-                <p
-                    className="text-[18px] font-normal leading-[150%]"
-                    style={{ fontFamily: "Outfit", color: "#8E98A8" }}
-                >
+                <p className="text-sm font-normal leading-[150%] text-[#8E98A8] sm:text-base md:text-[18px]">
                     We have just sent a verification code to{" "}
                     <strong className="text-[#1F083B]">{maskedEmail}</strong>
                 </p>
             </div>
 
             {/* OTP Inputs */}
-            <div className="flex justify-center gap-3">
+            <div className="flex w-full max-w-[400px] justify-center gap-2 sm:gap-3">
                 {otp.map((digit, index) => (
                     <input
                         key={index}
@@ -151,7 +142,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                         onChange={(e) => handleChange(index, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(index, e)}
                         onPaste={handlePaste}
-                        className="h-16 w-16 rounded-xl border-2 text-center text-2xl font-semibold transition focus:border-[#6E43A3] focus:outline-none focus:ring-2 focus:ring-[#6E43A3]/20"
+                        className="h-12 w-12 rounded-xl border-2 text-center text-xl font-semibold transition focus:border-[#6E43A3] focus:outline-none focus:ring-2 focus:ring-[#6E43A3]/20 sm:h-14 sm:w-14 sm:text-2xl md:h-16 md:w-16"
                         style={{
                             backgroundColor: "#F9FAFB",
                             borderColor: digit ? "#0A2342" : "#D1D5DB",
@@ -176,14 +167,14 @@ const OtpStep: React.FC<OtpStepProps> = ({
             )}
 
             {/* Resend */}
-            <div className="flex w-full items-center justify-between">
+            <div className="flex w-full flex-col items-center gap-2 sm:flex-row sm:justify-between">
                 <button
                     onClick={handleResend}
                     disabled={!canResend}
                     className={`text-sm font-medium transition ${
                         canResend
                             ? "hover:opacity-70"
-                            : "opacity-50 cursor-not-allowed"
+                            : "cursor-not-allowed opacity-50"
                     }`}
                     style={{ color: "#7A8492", fontFamily: "Outfit" }}
                 >
@@ -203,14 +194,11 @@ const OtpStep: React.FC<OtpStepProps> = ({
             {/* Continue Button */}
             <button
                 onClick={handleSubmit}
-                className="w-full rounded-2xl px-6 py-3 text-white transition hover:opacity-90 disabled:opacity-50"
+                className="h-14 w-full rounded-2xl px-6 py-3 text-base font-semibold text-white transition hover:opacity-90 disabled:opacity-50 sm:h-[56px]"
                 style={{
                     backgroundColor: "#6E43A3",
-                    height: "56px",
                     borderRadius: "16px",
                     fontFamily: "Outfit",
-                    fontSize: "16px",
-                    fontWeight: 600,
                 }}
                 disabled={otp.some((d) => !d)}
             >

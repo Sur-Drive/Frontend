@@ -170,22 +170,19 @@ const OtpStep: React.FC<OtpStepProps> = ({
 
     return (
         <div
-            className="flex w-full flex-col items-center"
-            style={{ gap: "40px" }}
+            className="flex w-full max-w-full flex-col items-center px-4 sm:px-6 md:px-0"
+            style={{ gap: "32px" }}
         >
             {/* Header */}
-            <div
-                className="flex flex-col items-center text-center"
-                style={{ width: "520px", gap: "16px" }}
-            >
+            <div className="flex w-full max-w-[520px] flex-col items-center gap-3 text-center sm:gap-4">
                 <h1
-                    className="text-[32px] font-bold text-black"
+                    className="text-2xl font-bold text-black sm:text-[28px] md:text-[32px]"
                     style={{ fontFamily: "Outfit" }}
                 >
                     Verify OTP
                 </h1>
                 <p
-                    className="text-[16px] text-[#8E98A8]"
+                    className="text-sm text-[#8E98A8] sm:text-base"
                     style={{ fontFamily: "Outfit" }}
                 >
                     We sent a 6-digit code to{" "}
@@ -194,14 +191,10 @@ const OtpStep: React.FC<OtpStepProps> = ({
             </div>
 
             {/* Form */}
-            <form
-                onSubmit={handleSubmit}
-                className="w-full"
-                style={{ maxWidth: "520px" }}
-            >
-                <div className="flex flex-col gap-8">
+            <form onSubmit={handleSubmit} className="w-full max-w-[520px]">
+                <div className="flex flex-col gap-6 sm:gap-8">
                     {/* OTP Inputs */}
-                    <div className="flex justify-center gap-3">
+                    <div className="flex justify-center gap-2 sm:gap-3">
                         {otp.map((digit, index) => (
                             <input
                                 key={index}
@@ -214,7 +207,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                                 }
                                 onKeyDown={(e) => handleKeyDown(index, e)}
                                 onPaste={handlePaste}
-                                className="w-14 h-16 text-center text-2xl font-bold border border-[#D1D5DB] rounded-xl focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] outline-none transition"
+                                className="h-12 w-12 rounded-xl border border-[#D1D5DB] text-center text-xl font-bold outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:w-14 sm:text-2xl md:h-16 md:w-16"
                                 style={{ fontFamily: "Outfit" }}
                                 autoFocus={index === 0}
                             />
@@ -222,7 +215,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                     </div>
 
                     {/* Timer & Resend */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between sm:gap-0">
                         <span
                             className="text-sm text-[#8E98A8]"
                             style={{ fontFamily: "Outfit" }}
@@ -237,7 +230,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                             disabled={timer > 0}
                             className={`text-sm font-medium transition ${
                                 timer > 0
-                                    ? "text-[#8E98A8] cursor-not-allowed"
+                                    ? "cursor-not-allowed text-[#8E98A8]"
                                     : "text-[#6E43A3] hover:underline"
                             }`}
                             style={{ fontFamily: "Outfit" }}
@@ -248,14 +241,11 @@ const OtpStep: React.FC<OtpStepProps> = ({
 
                     <button
                         type="submit"
-                        className="w-full rounded-2xl px-6 py-3 text-white transition hover:opacity-90"
+                        className="h-14 w-full rounded-2xl px-6 py-3 text-base font-semibold text-white transition hover:opacity-90 sm:h-[56px]"
                         style={{
                             backgroundColor: "#6E43A3",
-                            height: "56px",
                             borderRadius: "16px",
                             fontFamily: "Outfit",
-                            fontSize: "16px",
-                            fontWeight: 600,
                         }}
                     >
                         Verify OTP
@@ -264,7 +254,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                     <button
                         type="button"
                         onClick={onBack}
-                        className="flex items-center justify-center gap-2 text-sm text-[#8E98A8] hover:text-[#6E43A3] transition"
+                        className="flex items-center justify-center gap-2 text-sm text-[#8E98A8] transition hover:text-[#6E43A3] sm:text-base"
                         style={{ fontFamily: "Outfit" }}
                     >
                         <ArrowLeft size={16} />

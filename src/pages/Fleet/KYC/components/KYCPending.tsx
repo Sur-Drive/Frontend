@@ -117,7 +117,7 @@ const KYCPending: React.FC = () => {
                             >
                                 Need help? Contact us at{" "}
                                 <span className="text-[#6E43A3] font-medium">
-                                    support@surdrive.com
+                                    surdriveht@gmail.com
                                 </span>
                             </p>
                         </div>

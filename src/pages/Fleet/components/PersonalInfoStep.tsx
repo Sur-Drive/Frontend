@@ -47,27 +47,20 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     return (
         <form
             onSubmit={handleSubmit}
-            className="w-full"
-            style={{ width: "520px" }}
+            className="w-full max-w-[520px] px-4 sm:px-0"
         >
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:gap-6">
                 {/* Heading */}
                 <div className="text-center">
-                    <h2
-                        className="text-[32px] font-bold leading-[100%] text-black"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                    <h2 className="text-2xl font-bold leading-[100%] text-black sm:text-[28px] md:text-[32px]">
                         Personal Information
                     </h2>
-                    <p
-                        className="mt-2 text-[#8E98A8]"
-                        style={{ fontFamily: "Outfit", fontSize: "16px" }}
-                    >
+                    <p className="mt-2 text-sm text-[#8E98A8] sm:text-base">
                         Please provide your personal details
                     </p>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-4">
                     <div className="flex-1">
                         <label className="mb-1 block text-sm font-medium text-[#1F083B]">
                             First Name
@@ -81,7 +74,7 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                                     firstName: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter your first name"
                             required
                         />
@@ -99,7 +92,7 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                                     lastName: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter your last name"
                             required
                         />
@@ -115,7 +108,7 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                         onChange={(e) =>
                             setFormData({ ...formData, gender: e.target.value })
                         }
-                        className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                        className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                         required
                     >
                         <option value="">Select gender</option>
@@ -137,7 +130,7 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                                 dateOfBirth: e.target.value,
                             })
                         }
-                        className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                        className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                         required
                     />
                 </div>
@@ -155,21 +148,18 @@ const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                                 occupation: e.target.value,
                             })
                         }
-                        className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                        className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                         placeholder="Enter your occupation (optional)"
                     />
                 </div>
 
                 <button
                     type="submit"
-                    className="w-full rounded-2xl px-6 py-3 text-white transition hover:opacity-90"
+                    className="h-14 w-full rounded-2xl px-6 py-3 text-base font-semibold text-white transition hover:opacity-90 sm:h-[56px]"
                     style={{
                         backgroundColor: "#6E43A3",
-                        height: "56px",
                         borderRadius: "16px",
                         fontFamily: "Outfit",
-                        fontSize: "16px",
-                        fontWeight: 600,
                     }}
                 >
                     Continue

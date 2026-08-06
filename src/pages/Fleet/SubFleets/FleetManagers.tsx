@@ -1833,20 +1833,14 @@ const FleetManagers: React.FC = () => {
             )}
             {/* VIEW MANAGER DETAILS MODAL */}
             {showViewModal && selectedManager && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-                        <div className="flex justify-between items-start mb-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8">
+                        <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Manager Details
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Manager profile, scope, and assignments.
                                 </p>
                             </div>
@@ -1855,32 +1849,29 @@ const FleetManagers: React.FC = () => {
                                     setShowViewModal(false);
                                     setSelectedManager(null);
                                 }}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
 
                         {/* Divider */}
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
-                        {/* Manager Profile - White background */}
-                        <div className="flex items-start justify-between">
+                        {/* Manager Profile */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full bg-[#EDE8F4] flex items-center justify-center text-[#6E43A3] font-semibold text-lg">
+                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#EDE8F4] text-lg font-semibold text-[#6E43A3]">
                                     {getInitials(selectedManager)}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className="text-base font-bold text-[#1A2A3F]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-base font-bold text-[#1A2A3F]">
                                             {selectedManager.user?.firstName}{" "}
                                             {selectedManager.user?.lastName}
-                                        </div>
+                                        </span>
                                         <span
-                                            className={`px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getRoleColor(selectedManager.role)}`}
+                                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${getRoleColor(selectedManager.role)}`}
                                         >
                                             <Shield size={12} />
                                             {selectedManager.role
@@ -1891,19 +1882,16 @@ const FleetManagers: React.FC = () => {
                                                 : "Manager"}
                                         </span>
                                     </div>
-                                    <div
-                                        className="text-sm text-[#5B646F]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <div className="truncate text-sm text-[#5B646F]">
                                         {selectedManager.user?.email || ""}
                                     </div>
                                 </div>
                             </div>
-                            <div>
+                            <div className="flex-shrink-0">
                                 <span
-                                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getStatusColor(selectedManager.status)}`}
+                                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(selectedManager.status)}`}
                                 >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
                                     {selectedManager.status
                                         ? selectedManager.status
                                               .charAt(0)
@@ -1914,68 +1902,49 @@ const FleetManagers: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Stats Cards - Greyish background */}
-                        <div className="grid grid-cols-3 gap-3 mt-4">
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        {/* Stats Cards */}
+                        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Sub-fleet
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-base font-bold text-[#1A2A3F]">
                                     {selectedManager.subFleet?.name || "-"}
                                 </div>
                             </div>
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Vehicles
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-base font-bold text-[#1A2A3F]">
                                     {selectedManager.subFleet?.vehicleCount ||
                                         0}
                                 </div>
                             </div>
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Drivers
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-base font-bold text-[#1A2A3F]">
                                     {selectedManager.subFleet?.driverCount || 0}
                                 </div>
                             </div>
                         </div>
 
                         {/* Divider before actions */}
-                        <div className="h-px w-full bg-[#E5E7EB] my-6" />
+                        <div className="my-4 h-px w-full bg-[#E5E7EB] sm:my-6" />
 
-                        {/* Action Buttons with Icons */}
-                        <div className="flex gap-3">
+                        {/* Action Buttons */}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                             <button
                                 onClick={() => {
                                     setShowViewModal(false);
                                     setSelectedManager(null);
                                     setShowRemoveModal(true);
                                 }}
-                                className="flex-1 px-6 py-3 rounded-xl text-[#B71C1C] border border-[#B71C1C] hover:bg-[#B71C1C] hover:text-white transition flex items-center justify-center gap-2"
-                                style={{ fontFamily: "Outfit" }}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#B71C1C] px-4 py-3 text-sm text-[#B71C1C] transition hover:bg-[#B71C1C] hover:text-white sm:flex-1 sm:px-6"
                             >
-                                <Trash2 size={18} />
+                                <Trash2 size={16} className="sm:size-[18px]" />
                                 Remove Manager
                             </button>
                             {selectedManager.status === "suspended" ? (
@@ -1985,10 +1954,12 @@ const FleetManagers: React.FC = () => {
                                         setSelectedManager(selectedManager);
                                         setShowReactivateModal(true);
                                     }}
-                                    className="flex-1 bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6E43A3] px-4 py-3 text-sm text-white transition hover:opacity-90 sm:flex-1 sm:px-6"
                                 >
-                                    <RefreshCw size={18} />
+                                    <RefreshCw
+                                        size={16}
+                                        className="sm:size-[18px]"
+                                    />
                                     Reactivate
                                 </button>
                             ) : selectedManager.status === "pending" ||
@@ -1999,10 +1970,12 @@ const FleetManagers: React.FC = () => {
                                         setSelectedManager(selectedManager);
                                         setShowResendModal(true);
                                     }}
-                                    className="flex-1 bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6E43A3] px-4 py-3 text-sm text-white transition hover:opacity-90 sm:flex-1 sm:px-6"
                                 >
-                                    <Mail size={18} />
+                                    <Mail
+                                        size={16}
+                                        className="sm:size-[18px]"
+                                    />
                                     Resend Invite
                                 </button>
                             ) : (
@@ -2012,10 +1985,9 @@ const FleetManagers: React.FC = () => {
                                         setSelectedManager(selectedManager);
                                         setShowSuspendModal(true);
                                     }}
-                                    className="flex-1 bg-[#F2A618] text-white px-6 py-3 rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#F2A618] px-4 py-3 text-sm text-white transition hover:opacity-90 sm:flex-1 sm:px-6"
                                 >
-                                    <Ban size={18} />
+                                    <Ban size={16} className="sm:size-[18px]" />
                                     Suspend Manager
                                 </button>
                             )}

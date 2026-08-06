@@ -37,33 +37,26 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
     const isFreePlan = data.plan === "free_trial" || data.plan === "enterprise";
 
     return (
-        <div className="flex w-full flex-col" style={{ gap: "40px" }}>
+        <div
+            className="flex w-full max-w-full flex-col px-4 sm:px-8 md:px-12 lg:px-0 pt-14 sm:pt-0"
+            style={{ gap: "32px" }}
+        >
             {/* Header */}
             <div>
-                <h2
-                    className="text-[32px] font-bold text-black"
-                    style={{ fontFamily: "Outfit" }}
-                >
+                <h2 className="text-2xl font-bold text-black sm:text-[28px] md:text-[32px]">
                     Subscription Summary
                 </h2>
-                <p
-                    className="text-[#8E98A8]"
-                    style={{ fontFamily: "Outfit", fontSize: "16px" }}
-                >
+                <p className="mt-1 text-sm text-[#8E98A8] sm:text-base">
                     Review your subscription details before proceeding to
                     payment.
                 </p>
             </div>
+
             {/* Selected Plan Container */}
             <div
-                className="flex justify-between items-center"
+                className="flex w-full flex-col items-start gap-4 rounded-xl border border-[#E0E5EB] bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6"
                 style={{
-                    width: "100%",
-                    maxWidth: "558px",
-                    border: "1px solid #E0E5EB",
-                    borderRadius: "12px",
-                    padding: "24px",
-                    backgroundColor: "white",
+                    maxWidth: "100%",
                 }}
             >
                 <div className="flex flex-col gap-1">
@@ -89,7 +82,7 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
                 </div>
                 <button
                     onClick={onBack}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition hover:bg-gray-50"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 transition hover:bg-gray-50 sm:w-auto"
                     style={{
                         color: "#6E43A3",
                         fontFamily: "Outfit",
@@ -122,21 +115,17 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
                     Change
                 </button>
             </div>
+
             {/* Summary Container */}
             <div
-                className="flex flex-col"
+                className="flex w-full flex-col rounded-xl border border-[#E0E5EB] bg-white p-4 sm:p-6"
                 style={{
-                    width: "100%",
-                    maxWidth: "558px",
-                    border: "1px solid #E0E5EB",
-                    borderRadius: "12px",
-                    padding: "24px",
+                    maxWidth: "100%",
                     gap: "12px",
-                    backgroundColor: "white",
                 }}
             >
                 {/* Vehicle Row */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <span
                         className="text-sm"
                         style={{
@@ -159,7 +148,7 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
                 </div>
 
                 {/* Price Row */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <span
                         className="text-sm"
                         style={{
@@ -184,7 +173,7 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
                 </div>
 
                 {/* Billing Row */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <span
                         className="text-sm"
                         style={{
@@ -207,7 +196,7 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
                 </div>
 
                 {/* Estimated Monthly Cost */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <span
                         className="text-sm"
                         style={{
@@ -241,7 +230,7 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
                 />
 
                 {/* Total Payment */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <span
                         className="text-sm font-semibold"
                         style={{
@@ -264,24 +253,24 @@ const SubscriptionSummaryStep: React.FC<SubscriptionSummaryStepProps> = ({
                     </span>
                 </div>
             </div>
+
             {/* Buttons */}
-            <div className="flex justify-between items-center gap-4">
+            <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div></div>
                 <button
                     onClick={onComplete}
                     disabled={loading}
-                    className="rounded-xl px-6 py-3 font-semibold text-white transition hover:opacity-90 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-8"
                     style={{
                         backgroundColor: "#6E43A3",
                         fontFamily: "Outfit",
                         minWidth: "200px",
-                        justifyContent: "center",
                     }}
                 >
                     {loading ? (
                         <>
                             <svg
-                                className="animate-spin h-5 w-5"
+                                className="h-5 w-5 animate-spin"
                                 viewBox="0 0 24 24"
                             >
                                 <circle

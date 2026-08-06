@@ -22,21 +22,15 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
 
     return (
         <div
-            className="flex w-full flex-col"
-            style={{ gap: "32px", paddingTop: "60px" }}
+            className="flex w-full max-w-full flex-col px-4 sm:px-6 md:px-0"
+            style={{ gap: "24px", paddingTop: "30px" }}
         >
             {/* Header */}
             <div>
-                <h2
-                    className="text-[32px] font-bold text-black"
-                    style={{ fontFamily: "Outfit" }}
-                >
+                <h2 className="text-2xl font-bold text-black sm:text-[28px] md:text-[32px]">
                     Company Details
                 </h2>
-                <p
-                    className="text-[#8E98A8]"
-                    style={{ fontFamily: "Outfit", fontSize: "16px" }}
-                >
+                <p className="text-sm text-[#8E98A8] sm:text-base">
                     This information helps us create and secure your account.
                 </p>
             </div>
@@ -45,12 +39,12 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
             <form
                 onSubmit={handleSubmit}
                 className="flex flex-col"
-                style={{ gap: "32px" }}
+                style={{ gap: "24px" }}
             >
                 {/* Row 1: Company Name & Industry */}
-                <div className="flex gap-6">
-                    <div className="flex-1" style={{ width: "354px" }}>
-                        <label className="mb-2 block text-sm font-medium text-[#1F083B]">
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+                    <div className="flex-1">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Company Name
                         </label>
                         <input
@@ -62,13 +56,13 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                                     companyName: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter company name"
                             required
                         />
                     </div>
-                    <div className="flex-1" style={{ width: "354px" }}>
-                        <label className="mb-2 block text-sm font-medium text-[#1F083B]">
+                    <div className="flex-1">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Industry
                         </label>
                         <input
@@ -80,7 +74,7 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                                     industry: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter industry"
                             required
                         />
@@ -88,9 +82,9 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                 </div>
 
                 {/* Row 2: Fleet Name & Region */}
-                <div className="flex gap-6">
-                    <div className="flex-1" style={{ width: "354px" }}>
-                        <label className="mb-2 block text-sm font-medium text-[#1F083B]">
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+                    <div className="flex-1">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Fleet Name
                         </label>
                         <input
@@ -102,13 +96,13 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                                     fleetName: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter fleet name"
                             required
                         />
                     </div>
-                    <div className="flex-1" style={{ width: "354px" }}>
-                        <label className="mb-2 block text-sm font-medium text-[#1F083B]">
+                    <div className="flex-1">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Region
                         </label>
                         <input
@@ -120,7 +114,7 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                                     region: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter region"
                             required
                         />
@@ -128,9 +122,9 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                 </div>
 
                 {/* Row 3: Operations Contact & Phone */}
-                <div className="flex gap-6">
-                    <div className="flex-1" style={{ width: "354px" }}>
-                        <label className="mb-2 block text-sm font-medium text-[#1F083B]">
+                <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+                    <div className="flex-1">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Operations Contact
                         </label>
                         <input
@@ -142,13 +136,13 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                                     operationsContact: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter contact email"
                             required
                         />
                     </div>
-                    <div className="flex-1" style={{ width: "354px" }}>
-                        <label className="mb-2 block text-sm font-medium text-[#1F083B]">
+                    <div className="flex-1">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Company Phone
                         </label>
                         <input
@@ -160,7 +154,7 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                                     companyPhone: e.target.value,
                                 })
                             }
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             placeholder="Enter phone number"
                             required
                         />
@@ -169,7 +163,7 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
 
                 {/* Row 4: Brief Description - Full width */}
                 <div>
-                    <label className="mb-2 block text-sm font-medium text-[#1F083B]">
+                    <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                         Brief Description
                     </label>
                     <textarea
@@ -180,7 +174,7 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                                 briefDescription: e.target.value,
                             })
                         }
-                        className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                        className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:text-base"
                         placeholder="Tell us about your business"
                         rows={3}
                     />
@@ -190,10 +184,9 @@ const CompanyDetailsStep: React.FC<CompanyDetailsStepProps> = ({ onNext }) => {
                 <div className="flex justify-end">
                     <button
                         type="submit"
-                        className="flex items-center gap-2 rounded-xl px-10 py-3 text-white transition hover:opacity-90"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-white transition hover:opacity-90 sm:w-auto sm:px-10"
                         style={{
                             backgroundColor: "#6E43A3",
-                            width: "188px",
                             height: "56px",
                             borderRadius: "12px",
                             fontFamily: "Outfit",

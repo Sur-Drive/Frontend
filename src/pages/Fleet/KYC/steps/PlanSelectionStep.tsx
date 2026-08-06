@@ -105,72 +105,72 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ onNext }) => {
 
     return (
         <div
-            className="flex w-full flex-col"
-            style={{ gap: "32px", paddingTop: "20px", paddingBottom: "20px" }}
+            className="flex w-full max-w-full flex-col px-4 sm:px-8 md:px-12 lg:px-0"
+            style={{ gap: "32px", paddingTop: "30px", paddingBottom: "30px" }}
         >
             {/* Header - Left Aligned */}
             <div className="text-left">
-                <h2
-                    className="text-[40px] font-bold leading-[100%] text-black"
-                    style={{ fontFamily: "Outfit" }}
-                >
+                <h2 className="text-3xl font-bold leading-[100%] text-black sm:text-4xl md:text-[40px]">
                     Pick a subscription
                 </h2>
-                <p
-                    className="text-[#8E98A8]"
-                    style={{ fontFamily: "Outfit", fontSize: "18px" }}
-                >
+                <p className="mt-2 text-base text-[#8E98A8] sm:text-lg md:text-[18px]">
                     14-day free trial. Cancel anytime.
                 </p>
             </div>
 
             {/* Plan Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+            <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
                 {plans.map((plan) => {
                     const isSelected = selectedCard === plan.id;
 
                     return (
                         <div
                             key={plan.id}
-                            className="flex flex-col rounded-xl border p-6 transition-all w-full h-fit"
+                            className="flex h-fit w-full flex-col rounded-2xl border-2 p-6 transition-all hover:shadow-lg sm:p-8"
                             style={{
                                 borderColor: isSelected ? "#6E43A3" : "#E5E7EB",
                                 backgroundColor: "white",
                                 boxShadow: isSelected
-                                    ? "0 4px 20px rgba(110, 67, 163, 0.15)"
+                                    ? "0 8px 30px rgba(110, 67, 163, 0.15)"
                                     : "none",
                             }}
                         >
                             {/* Plan Name */}
-                            <h3
-                                className="text-2xl font-bold text-[#1F083B]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                            <h3 className="text-2xl font-bold text-[#1F083B] sm:text-3xl">
                                 {plan.name}
                             </h3>
 
                             {/* Description */}
-                            <p
-                                className="mt-2 text-sm text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                            <p className="mt-2 text-base text-[#8E98A8] sm:text-lg">
                                 {plan.description}
                             </p>
 
                             {/* Price */}
-                            <div className="my-4">
-                                <span
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="my-4 sm:my-6">
+                                <span className="text-3xl font-bold text-[#1F083B] sm:text-4xl">
                                     {plan.price}
                                 </span>
+                                {plan.id === "starter" && (
+                                    <span className="ml-2 text-base text-[#8E98A8] sm:text-lg">
+                                        /month
+                                    </span>
+                                )}
+                                {plan.id === "pro" && (
+                                    <span className="ml-2 text-base text-[#8E98A8] sm:text-lg">
+                                        /month
+                                    </span>
+                                )}
+                                {plan.id === "enterprise" && (
+                                    <span className="ml-2 text-base text-[#8E98A8] sm:text-lg">
+                                        /custom
+                                    </span>
+                                )}
                             </div>
 
-                            {/* Select Button - Changes to "Selected" when clicked */}
+                            {/* Select Button */}
                             <button
                                 onClick={() => handleSelect(plan.id)}
-                                className="w-full rounded-xl px-6 py-3 font-semibold transition"
+                                className="w-full rounded-xl px-6 py-3.5 text-base font-semibold transition hover:opacity-80 sm:py-4 sm:text-lg"
                                 style={{
                                     backgroundColor: isSelected
                                         ? "transparent"
@@ -182,18 +182,18 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ onNext }) => {
                                     fontFamily: "Outfit",
                                 }}
                             >
-                                {isSelected ? "Selected" : plan.buttonText}
+                                {isSelected ? "✓ Selected" : plan.buttonText}
                             </button>
 
                             {/* Features */}
-                            <div className="mt-4 flex flex-col gap-2">
+                            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:gap-3.5">
                                 {plan.features.map((feature, idx) => (
                                     <div
                                         key={idx}
-                                        className="flex items-start gap-2"
+                                        className="flex items-start gap-3"
                                     >
                                         <div
-                                            className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                                            className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
                                             style={{
                                                 backgroundColor: isSelected
                                                     ? "#6E43A3"
@@ -201,8 +201,8 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ onNext }) => {
                                             }}
                                         >
                                             <svg
-                                                width="12"
-                                                height="12"
+                                                width="14"
+                                                height="14"
                                                 viewBox="0 0 12 12"
                                                 fill="none"
                                             >
@@ -216,7 +216,7 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ onNext }) => {
                                             </svg>
                                         </div>
                                         <span
-                                            className="text-sm"
+                                            className="text-base"
                                             style={{
                                                 color: isSelected
                                                     ? "#1F083B"
@@ -235,25 +235,20 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ onNext }) => {
             </div>
 
             {/* Continue Button */}
-            <div className="flex justify-end w-full">
+            <div className="flex w-full justify-end pt-4">
                 <button
                     onClick={handleContinue}
-                    className="rounded-xl px-10 py-3 text-white transition hover:opacity-90 flex items-center gap-2"
+                    className="flex w-full items-center justify-center gap-3 rounded-xl px-8 py-4 text-base font-semibold text-white transition hover:opacity-90 sm:w-auto sm:px-12 sm:py-4 sm:text-lg"
                     style={{
                         backgroundColor: "#6E43A3",
-                        width: "188px",
-                        height: "56px",
                         borderRadius: "12px",
                         fontFamily: "Outfit",
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        justifyContent: "center",
                     }}
                 >
                     Continue
                     <svg
-                        width="20"
-                        height="20"
+                        width="22"
+                        height="22"
                         viewBox="0 0 20 20"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"

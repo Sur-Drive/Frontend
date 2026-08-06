@@ -93,22 +93,19 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
 
     return (
         <div
-            className="flex w-full flex-col items-center"
-            style={{ gap: "40px" }}
+            className="flex w-full max-w-full flex-col items-center px-4 sm:px-6 md:px-0"
+            style={{ gap: "32px" }}
         >
             {/* Header */}
-            <div
-                className="flex flex-col items-center text-center"
-                style={{ width: "520px", gap: "16px" }}
-            >
+            <div className="flex w-full max-w-[520px] flex-col items-center gap-3 text-center sm:gap-4">
                 <h1
-                    className="text-[32px] font-bold text-black"
+                    className="text-2xl font-bold text-black sm:text-[28px] md:text-[32px]"
                     style={{ fontFamily: "Outfit" }}
                 >
                     Create New Password
                 </h1>
                 <p
-                    className="text-[16px] text-[#8E98A8]"
+                    className="text-sm text-[#8E98A8] sm:text-base"
                     style={{ fontFamily: "Outfit" }}
                 >
                     Enter your new password below.
@@ -116,14 +113,10 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
             </div>
 
             {/* Form */}
-            <form
-                onSubmit={handleSubmit}
-                className="w-full"
-                style={{ maxWidth: "520px" }}
-            >
-                <div className="flex flex-col gap-6">
+            <form onSubmit={handleSubmit} className="w-full max-w-[520px]">
+                <div className="flex flex-col gap-4 sm:gap-6">
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-[#1F083B]">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             New Password
                         </label>
                         <div className="relative">
@@ -132,23 +125,24 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Enter new password"
-                                className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                                className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                                 style={{
-                                    height: "56px",
                                     fontFamily: "Outfit",
-                                    fontSize: "16px",
                                 }}
                                 required
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E98A8] hover:text-[#1F083B]"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E98A8] transition hover:text-[#1F083B]"
                             >
                                 {showPassword ? (
-                                    <EyeOff size={20} />
+                                    <EyeOff
+                                        size={18}
+                                        className="sm:size-[20px]"
+                                    />
                                 ) : (
-                                    <Eye size={20} />
+                                    <Eye size={18} className="sm:size-[20px]" />
                                 )}
                             </button>
                         </div>
@@ -191,7 +185,7 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-[#1F083B]">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Confirm Password
                         </label>
                         <div className="relative">
@@ -202,11 +196,9 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
                                     setConfirmPassword(e.target.value)
                                 }
                                 placeholder="Confirm new password"
-                                className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                                className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                                 style={{
-                                    height: "56px",
                                     fontFamily: "Outfit",
-                                    fontSize: "16px",
                                 }}
                                 required
                             />
@@ -215,12 +207,15 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
                                 onClick={() =>
                                     setShowConfirmPassword(!showConfirmPassword)
                                 }
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E98A8] hover:text-[#1F083B]"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E98A8] transition hover:text-[#1F083B]"
                             >
                                 {showConfirmPassword ? (
-                                    <EyeOff size={20} />
+                                    <EyeOff
+                                        size={18}
+                                        className="sm:size-[20px]"
+                                    />
                                 ) : (
-                                    <Eye size={20} />
+                                    <Eye size={18} className="sm:size-[20px]" />
                                 )}
                             </button>
                         </div>
@@ -236,14 +231,11 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
 
                     <button
                         type="submit"
-                        className="w-full rounded-2xl px-6 py-3 text-white transition hover:opacity-90"
+                        className="h-14 w-full rounded-2xl px-6 py-3 text-base font-semibold text-white transition hover:opacity-90 sm:h-[56px]"
                         style={{
                             backgroundColor: "#6E43A3",
-                            height: "56px",
                             borderRadius: "16px",
                             fontFamily: "Outfit",
-                            fontSize: "16px",
-                            fontWeight: 600,
                         }}
                     >
                         Reset Password
@@ -252,7 +244,7 @@ const ResetPasswordStep: React.FC<ResetPasswordStepProps> = ({
                     <button
                         type="button"
                         onClick={onBack}
-                        className="flex items-center justify-center gap-2 text-sm text-[#8E98A8] hover:text-[#6E43A3] transition"
+                        className="flex items-center justify-center gap-2 text-sm text-[#8E98A8] transition hover:text-[#6E43A3] sm:text-base"
                         style={{ fontFamily: "Outfit" }}
                     >
                         <ArrowLeft size={16} />

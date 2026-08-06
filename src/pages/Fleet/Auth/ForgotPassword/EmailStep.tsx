@@ -62,22 +62,19 @@ const EmailStep: React.FC<EmailStepProps> = ({
 
     return (
         <div
-            className="flex w-full flex-col items-center"
-            style={{ gap: "40px" }}
+            className="flex w-full max-w-full flex-col items-center px-4 sm:px-6 md:px-0"
+            style={{ gap: "32px" }}
         >
             {/* Header */}
-            <div
-                className="flex flex-col items-center text-center"
-                style={{ width: "520px", gap: "16px" }}
-            >
+            <div className="flex w-full max-w-[520px] flex-col items-center gap-3 text-center sm:gap-4">
                 <h1
-                    className="text-[32px] font-bold text-black"
+                    className="text-2xl font-bold text-black sm:text-[28px] md:text-[32px]"
                     style={{ fontFamily: "Outfit" }}
                 >
                     Forgot Password?
                 </h1>
                 <p
-                    className="text-[16px] text-[#8E98A8]"
+                    className="text-sm text-[#8E98A8] sm:text-base"
                     style={{ fontFamily: "Outfit" }}
                 >
                     Enter your email or phone number to receive a password reset
@@ -86,14 +83,10 @@ const EmailStep: React.FC<EmailStepProps> = ({
             </div>
 
             {/* Form */}
-            <form
-                onSubmit={handleSubmit}
-                className="w-full"
-                style={{ maxWidth: "520px" }}
-            >
-                <div className="flex flex-col gap-6">
+            <form onSubmit={handleSubmit} className="w-full max-w-[520px]">
+                <div className="flex flex-col gap-4 sm:gap-6">
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-[#1F083B]">
+                        <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
                             Email or Phone
                         </label>
                         <input
@@ -101,11 +94,9 @@ const EmailStep: React.FC<EmailStepProps> = ({
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
                             placeholder="Enter your email or phone number"
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
+                            className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             style={{
-                                height: "56px",
                                 fontFamily: "Outfit",
-                                fontSize: "16px",
                             }}
                             required
                         />
@@ -113,14 +104,11 @@ const EmailStep: React.FC<EmailStepProps> = ({
 
                     <button
                         type="submit"
-                        className="w-full rounded-2xl px-6 py-3 text-white transition hover:opacity-90"
+                        className="h-14 w-full rounded-2xl px-6 py-3 text-base font-semibold text-white transition hover:opacity-90 sm:h-[56px]"
                         style={{
                             backgroundColor: "#6E43A3",
-                            height: "56px",
                             borderRadius: "16px",
                             fontFamily: "Outfit",
-                            fontSize: "16px",
-                            fontWeight: 600,
                         }}
                     >
                         Send Reset OTP
@@ -129,7 +117,7 @@ const EmailStep: React.FC<EmailStepProps> = ({
                     <button
                         type="button"
                         onClick={onBack}
-                        className="flex items-center justify-center gap-2 text-sm text-[#8E98A8] hover:text-[#6E43A3] transition"
+                        className="flex items-center justify-center gap-2 text-sm text-[#8E98A8] transition hover:text-[#6E43A3] sm:text-base"
                         style={{ fontFamily: "Outfit" }}
                     >
                         <ArrowLeft size={16} />
