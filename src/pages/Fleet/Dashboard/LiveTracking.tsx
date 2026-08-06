@@ -1,4 +1,3 @@
-// src/pages/Fleet/LiveTracking/LiveTracking.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,13 +9,9 @@ import {
     AlertTriangle,
     Activity,
     Navigation,
-    Circle,
     AlertCircle,
     Search,
     Truck,
-    Users,
-    TrendingUp,
-    Eye,
 } from "lucide-react";
 import DashSidebar from "../Dashboard/DashSidebar";
 
@@ -486,100 +481,94 @@ const LiveTracking: React.FC = () => {
 
     return (
         <DashSidebar>
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
+                <div className="mb-4 flex flex-wrap items-center gap-3 sm:gap-4 sm:mb-6">
                     <button
                         onClick={() => navigate("/fleet/dashboard")}
-                        className="p-2 hover:bg-[#F8F8F8] rounded-lg transition flex items-center gap-2"
+                        className="flex items-center gap-2 rounded-lg p-2 transition hover:bg-[#F8F8F8]"
                     >
                         <ArrowLeft size={20} className="text-[#6E43A3]" />
                     </button>
                     <div className="flex-1">
-                        <h1
-                            className="text-2xl font-bold text-[#1F083B]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <h1 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                             Live Tracking
                         </h1>
-                        <p
-                            className="text-[#8E98A8] text-sm"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <p className="text-xs text-[#8E98A8] sm:text-sm">
                             Real-time vehicle positions and trip monitoring
                         </p>
                     </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="flex gap-4 mb-6">
-                    <StatCard
-                        title="Total Trips"
-                        value={stats.totalTrips}
-                        icon={Truck}
-                        color="#6E43A3"
-                    />
-                    <StatCard
-                        title="Active Trips"
-                        value={stats.activeTrips}
-                        icon={Activity}
-                        color="#2E7D32"
-                        subtext={`${Math.round((stats.activeTrips / stats.totalTrips) * 100) || 0}% of total`}
-                    />
-                    <StatCard
-                        title="Total Distance"
-                        value={`${stats.totalDistance} km`}
-                        icon={Navigation}
-                        color="#1565C0"
-                    />
-                    <StatCard
-                        title="Avg Duration"
-                        value={formatDuration(stats.avgDuration)}
-                        icon={Clock}
-                        color="#F2A618"
-                    />
+                {/* Stats Cards - Responsive Grid */}
+                <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 sm:flex sm:gap-4">
+                    <div className="sm:flex-1">
+                        <StatCard
+                            title="Total Trips"
+                            value={stats.totalTrips}
+                            icon={Truck}
+                            color="#6E43A3"
+                        />
+                    </div>
+                    <div className="sm:flex-1">
+                        <StatCard
+                            title="Active Trips"
+                            value={stats.activeTrips}
+                            icon={Activity}
+                            color="#2E7D32"
+                        />
+                    </div>
+                    <div className="sm:flex-1">
+                        <StatCard
+                            title="Total Distance"
+                            value={`${stats.totalDistance} km`}
+                            icon={Navigation}
+                            color="#1565C0"
+                        />
+                    </div>
+                    <div className="sm:flex-1">
+                        <StatCard
+                            title="Avg Duration"
+                            value={formatDuration(stats.avgDuration)}
+                            icon={Clock}
+                            color="#F2A618"
+                        />
+                    </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="flex gap-4">
+                {/* Main Content - Responsive Columns */}
+                <div className="flex flex-col gap-4 lg:flex-row">
                     {/* Left Column - Trips List */}
-                    <div className="w-[320px] flex-shrink-0">
-                        <div className="bg-white rounded-xl p-4 shadow-sm border border-[#F3F4F6] h-[600px] flex flex-col">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3
-                                    className="text-sm font-semibold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                    <div className="w-full lg:w-[320px] lg:flex-shrink-0">
+                        <div className="flex h-[400px] flex-col rounded-xl border border-[#F3F4F6] bg-white p-3 shadow-sm sm:h-[500px] sm:p-4 lg:h-[600px]">
+                            <div className="mb-2 flex items-center justify-between sm:mb-3">
+                                <h3 className="text-sm font-semibold text-[#1F083B]">
                                     All Trips
                                 </h3>
-                                <span
-                                    className="text-xs text-[#8E98A8]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <span className="text-xs text-[#8E98A8]">
                                     {filteredTrips.length} trips
                                 </span>
                             </div>
 
                             {/* Search */}
-                            <div className="relative mb-3">
+                            <div className="relative mb-2 sm:mb-3">
                                 <Search
                                     size={16}
-                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8E98A8]"
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8E98A8]"
                                 />
                                 <input
                                     type="text"
-                                    placeholder="Search by trip, driver, vehicle..."
+                                    placeholder="Search trips..."
                                     value={searchTerm}
                                     onChange={(e) =>
                                         setSearchTerm(e.target.value)
                                     }
-                                    className="w-full pl-9 pr-3 py-2 text-sm border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-lg border border-[#E0E5EB] py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                 />
                             </div>
 
                             {/* Trips List */}
-                            <div className="flex-1 overflow-y-auto space-y-2">
+                            <div className="flex-1 space-y-2 overflow-y-auto">
                                 {filteredTrips.slice(0, 20).map((trip) => {
                                     const isActive =
                                         trip.tripStatus === "in_progress" ||
@@ -587,7 +576,7 @@ const LiveTracking: React.FC = () => {
                                     return (
                                         <div
                                             key={trip.id || trip.tripNumber}
-                                            className={`p-3 rounded-lg border transition cursor-pointer hover:border-[#6E43A3] ${
+                                            className={`cursor-pointer rounded-lg border p-2 transition hover:border-[#6E43A3] sm:p-3 ${
                                                 selectedTrip?.id === trip.id
                                                     ? "border-[#6E43A3] bg-[#6E43A310]"
                                                     : "border-[#F3F4F6]"
@@ -596,55 +585,36 @@ const LiveTracking: React.FC = () => {
                                                 setSelectedTrip(trip)
                                             }
                                         >
-                                            <div className="flex justify-between items-start">
-                                                <span
-                                                    className="text-sm font-medium text-[#1F083B]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                            <div className="flex items-start justify-between">
+                                                <span className="text-xs font-medium text-[#1F083B] sm:text-sm">
                                                     {trip.tripNumber ||
                                                         `TR-${trip.id?.slice(0, 6)}`}
                                                 </span>
                                                 <span
-                                                    className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(trip.tripStatus)}`}
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
+                                                    className={`rounded-full px-1.5 py-0.5 text-[10px] sm:px-2 sm:py-0.5 sm:text-xs ${getStatusColor(trip.tripStatus)}`}
                                                 >
                                                     {getStatusDisplay(
                                                         trip.tripStatus,
                                                     )}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-2 mt-1">
+                                            <div className="mt-1 flex items-center gap-2">
                                                 <User
                                                     size={12}
                                                     className="text-[#8E98A8]"
                                                 />
-                                                <span
-                                                    className="text-xs text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <span className="text-xs text-[#8E98A8]">
                                                     {trip.driver?.name ||
                                                         "Unknown"}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center justify-between mt-0.5">
+                                            <div className="mt-0.5 flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <Car
                                                         size={12}
                                                         className="text-[#8E98A8]"
                                                     />
-                                                    <span
-                                                        className="text-xs text-[#8E98A8]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                    <span className="text-xs text-[#8E98A8]">
                                                         {trip.vehicle
                                                             ?.registrationNumber ||
                                                             "No Vehicle"}
@@ -652,25 +622,14 @@ const LiveTracking: React.FC = () => {
                                                 </div>
                                                 {trip.stats?.hazardsReported >
                                                     0 && (
-                                                    <span
-                                                        className="flex items-center gap-1 text-xs text-[#F2A618]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                    <span className="flex items-center gap-1 text-xs text-[#F2A618]">
                                                         <AlertTriangle
                                                             size={12}
                                                         />
                                                         {
                                                             trip.stats
                                                                 .hazardsReported
-                                                        }{" "}
-                                                        hazard
-                                                        {trip.stats
-                                                            .hazardsReported > 1
-                                                            ? "s"
-                                                            : ""}
+                                                        }
                                                     </span>
                                                 )}
                                             </div>
@@ -679,10 +638,7 @@ const LiveTracking: React.FC = () => {
                                 })}
 
                                 {filteredTrips.length === 0 && (
-                                    <p
-                                        className="text-center text-[#8E98A8] py-8 text-sm"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <p className="py-4 text-center text-sm text-[#8E98A8]">
                                         No trips found
                                     </p>
                                 )}
@@ -692,18 +648,15 @@ const LiveTracking: React.FC = () => {
 
                     {/* Right Column - Map */}
                     <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#2E7D32] animate-pulse"></span>
-                            <span
-                                className="text-sm font-medium text-[#2E7D32]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Live
+                        {/* Status Bar */}
+                        <div className="mb-2 flex flex-wrap items-center gap-2 sm:mb-3 sm:gap-3">
+                            <span className="flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#2E7D32] sm:h-2 sm:w-2"></span>
+                                <span className="text-xs font-medium text-[#2E7D32] sm:text-sm">
+                                    Live
+                                </span>
                             </span>
-                            <span
-                                className="text-xs text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                            <span className="text-xs text-[#8E98A8] sm:text-sm">
                                 {
                                     driverLocations.filter((d) => d.isActive)
                                         .length
@@ -711,35 +664,31 @@ const LiveTracking: React.FC = () => {
                                 drivers online
                             </span>
                         </div>
-                        <div className="bg-white rounded-xl shadow-sm border border-[#F3F4F6] h-[600px] overflow-hidden relative">
-                            {/* Map */}
-                            <div ref={mapRef} className="w-full h-full" />
 
-                            {/* Map Overlay Info */}
-                            <div className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-md p-3 max-w-[200px] max-h-[200px] overflow-y-auto border border-[#F3F4F6]">
-                                <div className="flex items-center gap-2 mb-2">
+                        {/* Map Container */}
+                        <div className="relative h-[400px] overflow-hidden rounded-xl border border-[#F3F4F6] bg-white shadow-sm sm:h-[500px] lg:h-[600px]">
+                            {/* Map */}
+                            <div ref={mapRef} className="h-full w-full" />
+
+                            {/* Map Overlay Info - Hazards */}
+                            <div className="absolute right-2 top-2 z-10 max-h-[150px] max-w-[160px] overflow-y-auto rounded-lg border border-[#F3F4F6] bg-white p-2 shadow-md sm:right-4 sm:top-4 sm:max-h-[200px] sm:max-w-[200px] sm:p-3">
+                                <div className="mb-1 flex items-center gap-1.5 sm:mb-2 sm:gap-2">
                                     <AlertTriangle
                                         size={14}
                                         className="text-[#F2A618]"
                                     />
-                                    <span
-                                        className="text-xs font-medium text-[#1F083B]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <span className="text-xs font-medium text-[#1F083B]">
                                         Nearby Hazards
                                     </span>
                                 </div>
-                                <div className="space-y-1.5">
+                                <div className="space-y-1">
                                     {hazards.slice(0, 4).map((hazard) => (
                                         <div
                                             key={hazard.id}
-                                            className="flex items-center gap-1.5 text-xs"
+                                            className="flex items-center gap-1 text-xs"
                                         >
                                             {getTypeIcon(hazard.type)}
-                                            <span
-                                                className="text-[#8E98A8] truncate max-w-[100px]"
-                                                style={{ fontFamily: "Outfit" }}
-                                            >
+                                            <span className="max-w-[60px] truncate text-[#8E98A8] sm:max-w-[100px]">
                                                 {hazard.description?.slice(
                                                     0,
                                                     20,
@@ -747,17 +696,14 @@ const LiveTracking: React.FC = () => {
                                                 ...
                                             </span>
                                             <span
-                                                className={`text-[10px] px-1.5 py-0.5 rounded ${getSeverityColor(hazard.severity)}`}
+                                                className={`rounded px-1 py-0.5 text-[8px] sm:px-1.5 sm:text-[10px] ${getSeverityColor(hazard.severity)}`}
                                             >
                                                 {hazard.severity}
                                             </span>
                                         </div>
                                     ))}
                                     {hazards.length === 0 && (
-                                        <span
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <span className="text-xs text-[#8E98A8]">
                                             No hazards nearby
                                         </span>
                                     )}
@@ -766,54 +712,34 @@ const LiveTracking: React.FC = () => {
 
                             {/* Selected Trip Details - Bottom */}
                             {selectedTrip && (
-                                <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-lg p-4 border border-[#F3F4F6]">
-                                    <div className="flex items-center justify-between">
+                                <div className="absolute bottom-2 left-2 right-2 rounded-xl border border-[#F3F4F6] bg-white p-3 shadow-lg sm:bottom-4 sm:left-4 sm:right-4 sm:p-4">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div>
-                                            <div className="flex items-center gap-2">
-                                                <span
-                                                    className="text-sm font-semibold text-[#1F083B]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="text-sm font-semibold text-[#1F083B]">
                                                     {selectedTrip.tripNumber ||
                                                         `TR-${selectedTrip.id?.slice(0, 6)}`}
                                                 </span>
                                                 <span
-                                                    className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(selectedTrip.tripStatus)}`}
+                                                    className={`rounded-full px-2 py-0.5 text-xs ${getStatusColor(selectedTrip.tripStatus)}`}
                                                 >
                                                     {getStatusDisplay(
                                                         selectedTrip.tripStatus,
                                                     )}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-4 mt-1">
-                                                <span
-                                                    className="text-sm text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                            <div className="mt-1 flex flex-wrap items-center gap-2 sm:gap-4">
+                                                <span className="text-xs text-[#8E98A8] sm:text-sm">
                                                     {selectedTrip.driver
                                                         ?.name ||
                                                         "Unknown Driver"}
                                                 </span>
-                                                <span
-                                                    className="text-xs text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <span className="text-xs text-[#8E98A8]">
                                                     {selectedTrip.vehicle
                                                         ?.registrationNumber ||
                                                         "No Vehicle"}
                                                 </span>
-                                                <span
-                                                    className="text-xs text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <span className="text-xs text-[#8E98A8]">
                                                     {selectedTrip.vehicle?.make}{" "}
                                                     {
                                                         selectedTrip.vehicle
@@ -822,22 +748,12 @@ const LiveTracking: React.FC = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-6">
+                                        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                                             <div className="text-right">
-                                                <div
-                                                    className="text-xs text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="text-xs text-[#8E98A8]">
                                                     Duration
                                                 </div>
-                                                <div
-                                                    className="text-sm font-medium text-[#1F083B]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="text-sm font-medium text-[#1F083B]">
                                                     {formatDuration(
                                                         selectedTrip.stats
                                                             ?.duration || 0,
@@ -845,20 +761,10 @@ const LiveTracking: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <div
-                                                    className="text-xs text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="text-xs text-[#8E98A8]">
                                                     Distance
                                                 </div>
-                                                <div
-                                                    className="text-sm font-medium text-[#1F083B]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="text-sm font-medium text-[#1F083B]">
                                                     {selectedTrip.stats
                                                         ?.distance || 0}{" "}
                                                     km

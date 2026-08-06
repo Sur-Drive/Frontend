@@ -355,30 +355,21 @@ const FleetDashboard: React.FC = () => {
 
     return (
         <DashSidebar>
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
                 {/* Welcome Section */}
-                <div className="mb-8">
-                    <h1
-                        className="text-3xl font-bold text-[#1F083B]"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl font-bold text-[#1F083B] sm:text-3xl">
                         Welcome back, {userName || "Fleet Owner"}!
                     </h1>
-                    <p
-                        className="mt-1 text-[#8E98A8]"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                    <p className="mt-1 text-sm text-[#8E98A8] sm:text-base">
                         Here's what's happening with your fleet today.
                     </p>
                     {company && (
-                        <div className="mt-2 flex items-center gap-4">
-                            <span
-                                className="text-sm text-[#6E43A3] font-medium"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-4">
+                            <span className="text-sm font-medium text-[#6E43A3]">
                                 {company.fleetName || company.companyName}
                             </span>
-                            <span className="text-xs px-2 py-1 rounded-full bg-[#6E43A310] text-[#6E43A3]">
+                            <span className="rounded-full bg-[#6E43A310] px-2 py-1 text-xs text-[#6E43A3]">
                                 {company.plan?.charAt(0).toUpperCase() +
                                     company.plan?.slice(1) || "Starter"}{" "}
                                 Plan
@@ -387,8 +378,8 @@ const FleetDashboard: React.FC = () => {
                     )}
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                {/* Stats Grid - Responsive */}
+                <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:mb-8">
                     <StatCard
                         title="Total Vehicles"
                         value={stats.totalVehicles}
@@ -419,43 +410,34 @@ const FleetDashboard: React.FC = () => {
                     />
                 </div>
 
-                {/* Two Columns */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Two Columns - Responsive */}
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
                     {/* Column 1: Chart + Recent Trips (2/3 width) */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Chart */}
-                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                            <h3
-                                className="text-lg font-semibold text-[#1F083B] mb-4"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                    <div className="space-y-4 sm:space-y-6 lg:col-span-2">
+                        {/* Chart - Responsive */}
+                        <div className="rounded-xl border border-[#F3F4F6] bg-white p-4 shadow-sm sm:p-6">
+                            <h3 className="mb-3 text-base font-semibold text-[#1F083B] sm:mb-4 sm:text-lg">
                                 Trips & Alerts Rate
                             </h3>
-                            <div className="relative h-[350px] rounded-lg border border-[#E5E7EB] p-4 overflow-hidden">
-                                {/* Legend */}
-                                <div className="flex items-center justify-center gap-8 mb-2">
+                            <div className="relative overflow-hidden rounded-lg border border-[#E5E7EB] p-2 sm:p-4">
+                                {/* Legend - Responsive */}
+                                <div className="mb-2 flex flex-wrap items-center justify-center gap-4 sm:gap-8">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded-full bg-[#00BC7B]"></div>
-                                        <span
-                                            className="text-sm text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <div className="h-2 w-2 rounded-full bg-[#00BC7B] sm:h-3 sm:w-3"></div>
+                                        <span className="text-xs text-[#8E98A8] sm:text-sm">
                                             Trips
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded-full bg-[#F2A618]"></div>
-                                        <span
-                                            className="text-sm text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <div className="h-2 w-2 rounded-full bg-[#F2A618] sm:h-3 sm:w-3"></div>
+                                        <span className="text-xs text-[#8E98A8] sm:text-sm">
                                             Alerts
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Chart Container */}
-                                <div className="relative h-[270px] w-full">
+                                {/* Chart Container - Responsive height */}
+                                <div className="relative h-[200px] w-full sm:h-[250px] md:h-[270px]">
                                     {(() => {
                                         const months = [
                                             "Jan",
@@ -527,10 +509,12 @@ const FleetDashboard: React.FC = () => {
                                         const maxVal = 10;
                                         const padding = {
                                             top: 10,
-                                            bottom: 35,
-                                            left: 50,
-                                            right: 20,
+                                            bottom: 30,
+                                            left: 35,
+                                            right: 15,
                                         };
+
+                                        // Responsive chart dimensions
                                         const chartWidth =
                                             900 - padding.left - padding.right;
                                         const chartHeight =
@@ -589,7 +573,7 @@ const FleetDashboard: React.FC = () => {
 
                                         return (
                                             <svg
-                                                className="w-full h-full"
+                                                className="h-full w-full"
                                                 viewBox="0 0 900 270"
                                                 preserveAspectRatio="none"
                                             >
@@ -626,7 +610,6 @@ const FleetDashboard: React.FC = () => {
                                                                 textAnchor="end"
                                                                 fontSize="10"
                                                                 fill="#8E98A8"
-                                                                fontFamily="Outfit"
                                                             >
                                                                 {val}
                                                             </text>
@@ -769,7 +752,6 @@ const FleetDashboard: React.FC = () => {
                                                                     ? "#1F083B"
                                                                     : "#8E98A8"
                                                             }
-                                                            fontFamily="Outfit"
                                                             fontWeight={
                                                                 isHovered
                                                                     ? "600"
@@ -806,7 +788,6 @@ const FleetDashboard: React.FC = () => {
                                                             textAnchor="middle"
                                                             fontSize="8"
                                                             fill="#FFFFFF"
-                                                            fontFamily="Outfit"
                                                             fontWeight="600"
                                                         >
                                                             {
@@ -833,7 +814,6 @@ const FleetDashboard: React.FC = () => {
                                                             y="38"
                                                             fontSize="8"
                                                             fill="#00BC7B"
-                                                            fontFamily="Outfit"
                                                         >
                                                             ● Trips
                                                         </text>
@@ -843,7 +823,6 @@ const FleetDashboard: React.FC = () => {
                                                             textAnchor="end"
                                                             fontSize="10"
                                                             fill="#FFFFFF"
-                                                            fontFamily="Outfit"
                                                             fontWeight="600"
                                                         >
                                                             {
@@ -857,7 +836,6 @@ const FleetDashboard: React.FC = () => {
                                                             y="55"
                                                             fontSize="8"
                                                             fill="#F2A618"
-                                                            fontFamily="Outfit"
                                                         >
                                                             ● Alerts
                                                         </text>
@@ -867,7 +845,6 @@ const FleetDashboard: React.FC = () => {
                                                             textAnchor="end"
                                                             fontSize="10"
                                                             fill="#FFFFFF"
-                                                            fontFamily="Outfit"
                                                             fontWeight="600"
                                                         >
                                                             {
@@ -922,11 +899,11 @@ const FleetDashboard: React.FC = () => {
                                     })()}
                                 </div>
 
-                                {/* Gradient Labels */}
-                                <div className="flex items-center justify-center gap-6 mt-1 text-xs text-[#8E98A8]">
+                                {/* Gradient Labels - Responsive */}
+                                <div className="mt-1 flex flex-wrap items-center justify-center gap-3 text-xs text-[#8E98A8] sm:gap-6 sm:text-sm">
                                     <div className="flex items-center gap-2">
                                         <div
-                                            className="w-16 h-2 rounded"
+                                            className="h-1.5 w-12 rounded sm:h-2 sm:w-16"
                                             style={{
                                                 background:
                                                     "linear-gradient(to right, #00BC7B00, #00BC7B)",
@@ -936,7 +913,7 @@ const FleetDashboard: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div
-                                            className="w-16 h-2 rounded"
+                                            className="h-1.5 w-12 rounded sm:h-2 sm:w-16"
                                             style={{
                                                 background:
                                                     "linear-gradient(to right, #F2A61800, #F2A618)",
@@ -949,19 +926,15 @@ const FleetDashboard: React.FC = () => {
                         </div>
 
                         {/* Recent Trips - Under Chart */}
-                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2
-                                    className="text-lg font-semibold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        <div className="rounded-xl border border-[#F3F4F6] bg-white p-4 shadow-sm sm:p-6">
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                                <h2 className="text-base font-semibold text-[#1F083B] sm:text-lg">
                                     Recent Trips
                                 </h2>
                                 <button
                                     onClick={() => navigate("/fleet/trips")}
-                                    className="text-sm hover:underline flex items-center gap-2 px-3 py-1.5 rounded-full"
+                                    className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs transition hover:opacity-80 sm:px-3 sm:py-1.5 sm:text-sm"
                                     style={{
-                                        fontFamily: "Outfit",
                                         color: "#4A148C",
                                         backgroundColor: "#EDE8F4",
                                     }}
@@ -973,7 +946,7 @@ const FleetDashboard: React.FC = () => {
                                     />
                                 </button>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-2 sm:space-y-3">
                                 {recentTrips.length > 0 ? (
                                     recentTrips.map((trip) => {
                                         const isCompleted =
@@ -988,46 +961,36 @@ const FleetDashboard: React.FC = () => {
                                         return (
                                             <div
                                                 key={trip.id}
-                                                className="flex items-center justify-between rounded-lg p-4 border border-[#F3F4F6] hover:shadow-md transition"
+                                                className="flex flex-col rounded-lg border border-[#F3F4F6] p-3 transition hover:shadow-md sm:flex-row sm:items-center sm:justify-between sm:p-4"
                                             >
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <p
-                                                            className="text-sm font-medium text-[#1F083B]"
-                                                            style={{
-                                                                fontFamily:
-                                                                    "Outfit",
-                                                            }}
-                                                        >
+                                                <div className="mb-2 flex-1 sm:mb-0">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className="text-sm font-medium text-[#1F083B]">
                                                             {trip.vehicle} -{" "}
                                                             {trip.driver}
                                                         </p>
                                                     </div>
                                                     <p
-                                                        className="text-xs text-[#8E98A8] mt-0.5 truncate"
+                                                        className="mt-0.5 truncate text-xs text-[#8E98A8]"
                                                         style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                            maxWidth: "350px",
+                                                            maxWidth: "100%",
                                                         }}
                                                         title={trip.route}
                                                     >
                                                         {trip.route}
                                                     </p>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-1">
+                                                <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-col sm:items-end sm:gap-1">
                                                     <span
-                                                        className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1.5"
+                                                        className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs"
                                                         style={{
                                                             color: statusColor,
                                                             backgroundColor:
                                                                 statusBg,
-                                                            fontFamily:
-                                                                "Outfit",
                                                         }}
                                                     >
                                                         <span
-                                                            className="w-1.5 h-1.5 rounded-full"
+                                                            className="h-1.5 w-1.5 rounded-full"
                                                             style={{
                                                                 backgroundColor:
                                                                     statusColor,
@@ -1061,10 +1024,7 @@ const FleetDashboard: React.FC = () => {
                                         );
                                     })
                                 ) : (
-                                    <p
-                                        className="text-center text-[#8E98A8] py-8"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <p className="py-4 text-center text-sm text-[#8E98A8] sm:py-8">
                                         No recent trips
                                     </p>
                                 )}
@@ -1073,16 +1033,13 @@ const FleetDashboard: React.FC = () => {
                     </div>
 
                     {/* Column 2: Quick Actions + Map + Recent Activity (1/3 width) */}
-                    <div className="lg:col-span-1 space-y-6">
+                    <div className="space-y-4 sm:space-y-6 lg:col-span-1">
                         {/* Quick Actions */}
-                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                            <h2
-                                className="text-lg font-semibold text-[#1F083B] mb-4"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        <div className="rounded-xl border border-[#F3F4F6] bg-white p-4 shadow-sm sm:p-6">
+                            <h2 className="mb-3 text-base font-semibold text-[#1F083B] sm:mb-4 sm:text-lg">
                                 Quick Actions
                             </h2>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                 <LiveTrackingButton />
                                 <BroadcastButton
                                     onBroadcastSent={() => {
@@ -1093,45 +1050,34 @@ const FleetDashboard: React.FC = () => {
                                 />
                             </div>
                         </div>
+
                         {/* Map */}
-                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                            <h2
-                                className="text-lg font-semibold text-[#1F083B] mb-4"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        <div className="rounded-xl border border-[#F3F4F6] bg-white p-4 shadow-sm sm:p-6">
+                            <h2 className="mb-3 text-base font-semibold text-[#1F083B] sm:mb-4 sm:text-lg">
                                 Live Map
                             </h2>
-                            <div className="rounded-xl overflow-hidden bg-[#F3F4F6] h-48 flex items-center justify-center">
+                            <div className="flex h-40 items-center justify-center overflow-hidden rounded-xl bg-[#F3F4F6] sm:h-48">
                                 <div className="text-center">
                                     <Navigation
-                                        size={28}
-                                        className="text-[#6E43A3] mx-auto"
+                                        size={24}
+                                        className="mx-auto text-[#6E43A3] sm:size-[28px]"
                                     />
-                                    <p
-                                        className="text-xs text-[#8E98A8] mt-2"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <p className="mt-2 text-xs text-[#8E98A8]">
                                         Live vehicle locations
                                     </p>
-                                    <p
-                                        className="text-[10px] text-[#8E98A8]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <p className="text-[10px] text-[#8E98A8]">
                                         {stats.activeVehicles} active vehicles
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Recent Activiy */}
-                        <div className="bg-white rounded-xl p-6 shadow-sm border border-[#F3F4F6]">
-                            <h2
-                                className="text-lg font-semibold text-[#1F083B] mb-4"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        {/* Recent Activity */}
+                        <div className="rounded-xl border border-[#F3F4F6] bg-white p-4 shadow-sm sm:p-6">
+                            <h2 className="mb-3 text-base font-semibold text-[#1F083B] sm:mb-4 sm:text-lg">
                                 Recent Activity
                             </h2>
-                            <div className="space-y-3">
+                            <div className="space-y-2 sm:space-y-3">
                                 {sessionLogs.slice(0, 4).map((log) => {
                                     const iconColors = {
                                         sos: { bg: "#FEE4E0", icon: "#FE3F21" },
@@ -1156,10 +1102,10 @@ const FleetDashboard: React.FC = () => {
                                     return (
                                         <div
                                             key={log.id}
-                                            className="flex items-start gap-3 rounded-lg p-2 hover:bg-[#F8F9FA] transition"
+                                            className="flex items-start gap-2 rounded-lg p-2 transition hover:bg-[#F8F9FA] sm:gap-3"
                                         >
                                             <div
-                                                className="flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0"
+                                                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full sm:h-8 sm:w-8"
                                                 style={{
                                                     backgroundColor: color.bg,
                                                 }}
@@ -1167,42 +1113,25 @@ const FleetDashboard: React.FC = () => {
                                                 {React.cloneElement(
                                                     getLogIcon(log.type),
                                                     {
-                                                        size: 18,
+                                                        size: 16,
                                                         style: {
                                                             color: color.icon,
                                                         },
                                                     },
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p
-                                                    className="text-xs font-medium text-[#1F083B]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-xs font-medium text-[#1F083B]">
                                                     {log.message}
                                                 </p>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <p
-                                                        className="text-[10px] text-[#8E98A8] whitespace-nowrap"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                <div className="mt-0.5 flex flex-wrap items-center gap-1 sm:gap-2">
+                                                    <p className="whitespace-nowrap text-[10px] text-[#8E98A8]">
                                                         {log.time}
                                                     </p>
                                                     <span className="text-[10px] text-[#D1D5DB]">
                                                         ·
                                                     </span>
-                                                    <p
-                                                        className="text-[10px] text-[#8E98A8] truncate"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                    <p className="truncate text-[10px] text-[#8E98A8]">
                                                         {log.driver}
                                                     </p>
                                                 </div>
@@ -1211,10 +1140,7 @@ const FleetDashboard: React.FC = () => {
                                     );
                                 })}
                                 {sessionLogs.length === 0 && (
-                                    <p
-                                        className="text-center text-[#8E98A8] py-4 text-sm"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <p className="py-4 text-center text-sm text-[#8E98A8]">
                                         No recent activity
                                     </p>
                                 )}

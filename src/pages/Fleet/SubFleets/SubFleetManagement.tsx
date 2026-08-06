@@ -345,36 +345,29 @@ const SubFleetManagement: React.FC = () => {
     }
 
     return (
-        <div className="p-8 bg-[#F3F0F7] min-h-screen">
+        <div className="min-h-screen bg-[#F3F0F7] p-3 sm:p-4 md:p-6 lg:p-8">
             {/* Header */}
-            <div className="bg-white rounded-xl p-8 mb-6 flex justify-between items-center">
+            <div className="mb-4 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6 md:p-8">
                 <div>
-                    <h1
-                        className="text-2xl font-bold text-[#1F083B]"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                    <h1 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                         Sub-fleets
                     </h1>
-                    <p
-                        className="text-[#8E98A8] text-sm"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                    <p className="text-xs text-[#8E98A8] sm:text-sm">
                         Group vehicles, drivers and managers into regional or
                         business units
                     </p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-[#6E43A3] text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:opacity-90 transition"
-                    style={{ fontFamily: "Outfit" }}
+                    className="flex items-center gap-2 rounded-xl bg-[#6E43A3] px-4 py-2 text-sm text-white transition hover:opacity-90 sm:px-6 sm:py-2.5"
                 >
                     <Plus size={18} />
                     New Sub-fleet
                 </button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Stats Cards - Responsive Grid */}
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-3 md:grid-cols-4 md:gap-4">
                 <StatCard
                     icon={Layers}
                     label="Sub-fleets"
@@ -403,12 +396,12 @@ const SubFleetManagement: React.FC = () => {
 
             {/* Error Message */}
             {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+                <div className="mb-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3 sm:p-4">
                     <AlertTriangle size={20} className="text-red-500" />
-                    <span className="text-red-700 text-sm">{error}</span>
+                    <span className="flex-1 text-sm text-red-700">{error}</span>
                     <button
                         onClick={() => setError(null)}
-                        className="ml-auto text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700"
                     >
                         <X size={18} />
                     </button>
@@ -417,39 +410,32 @@ const SubFleetManagement: React.FC = () => {
 
             {/* Sub-fleet List */}
             {subFleets.length === 0 ? (
-                <div className="bg-white rounded-xl p-12 flex flex-col items-center justify-center">
+                <div className="rounded-xl bg-white p-8 sm:p-12 flex flex-col items-center justify-center">
                     <div className="relative mb-6">
-                        <div className="w-20 h-20 rounded-full bg-[#F3F0F7] flex items-center justify-center">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#F3F0F7]">
                             <Layers size={32} className="text-[#B3BBC4]" />
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#F3F0F7] flex items-center justify-center">
+                        <div className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#F3F0F7]">
                             <Layers size={16} className="text-[#B3BBC4]" />
                         </div>
                     </div>
-                    <h3
-                        className="text-xl font-semibold text-[#1F083B] mb-2"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                    <h3 className="mb-2 text-xl font-semibold text-[#1F083B]">
                         No Sub-Fleets Created Yet
                     </h3>
-                    <p
-                        className="text-[#B3BBC4] text-center max-w-md"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                    <p className="max-w-md text-center text-sm text-[#B3BBC4]">
                         Organize your fleet by creating sub-fleets for different
                         branches, regions, departments, or operations.
                     </p>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="mt-6 bg-[#6E43A3] text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 transition"
-                        style={{ fontFamily: "Outfit" }}
+                        className="mt-6 flex items-center gap-2 rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90"
                     >
                         <Plus size={18} />
                         New Sub-fleet
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4">
                     {subFleets.map((subFleet) => {
                         const manager = subFleet.managers?.[0]?.user;
                         const isActive = subFleet.status === "active";
@@ -457,60 +443,45 @@ const SubFleetManagement: React.FC = () => {
                         return (
                             <div
                                 key={subFleet.id}
-                                className="rounded-xl border p-4 transition-all hover:shadow-md bg-white"
+                                className={`rounded-xl border p-4 transition-all hover:shadow-md ${
+                                    isActive ? "bg-white" : "bg-[#F7F7F7]"
+                                }`}
                                 style={{
-                                    width: "100%",
-                                    maxWidth: "354px",
-                                    borderWidth: "1px",
                                     borderColor: isActive
                                         ? "#DFE6EB"
                                         : "#F7F7F7",
-                                    backgroundColor: isActive
-                                        ? "#FFFFFF"
-                                        : "#F7F7F7",
-                                    padding: "16px",
-                                    borderRadius: "16px",
                                 }}
                             >
                                 {/* Header - Name and Status */}
                                 <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
                                         <div
-                                            className="h-2.5 w-2.5 rounded-full"
+                                            className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
                                             style={{
                                                 backgroundColor: getStatusColor(
                                                     subFleet.status,
                                                 ),
                                             }}
                                         />
-                                        <span
-                                            className="font-semibold text-sm"
-                                            style={{
-                                                color: "#031222",
-                                                fontFamily: "Outfit",
-                                            }}
-                                        >
+                                        <span className="truncate text-sm font-semibold text-[#031222]">
                                             {subFleet.name}
                                         </span>
                                         <span
-                                            className="rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-                                            style={{
-                                                backgroundColor: getStatusBg(
-                                                    subFleet.status,
-                                                ),
-                                                color: getStatusTextColor(
-                                                    subFleet.status,
-                                                ),
-                                                fontFamily: "Outfit",
-                                            }}
+                                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize sm:text-xs ${
+                                                subFleet.status === "active"
+                                                    ? "bg-green-100 text-green-700"
+                                                    : subFleet.status ===
+                                                        "suspended"
+                                                      ? "bg-yellow-100 text-yellow-700"
+                                                      : "bg-gray-100 text-gray-700"
+                                            }`}
                                         >
                                             {subFleet.status}
                                         </span>
                                     </div>
-                                    <div className="relative">
+                                    <div className="relative flex-shrink-0">
                                         <button
                                             onClick={() => {
-                                                // Toggle dropdown
                                                 const el =
                                                     document.getElementById(
                                                         `dropdown-${subFleet.id}`,
@@ -524,12 +495,12 @@ const SubFleetManagement: React.FC = () => {
                                         >
                                             <MoreVertical
                                                 size={18}
-                                                style={{ color: "#8E98A8" }}
+                                                className="text-[#8E98A8]"
                                             />
                                         </button>
                                         <div
                                             id={`dropdown-${subFleet.id}`}
-                                            className="hidden absolute right-0 z-20 mt-1 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5"
+                                            className="absolute right-0 z-20 mt-1 hidden w-48 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5"
                                         >
                                             <div className="py-1">
                                                 <button
@@ -538,11 +509,7 @@ const SubFleetManagement: React.FC = () => {
                                                             subFleet,
                                                         )
                                                     }
-                                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
-                                                    style={{
-                                                        color: "#0B0015",
-                                                        fontFamily: "Outfit",
-                                                    }}
+                                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[#0B0015] hover:bg-gray-50"
                                                 >
                                                     <Eye size={14} /> View
                                                     details
@@ -551,11 +518,7 @@ const SubFleetManagement: React.FC = () => {
                                                     onClick={() =>
                                                         openEditModal(subFleet)
                                                     }
-                                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
-                                                    style={{
-                                                        color: "#0B0015",
-                                                        fontFamily: "Outfit",
-                                                    }}
+                                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[#0B0015] hover:bg-gray-50"
                                                 >
                                                     <Edit size={14} /> Edit
                                                 </button>
@@ -567,12 +530,7 @@ const SubFleetManagement: React.FC = () => {
                                                                 "suspend",
                                                             )
                                                         }
-                                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
-                                                        style={{
-                                                            color: "#F2A618",
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
+                                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[#F2A618] hover:bg-gray-50"
                                                     >
                                                         <Pause size={14} />{" "}
                                                         Suspend
@@ -585,12 +543,7 @@ const SubFleetManagement: React.FC = () => {
                                                                 "reactivate",
                                                             )
                                                         }
-                                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
-                                                        style={{
-                                                            color: "#2E7D32",
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
+                                                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[#2E7D32] hover:bg-gray-50"
                                                     >
                                                         <RotateCcw size={14} />{" "}
                                                         Reactivate
@@ -603,11 +556,7 @@ const SubFleetManagement: React.FC = () => {
                                                             "delete",
                                                         )
                                                     }
-                                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
-                                                    style={{
-                                                        color: "#B71C1C",
-                                                        fontFamily: "Outfit",
-                                                    }}
+                                                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[#B71C1C] hover:bg-gray-50"
                                                 >
                                                     <Trash2 size={14} /> Remove
                                                 </button>
@@ -620,15 +569,9 @@ const SubFleetManagement: React.FC = () => {
                                 <div className="mt-2 flex items-center gap-1.5">
                                     <MapPin
                                         size={14}
-                                        style={{ color: "#5B646F" }}
+                                        className="text-[#5B646F]"
                                     />
-                                    <span
-                                        className="text-sm"
-                                        style={{
-                                            color: "#5B646F",
-                                            fontFamily: "Outfit",
-                                        }}
-                                    >
+                                    <span className="text-sm text-[#5B646F]">
                                         {subFleet.region}
                                     </span>
                                 </div>
@@ -636,16 +579,11 @@ const SubFleetManagement: React.FC = () => {
                                 {/* Manager Info */}
                                 <div className="mt-3 flex items-center gap-3">
                                     <div
-                                        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
-                                        style={{
-                                            backgroundColor: manager
-                                                ? "#EDE8F4"
-                                                : "#F3F0F7",
-                                            color: manager
-                                                ? "#6E43A3"
-                                                : "#B3BBC4",
-                                            fontFamily: "Outfit",
-                                        }}
+                                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                                            manager
+                                                ? "bg-[#EDE8F4] text-[#6E43A3]"
+                                                : "bg-[#F3F0F7] text-[#B3BBC4]"
+                                        }`}
                                     >
                                         {manager
                                             ? getInitials(
@@ -654,47 +592,23 @@ const SubFleetManagement: React.FC = () => {
                                               )
                                             : "NA"}
                                     </div>
-                                    <div>
+                                    <div className="min-w-0 flex-1">
                                         {manager ? (
                                             <>
-                                                <div
-                                                    className="text-sm font-medium"
-                                                    style={{
-                                                        color: "#111827",
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="truncate text-sm font-medium text-[#111827]">
                                                     {manager.firstName}{" "}
                                                     {manager.lastName}
                                                 </div>
-                                                <div
-                                                    className="text-xs"
-                                                    style={{
-                                                        color: "#8E98A8",
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="text-xs text-[#8E98A8]">
                                                     Fleet Manager
                                                 </div>
                                             </>
                                         ) : (
                                             <>
-                                                <div
-                                                    className="text-sm font-medium"
-                                                    style={{
-                                                        color: "#8E98A8",
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="text-sm font-medium text-[#8E98A8]">
                                                     Not Assigned
                                                 </div>
-                                                <div
-                                                    className="text-xs"
-                                                    style={{
-                                                        color: "#B3BBC4",
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="text-xs text-[#B3BBC4]">
                                                     No manager assigned
                                                 </div>
                                             </>
@@ -702,116 +616,60 @@ const SubFleetManagement: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Stats */}
-                                {/* Stats - Individual Cards with icon and text centered, number below */}
-                                <div className="mt-4 grid grid-cols-3 gap-2">
-                                    {/* Vehicles Card */}
-                                    <div
-                                        className="flex flex-col items-center rounded-lg p-2"
-                                        style={{ backgroundColor: "#F3F0F7" }}
-                                    >
-                                        <div className="flex items-center gap-1.5">
+                                {/* Stats Cards */}
+                                <div className="mt-4 grid grid-cols-3 gap-1.5 sm:gap-2">
+                                    <div className="flex flex-col items-center rounded-lg bg-[#F3F0F7] p-2">
+                                        <div className="flex items-center gap-1">
                                             <Truck
-                                                size={18}
+                                                size={16}
                                                 strokeWidth={2.5}
-                                                style={{ color: "#5B646F" }}
+                                                className="text-[#5B646F] sm:size-[18px]"
                                             />
-                                            <span
-                                                className="text-xs font-semibold uppercase"
-                                                style={{
-                                                    color: "#5B646F",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <span className="text-[10px] font-semibold uppercase text-[#5B646F] sm:text-xs">
                                                 Vehicles
                                             </span>
                                         </div>
-                                        <div
-                                            className="text-lg font-bold mt-1"
-                                            style={{
-                                                color: "#031222",
-                                                fontFamily: "Outfit",
-                                            }}
-                                        >
+                                        <div className="mt-1 text-base font-bold text-[#031222] sm:text-lg">
                                             {subFleet.vehicleCount || 0}
                                         </div>
                                     </div>
 
-                                    {/* Drivers Card */}
-                                    <div
-                                        className="flex flex-col items-center rounded-lg p-2"
-                                        style={{ backgroundColor: "#F3F0F7" }}
-                                    >
-                                        <div className="flex items-center gap-1.5">
+                                    <div className="flex flex-col items-center rounded-lg bg-[#F3F0F7] p-2">
+                                        <div className="flex items-center gap-1">
                                             <Users
-                                                size={18}
+                                                size={16}
                                                 strokeWidth={2.5}
-                                                style={{ color: "#5B646F" }}
+                                                className="text-[#5B646F] sm:size-[18px]"
                                             />
-                                            <span
-                                                className="text-xs font-semibold uppercase"
-                                                style={{
-                                                    color: "#5B646F",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <span className="text-[10px] font-semibold uppercase text-[#5B646F] sm:text-xs">
                                                 Drivers
                                             </span>
                                         </div>
-                                        <div
-                                            className="text-lg font-bold mt-1"
-                                            style={{
-                                                color: "#031222",
-                                                fontFamily: "Outfit",
-                                            }}
-                                        >
+                                        <div className="mt-1 text-base font-bold text-[#031222] sm:text-lg">
                                             {subFleet.driverCount || 0}
                                         </div>
                                     </div>
 
-                                    {/* Trips Card */}
-                                    <div
-                                        className="flex flex-col items-center rounded-lg p-2"
-                                        style={{ backgroundColor: "#F3F0F7" }}
-                                    >
-                                        <div className="flex items-center gap-1.5">
+                                    <div className="flex flex-col items-center rounded-lg bg-[#F3F0F7] p-2">
+                                        <div className="flex items-center gap-1">
                                             <Calendar
-                                                size={18}
+                                                size={16}
                                                 strokeWidth={2.5}
-                                                style={{ color: "#5B646F" }}
+                                                className="text-[#5B646F] sm:size-[18px]"
                                             />
-                                            <span
-                                                className="text-xs font-semibold uppercase"
-                                                style={{
-                                                    color: "#5B646F",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <span className="text-[10px] font-semibold uppercase text-[#5B646F] sm:text-xs">
                                                 Trips
                                             </span>
                                         </div>
-                                        <div
-                                            className="text-lg font-bold mt-1"
-                                            style={{
-                                                color: "#031222",
-                                                fontFamily: "Outfit",
-                                            }}
-                                        >
+                                        <div className="mt-1 text-base font-bold text-[#031222] sm:text-lg">
                                             0
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Footer */}
-                                {/* Footer - Manage Button */}
                                 <div className="mt-4 flex items-center justify-between">
-                                    <div
-                                        className="text-xs"
-                                        style={{
-                                            color: "#8E98A8",
-                                            fontFamily: "Outfit",
-                                        }}
-                                    >
+                                    <div className="text-xs text-[#8E98A8]">
                                         Created{" "}
                                         {
                                             new Date(subFleet.createdAt)
@@ -823,14 +681,13 @@ const SubFleetManagement: React.FC = () => {
                                         onClick={() =>
                                             openDetailsModal(subFleet)
                                         }
-                                        className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-                                        style={{
-                                            backgroundColor: "#6E43A3",
-                                            fontFamily: "Outfit",
-                                        }}
+                                        className="flex items-center gap-1.5 rounded-lg bg-[#6E43A3] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 sm:px-4"
                                     >
                                         Manage
-                                        <ArrowRight size={14} />
+                                        <ArrowRight
+                                            size={14}
+                                            className="sm:size-[14px]"
+                                        />
                                     </button>
                                 </div>
                             </div>
@@ -839,29 +696,23 @@ const SubFleetManagement: React.FC = () => {
                 </div>
             )}
 
-            {/* CREATE MODAL */}
+            {/* CREATE MODAL - Responsive */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="flex justify-between items-start mb-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-8">
+                        <div className="mb-6 flex items-start justify-between">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Create sub-fleet
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Segment your fleet by region, business unit
                                     or contract.
                                 </p>
                             </div>
                             <button
                                 onClick={handleCloseCreateModal}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="text-[#5B646F] hover:text-[#1F083B]"
                             >
                                 <X size={24} />
                             </button>
@@ -869,7 +720,7 @@ const SubFleetManagement: React.FC = () => {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                     Name
                                 </label>
                                 <input
@@ -882,14 +733,13 @@ const SubFleetManagement: React.FC = () => {
                                         })
                                     }
                                     placeholder="e.g. Lagos Metro"
-                                    className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Region
                                     </label>
                                     <input
@@ -902,12 +752,11 @@ const SubFleetManagement: React.FC = () => {
                                             })
                                         }
                                         placeholder="e.g. Lagos, SW"
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Manager (Optional)
                                     </label>
                                     <select
@@ -918,8 +767,7 @@ const SubFleetManagement: React.FC = () => {
                                                 managerId: e.target.value,
                                             })
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                     >
                                         <option value="">
                                             Select a manager
@@ -944,17 +792,16 @@ const SubFleetManagement: React.FC = () => {
                             </div>
 
                             {error && (
-                                <div className="flex items-center gap-2 text-red-600 text-sm">
+                                <div className="flex items-center gap-2 text-sm text-red-600">
                                     <AlertTriangle size={16} />
                                     <span>{error}</span>
                                 </div>
                             )}
 
-                            <div className="flex gap-3 mt-6">
+                            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
                                 <button
                                     onClick={handleCloseCreateModal}
-                                    className="flex-1 px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="flex-1 rounded-xl border border-[#E0E5EB] px-6 py-3 text-[#8E98A8] transition hover:bg-gray-50"
                                 >
                                     Cancel
                                 </button>
@@ -965,15 +812,17 @@ const SubFleetManagement: React.FC = () => {
                                         !formData.region ||
                                         isSubmitting
                                     }
-                                    className={`flex-1 bg-[#6E43A3] text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed`}
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="flex-1 rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? (
                                         "Creating..."
                                     ) : (
                                         <>
                                             Create Sub-fleet{" "}
-                                            <ArrowRight size={18} />
+                                            <ArrowRight
+                                                size={18}
+                                                className="inline"
+                                            />
                                         </>
                                     )}
                                 </button>
@@ -983,28 +832,22 @@ const SubFleetManagement: React.FC = () => {
                 </div>
             )}
 
-            {/* EDIT MODAL */}
+            {/* EDIT MODAL - Responsive */}
             {showEditModal && selectedSubFleet && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="flex justify-between items-start mb-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-8">
+                        <div className="mb-6 flex items-start justify-between">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Edit Sub-Fleet
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Update sub-fleet information
                                 </p>
                             </div>
                             <button
                                 onClick={handleCloseEditModal}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="text-[#5B646F] hover:text-[#1F083B]"
                             >
                                 <X size={24} />
                             </button>
@@ -1012,7 +855,7 @@ const SubFleetManagement: React.FC = () => {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                     Name
                                 </label>
                                 <input
@@ -1025,14 +868,13 @@ const SubFleetManagement: React.FC = () => {
                                         })
                                     }
                                     placeholder="e.g. Lagos Metro"
-                                    className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Region
                                     </label>
                                     <input
@@ -1045,12 +887,11 @@ const SubFleetManagement: React.FC = () => {
                                             })
                                         }
                                         placeholder="e.g. Lagos, SW"
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Manager
                                     </label>
                                     <select
@@ -1061,8 +902,7 @@ const SubFleetManagement: React.FC = () => {
                                                 managerId: e.target.value,
                                             })
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                     >
                                         <option value="">
                                             Select a manager
@@ -1087,17 +927,16 @@ const SubFleetManagement: React.FC = () => {
                             </div>
 
                             {error && (
-                                <div className="flex items-center gap-2 text-red-600 text-sm">
+                                <div className="flex items-center gap-2 text-sm text-red-600">
                                     <AlertTriangle size={16} />
                                     <span>{error}</span>
                                 </div>
                             )}
 
-                            <div className="flex gap-3 mt-6">
+                            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
                                 <button
                                     onClick={handleCloseEditModal}
-                                    className="flex-1 px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="flex-1 rounded-xl border border-[#E0E5EB] px-6 py-3 text-[#8E98A8] transition hover:bg-gray-50"
                                 >
                                     Cancel
                                 </button>
@@ -1108,15 +947,17 @@ const SubFleetManagement: React.FC = () => {
                                         !formData.region ||
                                         isSubmitting
                                     }
-                                    className={`flex-1 bg-[#6E43A3] text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed`}
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="flex-1 rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? (
                                         "Saving..."
                                     ) : (
                                         <>
                                             Save Changes{" "}
-                                            <ArrowRight size={18} />
+                                            <ArrowRight
+                                                size={18}
+                                                className="inline"
+                                            />
                                         </>
                                     )}
                                 </button>
@@ -1126,108 +967,73 @@ const SubFleetManagement: React.FC = () => {
                 </div>
             )}
 
-            {/* DETAILS MODAL */}
+            {/* DETAILS MODAL - Responsive */}
             {showDetailsModal && selectedSubFleet && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-start mb-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 sm:p-8">
+                        <div className="mb-6 flex items-start justify-between">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     {selectedSubFleet.name}
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Sub-fleet details and information
                                 </p>
                             </div>
                             <button
                                 onClick={() => setShowDetailsModal(false)}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="text-[#5B646F] hover:text-[#1F083B]"
                             >
                                 <X size={24} />
                             </button>
                         </div>
 
                         <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
-                                    <p
-                                        className="text-sm text-[#8E98A8]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <p className="text-sm text-[#8E98A8]">
                                         Region
                                     </p>
-                                    <p
-                                        className="flex items-center gap-1.5 font-medium"
-                                        style={{
-                                            color: "#1F083B",
-                                            fontFamily: "Outfit",
-                                        }}
-                                    >
+                                    <p className="flex items-center gap-1.5 font-medium text-[#1F083B]">
                                         <MapPin
                                             size={16}
-                                            style={{ color: "#5B646F" }}
+                                            className="text-[#5B646F]"
                                         />{" "}
                                         {selectedSubFleet.region}
                                     </p>
                                 </div>
                                 <div>
-                                    <p
-                                        className="text-sm text-[#8E98A8]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <p className="text-sm text-[#8E98A8]">
                                         Status
                                     </p>
                                     <span
-                                        className="inline-block rounded-full px-3 py-1 text-xs font-medium capitalize"
-                                        style={{
-                                            backgroundColor: getStatusBg(
-                                                selectedSubFleet.status,
-                                            ),
-                                            color: getStatusTextColor(
-                                                selectedSubFleet.status,
-                                            ),
-                                            fontFamily: "Outfit",
-                                        }}
+                                        className={`inline-block rounded-full px-3 py-1 text-xs font-medium capitalize ${
+                                            selectedSubFleet.status === "active"
+                                                ? "bg-green-100 text-green-700"
+                                                : selectedSubFleet.status ===
+                                                    "suspended"
+                                                  ? "bg-yellow-100 text-yellow-700"
+                                                  : "bg-gray-100 text-gray-700"
+                                        }`}
                                     >
                                         {selectedSubFleet.status}
                                     </span>
                                 </div>
                             </div>
 
-                            <div
-                                className="rounded-xl p-4"
-                                style={{ backgroundColor: "#F3F0F7" }}
-                            >
+                            <div className="rounded-xl bg-[#F3F0F7] p-4">
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="flex items-center gap-3">
                                         <Truck
                                             size={20}
-                                            style={{ color: "#6E43A3" }}
+                                            className="text-[#6E43A3]"
                                         />
                                         <div>
-                                            <div
-                                                className="text-lg font-bold"
-                                                style={{
-                                                    color: "#1F083B",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <div className="text-lg font-bold text-[#1F083B]">
                                                 {selectedSubFleet.vehicleCount ||
                                                     0}
                                             </div>
-                                            <div
-                                                className="text-xs"
-                                                style={{
-                                                    color: "#8E98A8",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <div className="text-xs text-[#8E98A8]">
                                                 Vehicles
                                             </div>
                                         </div>
@@ -1235,26 +1041,14 @@ const SubFleetManagement: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <Users
                                             size={20}
-                                            style={{ color: "#6E43A3" }}
+                                            className="text-[#6E43A3]"
                                         />
                                         <div>
-                                            <div
-                                                className="text-lg font-bold"
-                                                style={{
-                                                    color: "#1F083B",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <div className="text-lg font-bold text-[#1F083B]">
                                                 {selectedSubFleet.driverCount ||
                                                     0}
                                             </div>
-                                            <div
-                                                className="text-xs"
-                                                style={{
-                                                    color: "#8E98A8",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <div className="text-xs text-[#8E98A8]">
                                                 Drivers
                                             </div>
                                         </div>
@@ -1262,25 +1056,13 @@ const SubFleetManagement: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <Calendar
                                             size={20}
-                                            style={{ color: "#6E43A3" }}
+                                            className="text-[#6E43A3]"
                                         />
                                         <div>
-                                            <div
-                                                className="text-lg font-bold"
-                                                style={{
-                                                    color: "#1F083B",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <div className="text-lg font-bold text-[#1F083B]">
                                                 0
                                             </div>
-                                            <div
-                                                className="text-xs"
-                                                style={{
-                                                    color: "#8E98A8",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <div className="text-xs text-[#8E98A8]">
                                                 Trips
                                             </div>
                                         </div>
@@ -1289,26 +1071,13 @@ const SubFleetManagement: React.FC = () => {
                             </div>
 
                             <div>
-                                <p
-                                    className="mb-3 text-sm text-[#8E98A8]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mb-3 text-sm text-[#8E98A8]">
                                     Fleet Manager
                                 </p>
                                 {selectedSubFleet.managers?.[0]?.user ? (
-                                    <div
-                                        className="rounded-xl border p-4"
-                                        style={{ borderColor: "#DFE6EB" }}
-                                    >
+                                    <div className="rounded-xl border border-[#DFE6EB] p-4">
                                         <div className="flex items-center gap-4">
-                                            <div
-                                                className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-semibold"
-                                                style={{
-                                                    backgroundColor: "#EDE8F4",
-                                                    color: "#6E43A3",
-                                                    fontFamily: "Outfit",
-                                                }}
-                                            >
+                                            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#EDE8F4] text-lg font-semibold text-[#6E43A3]">
                                                 {getInitials(
                                                     selectedSubFleet.managers[0]
                                                         .user.firstName,
@@ -1317,13 +1086,7 @@ const SubFleetManagement: React.FC = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                <div
-                                                    className="font-medium"
-                                                    style={{
-                                                        color: "#1F083B",
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="font-medium text-[#1F083B]">
                                                     {
                                                         selectedSubFleet
                                                             .managers[0].user
@@ -1335,13 +1098,7 @@ const SubFleetManagement: React.FC = () => {
                                                             .lastName
                                                     }
                                                 </div>
-                                                <div
-                                                    className="flex items-center gap-3 text-sm"
-                                                    style={{
-                                                        color: "#8E98A8",
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
+                                                <div className="flex items-center gap-3 text-sm text-[#8E98A8]">
                                                     <div className="flex items-center gap-1">
                                                         <User size={14} />{" "}
                                                         {
@@ -1355,17 +1112,8 @@ const SubFleetManagement: React.FC = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div
-                                        className="rounded-xl border p-4 text-center"
-                                        style={{ borderColor: "#DFE6EB" }}
-                                    >
-                                        <p
-                                            className="text-sm"
-                                            style={{
-                                                color: "#8E98A8",
-                                                fontFamily: "Outfit",
-                                            }}
-                                        >
+                                    <div className="rounded-xl border border-[#DFE6EB] p-4 text-center">
+                                        <p className="text-sm text-[#8E98A8]">
                                             No manager assigned to this
                                             sub-fleet
                                         </p>
@@ -1373,73 +1121,48 @@ const SubFleetManagement: React.FC = () => {
                                 )}
                             </div>
 
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowDetailsModal(false)}
-                                    className="flex-1 bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
-                                    Close
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => setShowDetailsModal(false)}
+                                className="w-full rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* SUSPEND MODAL */}
-
             {showSuspendModal && selectedSubFleet && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="w-16 h-16 rounded-full bg-[#F2A61820] flex items-center justify-center mx-auto mb-4">
-                            <Pause size={32} style={{ color: "#F2A618" }} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F2A61820]">
+                            <Pause size={32} className="text-[#F2A618]" />
                         </div>
-                        <h3
-                            className="text-xl font-bold text-center"
-                            style={{ fontFamily: "Outfit", color: "#1F083B" }}
-                        >
+                        <h3 className="text-center text-xl font-bold text-[#1F083B]">
                             Suspend This Fleet?
                         </h3>
-                        <p
-                            className="mt-4 text-sm text-center"
-                            style={{ fontFamily: "Outfit", color: "#5B646F" }}
-                        >
+                        <p className="mt-4 text-center text-sm text-[#5B646F]">
                             Are you sure you want to suspend{" "}
                             <strong>{selectedSubFleet.name}</strong>?
                         </p>
-                        <div
-                            className="mt-6 h-px w-full"
-                            style={{ backgroundColor: "#E5E7EB" }}
-                        />
-                        <p
-                            className="mt-6 text-sm text-center"
-                            style={{ fontFamily: "Outfit", color: "#8E98A8" }}
-                        >
+                        <div className="mt-6 h-px w-full bg-[#E5E7EB]" />
+                        <p className="mt-6 text-center text-sm text-[#8E98A8]">
                             Suspending the fleet will temporarily disable access
                             for all assigned Fleet Managers and pause fleet
                             operations. Your fleet data will remain saved and
                             can be restored by reactivating the fleet.
                         </p>
-                        <div className="mt-8 flex flex-col-reverse gap-3">
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 onClick={() => setShowSuspendModal(false)}
-                                className="w-full rounded-xl border px-4 py-3 font-medium transition hover:bg-gray-50"
-                                style={{
-                                    borderColor: "#D1D5DB",
-                                    color: "#1F083B",
-                                    fontFamily: "Outfit",
-                                }}
+                                className="flex-1 rounded-xl border border-[#D1D5DB] px-4 py-3 font-medium text-[#1F083B] transition hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmAction}
-                                className="w-full rounded-xl px-4 py-3 font-medium text-white transition hover:opacity-90"
-                                style={{
-                                    backgroundColor: "#B71C1C",
-                                    fontFamily: "Outfit",
-                                }}
+                                className="flex-1 rounded-xl bg-[#B71C1C] px-4 py-3 font-medium text-white transition hover:opacity-90"
                             >
                                 Suspend Fleet
                             </button>
@@ -1450,55 +1173,34 @@ const SubFleetManagement: React.FC = () => {
 
             {/* REACTIVATE MODAL */}
             {showReactivateModal && selectedSubFleet && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="w-16 h-16 rounded-full bg-[#2E7D3220] flex items-center justify-center mx-auto mb-4">
-                            <RotateCcw size={32} style={{ color: "#2E7D32" }} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#2E7D3220]">
+                            <RotateCcw size={32} className="text-[#2E7D32]" />
                         </div>
-                        <h3
-                            className="text-xl font-bold text-center"
-                            style={{ fontFamily: "Outfit", color: "#1F083B" }}
-                        >
+                        <h3 className="text-center text-xl font-bold text-[#1F083B]">
                             Reactivate This Fleet?
                         </h3>
-                        <p
-                            className="mt-4 text-sm text-center"
-                            style={{ fontFamily: "Outfit", color: "#5B646F" }}
-                        >
+                        <p className="mt-4 text-center text-sm text-[#5B646F]">
                             Are you sure you want to reactivate{" "}
                             <strong>{selectedSubFleet.name}</strong>?
                         </p>
-                        <div
-                            className="mt-6 h-px w-full"
-                            style={{ backgroundColor: "#E5E7EB" }}
-                        />
-                        <p
-                            className="mt-6 text-sm text-center"
-                            style={{ fontFamily: "Outfit", color: "#8E98A8" }}
-                        >
+                        <div className="mt-6 h-px w-full bg-[#E5E7EB]" />
+                        <p className="mt-6 text-center text-sm text-[#8E98A8]">
                             Reactivating the fleet will restore access for all
                             assigned Fleet Managers and resume normal fleet
                             operations.
                         </p>
-                        <div className="mt-8 flex flex-col-reverse gap-3">
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 onClick={() => setShowReactivateModal(false)}
-                                className="w-full rounded-xl border px-4 py-3 font-medium transition hover:bg-gray-50"
-                                style={{
-                                    borderColor: "#D1D5DB",
-                                    color: "#1F083B",
-                                    fontFamily: "Outfit",
-                                }}
+                                className="flex-1 rounded-xl border border-[#D1D5DB] px-4 py-3 font-medium text-[#1F083B] transition hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmAction}
-                                className="w-full rounded-xl px-4 py-3 font-medium text-white transition hover:opacity-90"
-                                style={{
-                                    backgroundColor: "#2E7D32",
-                                    fontFamily: "Outfit",
-                                }}
+                                className="flex-1 rounded-xl bg-[#2E7D32] px-4 py-3 font-medium text-white transition hover:opacity-90"
                             >
                                 Reactivate Fleet
                             </button>
@@ -1509,55 +1211,34 @@ const SubFleetManagement: React.FC = () => {
 
             {/* DELETE MODAL */}
             {showDeleteModal && selectedSubFleet && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="w-16 h-16 rounded-full bg-[#B71C1C20] flex items-center justify-center mx-auto mb-4">
-                            <Trash2 size={32} style={{ color: "#B71C1C" }} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#B71C1C20]">
+                            <Trash2 size={32} className="text-[#B71C1C]" />
                         </div>
-                        <h3
-                            className="text-xl font-bold text-center"
-                            style={{ fontFamily: "Outfit", color: "#1F083B" }}
-                        >
+                        <h3 className="text-center text-xl font-bold text-[#1F083B]">
                             Delete This Fleet?
                         </h3>
-                        <p
-                            className="mt-4 text-sm text-center"
-                            style={{ fontFamily: "Outfit", color: "#5B646F" }}
-                        >
+                        <p className="mt-4 text-center text-sm text-[#5B646F]">
                             Are you sure you want to permanently delete{" "}
                             <strong>{selectedSubFleet.name}</strong>?
                         </p>
-                        <div
-                            className="mt-6 h-px w-full"
-                            style={{ backgroundColor: "#E5E7EB" }}
-                        />
-                        <p
-                            className="mt-6 text-sm text-center"
-                            style={{ fontFamily: "Outfit", color: "#8E98A8" }}
-                        >
+                        <div className="mt-6 h-px w-full bg-[#E5E7EB]" />
+                        <p className="mt-6 text-center text-sm text-[#8E98A8]">
                             This action will remove the fleet, its vehicles,
                             drivers, sub-fleets, and related records. This
                             action cannot be undone.
                         </p>
-                        <div className="mt-8 flex flex-col-reverse gap-3">
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 onClick={() => setShowDeleteModal(false)}
-                                className="w-full rounded-xl border px-4 py-3 font-medium transition hover:bg-gray-50"
-                                style={{
-                                    borderColor: "#D1D5DB",
-                                    color: "#1F083B",
-                                    fontFamily: "Outfit",
-                                }}
+                                className="flex-1 rounded-xl border border-[#D1D5DB] px-4 py-3 font-medium text-[#1F083B] transition hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmAction}
-                                className="w-full rounded-xl px-4 py-3 font-medium text-white transition hover:opacity-90"
-                                style={{
-                                    backgroundColor: "#B71C1C",
-                                    fontFamily: "Outfit",
-                                }}
+                                className="flex-1 rounded-xl bg-[#B71C1C] px-4 py-3 font-medium text-white transition hover:opacity-90"
                             >
                                 Delete Fleet
                             </button>
@@ -1568,27 +1249,20 @@ const SubFleetManagement: React.FC = () => {
 
             {/* SUCCESS MODAL */}
             {showSuccessModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
-                        <div className="w-16 h-16 rounded-full bg-[#D6F5DA] flex items-center justify-center mx-auto mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#D6F5DA]">
                             <CheckCircle size={32} className="text-[#267F50]" />
                         </div>
-                        <h3
-                            className="text-2xl font-bold text-[#1F083B] mb-2"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <h3 className="mb-2 text-xl font-bold text-[#1F083B] sm:text-2xl">
                             {successTitle}
                         </h3>
-                        <p
-                            className="text-[#5B646F] mb-6"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <p className="mb-6 text-sm text-[#5B646F]">
                             {successMessage}
                         </p>
                         <button
                             onClick={() => setShowSuccessModal(false)}
-                            className="w-full bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition"
-                            style={{ fontFamily: "Outfit" }}
+                            className="w-full rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90"
                         >
                             Done
                         </button>
@@ -1596,59 +1270,46 @@ const SubFleetManagement: React.FC = () => {
                 </div>
             )}
 
-            {/* ERROR / WARNING MODAL (Plan Limit) */}
+            {/* ERROR MODAL - Plan Limit */}
             {showErrorModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="w-16 h-16 rounded-full bg-[#FFEED4] flex items-center justify-center mx-auto mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#FFEED4]">
                             <AlertTriangle
                                 size={32}
                                 className="text-[#F09205]"
                             />
                         </div>
-                        <h3
-                            className="text-2xl font-bold text-[#1F083B] text-center mb-2"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <h3 className="mb-2 text-center text-xl font-bold text-[#1F083B] sm:text-2xl">
                             Upgrade Required
                         </h3>
-                        <p
-                            className="text-[#5B646F] text-center mb-4"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <p className="mb-4 text-center text-sm text-[#5B646F]">
                             You've Reached Your Plan Limit. Your current
                             subscription has reached its limit for this feature.
                         </p>
-                        <p
-                            className="text-[#5B646F] text-sm text-center mb-6"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <p className="mb-6 text-center text-sm text-[#5B646F]">
                             Upgrade your plan to unlock additional Fleet
                             Managers, sub-fleets, and more advanced fleet
                             management capabilities.
                         </p>
 
-                        <div className="flex items-center justify-between bg-[#4C577D05] rounded-xl px-4 py-3 mb-6 border border-[#E0E5EB]">
-                            <span className="text-[#5B646F] text-sm">
+                        <div className="mb-6 flex items-center justify-between rounded-xl border border-[#E0E5EB] bg-[#4C577D05] px-4 py-3">
+                            <span className="text-sm text-[#5B646F]">
                                 Current Plan:
                             </span>
-                            <span className="text-[#6E43A3] font-semibold text-sm">
+                            <span className="text-sm font-semibold text-[#6E43A3]">
                                 Starter Fleet
                             </span>
                         </div>
 
-                        <div className="flex flex-col-reverse gap-3">
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 onClick={() => setShowErrorModal(false)}
-                                className="w-full px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                style={{ fontFamily: "Outfit" }}
+                                className="flex-1 rounded-xl border border-[#E0E5EB] px-6 py-3 text-[#8E98A8] transition hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
-                            <button
-                                className="w-full bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                            <button className="flex-1 rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90">
                                 Upgrade Plan
                             </button>
                         </div>

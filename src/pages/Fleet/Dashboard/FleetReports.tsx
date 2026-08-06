@@ -333,141 +333,134 @@ const FleetReports: React.FC = () => {
 
     return (
         <DashSidebar>
-            <div className="p-8">
+            <div className="p-3 sm:p-4 md:p-6 lg:p-8">
                 {/* Header */}
-                <div className="bg-white rounded-xl p-6">
-                    <div>
-                        <h1
-                            className="text-2xl font-bold text-[#1F083B]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            Reports
-                        </h1>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span
-                                className="text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Fleet performance, safety and compliance
-                                insights
-                            </span>
-                        </div>
-                    </div>
+                <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                    <h1 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
+                        Reports
+                    </h1>
+                    <p className="mt-1 text-sm text-[#8E98A8]">
+                        Fleet performance, safety and compliance insights
+                    </p>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="flex gap-4 flex-wrap mt-6">
-                    <div className="bg-white rounded-xl p-6 flex flex-col flex-1 min-w-[150px]">
-                        <div className="flex items-center gap-2 text-[#6F6C8F] mb-2">
-                            <Activity size={18} className="text-[#6E43A3]" />
-                            <span className="text-sm font-medium">Trips</span>
+                {/* Stats Cards - Responsive Grid */}
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+                    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                        <div className="flex items-center gap-2 text-[#6F6C8F]">
+                            <Activity
+                                size={16}
+                                className="text-[#6E43A3] sm:size-[18px]"
+                            />
+                            <span className="text-xs font-medium sm:text-sm">
+                                Trips
+                            </span>
                         </div>
-                        <div className="text-3xl font-bold text-[#6E43A3]">
+                        <div className="mt-1 text-2xl font-bold text-[#6E43A3] sm:text-3xl">
                             {stats.totalTrips}
                         </div>
-                        <div className="text-xs text-[#8E98A8] mt-1">
+                        <div className="mt-0.5 text-[10px] text-[#8E98A8] sm:text-xs">
                             Total trips
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl p-6 flex flex-col flex-1 min-w-[150px]">
-                        <div className="flex items-center gap-2 text-[#6F6C8F] mb-2">
-                            <TrendingUp size={18} className="text-[#00BC7B]" />
-                            <span className="text-sm font-medium">
+                    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                        <div className="flex items-center gap-2 text-[#6F6C8F]">
+                            <TrendingUp
+                                size={16}
+                                className="text-[#00BC7B] sm:size-[18px]"
+                            />
+                            <span className="text-xs font-medium sm:text-sm">
                                 Distance (km)
                             </span>
                         </div>
-                        <div className="text-3xl font-bold text-[#00BC7B]">
+                        <div className="mt-1 text-2xl font-bold text-[#00BC7B] sm:text-3xl">
                             {stats.totalDistance.toFixed(1)}
                         </div>
-                        <div className="text-xs text-[#8E98A8] mt-1">
+                        <div className="mt-0.5 text-[10px] text-[#8E98A8] sm:text-xs">
                             Total distance covered
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl p-6 flex flex-col flex-1 min-w-[150px]">
-                        <div className="flex items-center gap-2 text-[#6F6C8F] mb-2">
-                            <CheckCircle size={18} className="text-[#2E7D32]" />
-                            <span className="text-sm font-medium">
+                    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                        <div className="flex items-center gap-2 text-[#6F6C8F]">
+                            <CheckCircle
+                                size={16}
+                                className="text-[#2E7D32] sm:size-[18px]"
+                            />
+                            <span className="text-xs font-medium sm:text-sm">
                                 Avg Safety
                             </span>
                         </div>
-                        <div className="text-3xl font-bold text-[#2E7D32]">
+                        <div className="mt-1 text-2xl font-bold text-[#2E7D32] sm:text-3xl">
                             {stats.avgSafetyScore}
                         </div>
-                        <div className="text-xs text-[#8E98A8] mt-1">
+                        <div className="mt-0.5 text-[10px] text-[#8E98A8] sm:text-xs">
                             Average safety score
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl p-6 flex flex-col flex-1 min-w-[150px]">
-                        <div className="flex items-center gap-2 text-[#6F6C8F] mb-2">
+                    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                        <div className="flex items-center gap-2 text-[#6F6C8F]">
                             <AlertTriangle
-                                size={18}
-                                className="text-[#FE3F21]"
+                                size={16}
+                                className="text-[#FE3F21] sm:size-[18px]"
                             />
-                            <span className="text-sm font-medium">
+                            <span className="text-xs font-medium sm:text-sm">
                                 SOS this month
                             </span>
                         </div>
-                        <div className="text-3xl font-bold text-[#FE3F21]">
+                        <div className="mt-1 text-2xl font-bold text-[#FE3F21] sm:text-3xl">
                             {stats.sosCount}
                         </div>
-                        <div className="text-xs text-[#8E98A8] mt-1">
+                        <div className="mt-0.5 text-[10px] text-[#8E98A8] sm:text-xs">
                             SOS alerts
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl p-6 flex flex-col flex-1 min-w-[150px]">
-                        <div className="flex items-center gap-2 text-[#6F6C8F] mb-2">
+                    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                        <div className="flex items-center gap-2 text-[#6F6C8F]">
                             <AlertTriangle
-                                size={18}
-                                className="text-[#F2A618]"
+                                size={16}
+                                className="text-[#F2A618] sm:size-[18px]"
                             />
-                            <span className="text-sm font-medium">Hazards</span>
+                            <span className="text-xs font-medium sm:text-sm">
+                                Hazards
+                            </span>
                         </div>
-                        <div className="text-3xl font-bold text-[#F2A618]">
+                        <div className="mt-1 text-2xl font-bold text-[#F2A618] sm:text-3xl">
                             {stats.hazardCount}
                         </div>
-                        <div className="text-xs text-[#8E98A8] mt-1">
+                        <div className="mt-0.5 text-[10px] text-[#8E98A8] sm:text-xs">
                             Hazards reported
                         </div>
                     </div>
                 </div>
 
                 {/* Chart Section */}
-                <div className="bg-white rounded-xl p-6 mt-6">
-                    <h3
-                        className="text-lg font-semibold text-[#1F083B] mb-4"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                <div className="mt-4 rounded-xl bg-white p-4 shadow-sm sm:mt-6 sm:p-6">
+                    <h3 className="mb-3 text-base font-semibold text-[#1F083B] sm:mb-4 sm:text-lg">
                         Trips & Alerts Rate
                     </h3>
-                    <div className="relative h-[350px] rounded-lg border border-[#E5E7EB] p-4 overflow-hidden">
+                    <div className="relative overflow-hidden rounded-lg border border-[#E5E7EB] p-2 sm:p-4">
                         {/* Legend */}
-                        <div className="flex items-center justify-center gap-8 mb-2">
+                        <div className="mb-2 flex flex-wrap items-center justify-center gap-4 sm:gap-8">
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-[#00BC7B]"></div>
-                                <span
-                                    className="text-sm text-[#8E98A8]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="h-2 w-2 rounded-full bg-[#00BC7B] sm:h-3 sm:w-3"></div>
+                                <span className="text-xs text-[#8E98A8] sm:text-sm">
                                     Trips
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-[#F2A618]"></div>
-                                <span
-                                    className="text-sm text-[#8E98A8]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="h-2 w-2 rounded-full bg-[#F2A618] sm:h-3 sm:w-3"></div>
+                                <span className="text-xs text-[#8E98A8] sm:text-sm">
                                     Alerts
                                 </span>
                             </div>
                         </div>
 
-                        {/* Chart Container */}
-                        <div className="relative h-[270px] w-full">
+                        {/* Chart Container - Responsive height */}
+                        <div className="relative h-[200px] w-full sm:h-[250px] md:h-[270px]">
                             {(() => {
                                 // Generate 12 months of data
                                 const now = new Date();
@@ -493,18 +486,18 @@ const FleetReports: React.FC = () => {
                                     10,
                                 );
                                 const tripData = [
-                                    Math.round(baseTrips * 0.4 * 10) / 10, // Jan ~3.2
-                                    Math.round(baseTrips * 0.5 * 10) / 10, // Feb ~4.0
-                                    Math.round(baseTrips * 0.65 * 10) / 10, // Mar ~5.2
-                                    Math.round(baseTrips * 0.45 * 10) / 10, // Apr ~3.6
-                                    Math.round(baseTrips * 0.75 * 10) / 10, // May ~6.0
-                                    Math.round(baseTrips * 0.6 * 10) / 10, // Jun ~4.8
-                                    baseTrips, // Jul - current month (5-10)
-                                    Math.round(baseTrips * 0.7 * 10) / 10, // Aug ~5.6
-                                    Math.round(baseTrips * 0.85 * 10) / 10, // Sep ~6.8
-                                    Math.round(baseTrips * 0.55 * 10) / 10, // Oct ~4.4
-                                    Math.round(baseTrips * 0.45 * 10) / 10, // Nov ~3.6
-                                    Math.round(baseTrips * 0.9 * 10) / 10, // Dec ~7.2
+                                    Math.round(baseTrips * 0.4 * 10) / 10,
+                                    Math.round(baseTrips * 0.5 * 10) / 10,
+                                    Math.round(baseTrips * 0.65 * 10) / 10,
+                                    Math.round(baseTrips * 0.45 * 10) / 10,
+                                    Math.round(baseTrips * 0.75 * 10) / 10,
+                                    Math.round(baseTrips * 0.6 * 10) / 10,
+                                    baseTrips,
+                                    Math.round(baseTrips * 0.7 * 10) / 10,
+                                    Math.round(baseTrips * 0.85 * 10) / 10,
+                                    Math.round(baseTrips * 0.55 * 10) / 10,
+                                    Math.round(baseTrips * 0.45 * 10) / 10,
+                                    Math.round(baseTrips * 0.9 * 10) / 10,
                                 ];
 
                                 // Scale down alerts - keep between 0 and 10
@@ -513,21 +506,21 @@ const FleetReports: React.FC = () => {
                                     10,
                                 );
                                 const alertData = [
-                                    Math.round(baseAlerts * 0.35 * 10) / 10, // Jan ~1.8
-                                    Math.round(baseAlerts * 0.55 * 10) / 10, // Feb ~2.8
-                                    Math.round(baseAlerts * 0.75 * 10) / 10, // Mar ~3.8
-                                    Math.round(baseAlerts * 0.3 * 10) / 10, // Apr ~1.5
-                                    Math.round(baseAlerts * 0.9 * 10) / 10, // May ~4.5
-                                    Math.round(baseAlerts * 0.6 * 10) / 10, // Jun ~3.0
-                                    baseAlerts, // Jul - current month (3-10)
-                                    Math.round(baseAlerts * 0.7 * 10) / 10, // Aug ~3.5
-                                    Math.round(baseAlerts * 0.85 * 10) / 10, // Sep ~4.3
-                                    Math.round(baseAlerts * 0.45 * 10) / 10, // Oct ~2.3
-                                    Math.round(baseAlerts * 0.3 * 10) / 10, // Nov ~1.5
-                                    Math.round(baseAlerts * 1.1 * 10) / 10, // Dec ~5.5
+                                    Math.round(baseAlerts * 0.35 * 10) / 10,
+                                    Math.round(baseAlerts * 0.55 * 10) / 10,
+                                    Math.round(baseAlerts * 0.75 * 10) / 10,
+                                    Math.round(baseAlerts * 0.3 * 10) / 10,
+                                    Math.round(baseAlerts * 0.9 * 10) / 10,
+                                    Math.round(baseAlerts * 0.6 * 10) / 10,
+                                    baseAlerts,
+                                    Math.round(baseAlerts * 0.7 * 10) / 10,
+                                    Math.round(baseAlerts * 0.85 * 10) / 10,
+                                    Math.round(baseAlerts * 0.45 * 10) / 10,
+                                    Math.round(baseAlerts * 0.3 * 10) / 10,
+                                    Math.round(baseAlerts * 1.1 * 10) / 10,
                                 ];
 
-                                // Calculate max value - round up to nearest 1
+                                // Calculate max value
                                 const maxTrip = Math.max(...tripData);
                                 const maxAlert = Math.max(...alertData);
                                 const maxValue =
@@ -594,7 +587,7 @@ const FleetReports: React.FC = () => {
                                     alertPath +
                                     ` L ${alertPoints[alertPoints.length - 1].x} ${padding.top + chartHeight} L ${alertPoints[0].x} ${padding.top + chartHeight} Z`;
 
-                                // Y-axis values (0 to maxValue)
+                                // Y-axis values
                                 const yAxisSteps = 5;
                                 const yAxisValues = [];
                                 for (let i = 0; i <= yAxisSteps; i++) {
@@ -606,19 +599,14 @@ const FleetReports: React.FC = () => {
                                     );
                                 }
 
-                                // Get hover data
                                 const hoverIndex =
                                     hoveredIndex !== null
                                         ? hoveredIndex
                                         : tripData.length - 1;
-                                const month = months[hoverIndex];
-                                const year = years[hoverIndex];
-                                const tripValue = tripData[hoverIndex];
-                                const alertValue = alertData[hoverIndex];
 
                                 return (
                                     <svg
-                                        className="w-full h-full"
+                                        className="h-full w-full"
                                         viewBox="0 0 900 270"
                                         preserveAspectRatio="none"
                                     >
@@ -689,7 +677,7 @@ const FleetReports: React.FC = () => {
                                             strokeLinejoin="round"
                                         />
 
-                                        {/* Invisible hover areas for each data point */}
+                                        {/* Invisible hover areas */}
                                         {tripPoints.map((p, i) => (
                                             <g key={`hover-area-${i}`}>
                                                 <circle
@@ -710,7 +698,7 @@ const FleetReports: React.FC = () => {
                                             </g>
                                         ))}
 
-                                        {/* Data Points */}
+                                        {/* Data Points - Trips */}
                                         {tripPoints.map((p, i) => {
                                             const isHovered =
                                                 hoveredIndex === i;
@@ -734,6 +722,7 @@ const FleetReports: React.FC = () => {
                                             );
                                         })}
 
+                                        {/* Data Points - Alerts */}
                                         {alertPoints.map((p, i) => {
                                             const isHovered =
                                                 hoveredIndex === i;
@@ -795,7 +784,7 @@ const FleetReports: React.FC = () => {
                                             );
                                         })}
 
-                                        {/* Tooltip - Only show when hovered */}
+                                        {/* Tooltip */}
                                         {hoveredIndex !== null && (
                                             <g
                                                 transform={`translate(${tripPoints[hoveredIndex].x - 40}, ${tripPoints[hoveredIndex].y - 75})`}
@@ -918,25 +907,13 @@ const FleetReports: React.FC = () => {
                         </div>
 
                         {/* Gradient Labels */}
-                        <div className="flex items-center justify-center gap-6 mt-1 text-xs text-[#8E98A8]">
+                        <div className="mt-1 flex flex-wrap items-center justify-center gap-3 text-xs text-[#8E98A8] sm:gap-6 sm:text-sm">
                             <div className="flex items-center gap-2">
-                                <div
-                                    className="w-16 h-2 rounded"
-                                    style={{
-                                        background:
-                                            "linear-gradient(to right, #00BC7B00, #00BC7B)",
-                                    }}
-                                ></div>
+                                <div className="h-1.5 w-12 rounded bg-gradient-to-r from-[#00BC7B00] to-[#00BC7B] sm:w-16"></div>
                                 <span>Trips</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div
-                                    className="w-16 h-2 rounded"
-                                    style={{
-                                        background:
-                                            "linear-gradient(to right, #F2A61800, #F2A618)",
-                                    }}
-                                ></div>
+                                <div className="h-1.5 w-12 rounded bg-gradient-to-r from-[#F2A61800] to-[#F2A618] sm:w-16"></div>
                                 <span>Alerts</span>
                             </div>
                         </div>
@@ -944,103 +921,174 @@ const FleetReports: React.FC = () => {
                 </div>
 
                 {/* Reports Table Section */}
-                <div className="bg-white rounded-xl p-6 mt-6">
+                <div className="mt-4 rounded-xl bg-white p-3 shadow-sm sm:mt-6 sm:p-4 md:p-6">
                     {/* Table Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h2
-                            className="text-lg font-semibold text-[#1F083B]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                    <div className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <h2 className="text-base font-semibold text-[#1F083B] sm:text-lg">
                             Generated Reports ({totalItems})
                         </h2>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                             <button
                                 onClick={() => setShowGenerateModal(true)}
-                                className="bg-[#6E43A3] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition flex items-center gap-2"
-                                style={{ fontFamily: "Outfit" }}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6E43A3] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 sm:w-auto sm:px-6"
                             >
-                                <Plus size={20} />
+                                <Plus size={18} />
                                 Generate Report
                             </button>
-                            <div className="relative">
-                                <Search
-                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8E98A8]"
-                                    size={18}
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="Search reports..."
-                                    value={searchTerm}
-                                    onChange={(e) =>
-                                        setSearchTerm(e.target.value)
-                                    }
-                                    className="pl-10 pr-4 py-2 bg-[#F8F8F8] rounded-xl text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                    style={{ fontFamily: "Outfit" }}
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Filter size={18} className="text-[#8E98A8]" />
-                                <select
-                                    value={selectedType}
-                                    onChange={(e) =>
-                                        setSelectedType(e.target.value)
-                                    }
-                                    className="bg-[#F8F8F8] px-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
-                                    <option value="all">All Types</option>
-                                    {reportTypes.map((type) => (
-                                        <option
-                                            key={type.value}
-                                            value={type.value}
-                                        >
-                                            {type.label}
-                                        </option>
-                                    ))}
-                                </select>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                                <div className="relative w-full sm:w-48 md:w-56">
+                                    <Search
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8E98A8]"
+                                        size={16}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Search reports..."
+                                        value={searchTerm}
+                                        onChange={(e) =>
+                                            setSearchTerm(e.target.value)
+                                        }
+                                        className="w-full rounded-xl bg-[#F8F8F8] py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Filter
+                                        size={16}
+                                        className="text-[#8E98A8]"
+                                    />
+                                    <select
+                                        value={selectedType}
+                                        onChange={(e) =>
+                                            setSelectedType(e.target.value)
+                                        }
+                                        className="rounded-xl bg-[#F8F8F8] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3] sm:px-4"
+                                    >
+                                        <option value="all">All Types</option>
+                                        {reportTypes.map((type) => (
+                                            <option
+                                                key={type.value}
+                                                value={type.value}
+                                            >
+                                                {type.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    {/* Mobile Cards */}
+                    <div className="space-y-3 sm:hidden">
+                        {loading ? (
+                            <div className="py-8 text-center text-sm text-[#8E98A8]">
+                                Loading reports...
+                            </div>
+                        ) : currentReports.length === 0 ? (
+                            <div className="py-8 text-center text-sm text-[#8E98A8]">
+                                No reports found
+                            </div>
+                        ) : (
+                            currentReports.map((report) => (
+                                <div
+                                    key={report.id}
+                                    className="rounded-lg border border-[#E0E5EB] bg-white p-4"
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#6E43A310]">
+                                                <FileText
+                                                    size={18}
+                                                    className="text-[#6E43A3]"
+                                                />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="truncate text-sm font-medium text-[#111827]">
+                                                    {report.reportNumber}
+                                                </div>
+                                                <div className="truncate text-xs text-[#8E98A8]">
+                                                    {getTypeDisplay(
+                                                        report.type,
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span
+                                            className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium ${getStatusColor(report.status)}`}
+                                        >
+                                            <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
+                                            {getStatusDisplay(report.status)}
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[#E0E5EB] pt-3">
+                                        <div>
+                                            <p className="text-[10px] text-[#8E98A8]">
+                                                Period
+                                            </p>
+                                            <p className="truncate text-xs font-medium text-[#111827]">
+                                                {getPeriodDisplay(
+                                                    report.period,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-[#8E98A8]">
+                                                Generated
+                                            </p>
+                                            <p className="truncate text-xs font-medium text-[#111827]">
+                                                {formatDateTime(
+                                                    report.generatedAt,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-[#8E98A8]">
+                                                Size
+                                            </p>
+                                            <p className="truncate text-xs font-medium text-[#111827]">
+                                                {formatFileSize(
+                                                    report.fileSize,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-end justify-end">
+                                            <button
+                                                onClick={() =>
+                                                    handleDownload(report.id)
+                                                }
+                                                className="rounded-lg p-2 text-[#6E43A3] transition hover:bg-[#F8F8F8]"
+                                            >
+                                                <Download size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden overflow-x-auto sm:block">
+                        <table className="w-full min-w-[700px]">
                             <thead>
                                 <tr className="border-b border-[#E0E5EB]">
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-2 text-left text-xs font-medium text-[#8E98A8] sm:py-3 sm:text-sm">
                                         Report
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="hidden py-2 text-left text-xs font-medium text-[#8E98A8] md:table-cell sm:py-3 sm:text-sm">
                                         Type/Size
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="hidden py-2 text-left text-xs font-medium text-[#8E98A8] lg:table-cell sm:py-3 sm:text-sm">
                                         Period
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="hidden py-2 text-left text-xs font-medium text-[#8E98A8] xl:table-cell sm:py-3 sm:text-sm">
                                         Generated
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-2 text-left text-xs font-medium text-[#8E98A8] sm:py-3 sm:text-sm">
                                         Status
                                     </th>
-                                    <th
-                                        className="text-right py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-2 text-right text-xs font-medium text-[#8E98A8] sm:py-3 sm:text-sm">
                                         Action
                                     </th>
                                 </tr>
@@ -1050,7 +1098,7 @@ const FleetReports: React.FC = () => {
                                     <tr>
                                         <td
                                             colSpan={6}
-                                            className="text-center py-8 text-[#8E98A8]"
+                                            className="py-8 text-center text-sm text-[#8E98A8]"
                                         >
                                             Loading reports...
                                         </td>
@@ -1059,7 +1107,7 @@ const FleetReports: React.FC = () => {
                                     <tr>
                                         <td
                                             colSpan={6}
-                                            className="text-center py-8 text-[#8E98A8]"
+                                            className="py-8 text-center text-sm text-[#8E98A8]"
                                         >
                                             No reports found
                                         </td>
@@ -1068,35 +1116,23 @@ const FleetReports: React.FC = () => {
                                     currentReports.map((report) => (
                                         <tr
                                             key={report.id}
-                                            className="border-b border-[#E0E5EB] hover:bg-[#F7F7F7] transition"
+                                            className="border-b border-[#E0E5EB] transition hover:bg-[#F7F7F7]"
                                         >
-                                            <td className="py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-[#6E43A310] flex items-center justify-center">
+                                            <td className="py-2 sm:py-3">
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#6E43A310] sm:h-10 sm:w-10">
                                                         <FileText
-                                                            size={18}
-                                                            className="text-[#6E43A3]"
+                                                            size={16}
+                                                            className="text-[#6E43A3] sm:size-[18px]"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <div
-                                                            className="text-sm font-medium text-[#111827]"
-                                                            style={{
-                                                                fontFamily:
-                                                                    "Outfit",
-                                                            }}
-                                                        >
+                                                        <div className="text-sm font-medium text-[#111827]">
                                                             {
                                                                 report.reportNumber
                                                             }
                                                         </div>
-                                                        <div
-                                                            className="text-xs text-[#8E98A8]"
-                                                            style={{
-                                                                fontFamily:
-                                                                    "Outfit",
-                                                            }}
-                                                        >
+                                                        <div className="text-xs text-[#8E98A8]">
                                                             {getTypeDisplay(
                                                                 report.type,
                                                             )}
@@ -1104,52 +1140,28 @@ const FleetReports: React.FC = () => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="py-3">
+                                            <td className="hidden py-2 md:table-cell sm:py-3">
                                                 <div>
-                                                    <div
-                                                        className="text-sm text-[#111827]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                    <div className="text-sm text-[#111827]">
                                                         {getTypeDisplay(
                                                             report.type,
                                                         )}
                                                     </div>
-                                                    <div
-                                                        className="text-xs text-[#8E98A8]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                    <div className="text-xs text-[#8E98A8]">
                                                         {formatFileSize(
                                                             report.fileSize,
                                                         )}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="py-3">
+                                            <td className="hidden py-2 lg:table-cell sm:py-3">
                                                 <div>
-                                                    <div
-                                                        className="text-sm text-[#111827]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                    <div className="text-sm text-[#111827]">
                                                         {getPeriodDisplay(
                                                             report.period,
                                                         )}
                                                     </div>
-                                                    <div
-                                                        className="text-xs text-[#8E98A8]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
+                                                    <div className="text-xs text-[#8E98A8]">
                                                         {formatDate(
                                                             report.startDate,
                                                         )}{" "}
@@ -1160,42 +1172,37 @@ const FleetReports: React.FC = () => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="py-3">
-                                                <div>
-                                                    <div
-                                                        className="text-sm text-[#111827]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
-                                                        {formatDateTime(
-                                                            report.generatedAt,
-                                                        )}
-                                                    </div>
-                                                </div>
+                                            <td className="hidden py-2 xl:table-cell sm:py-3">
+                                                <span className="text-sm text-[#111827]">
+                                                    {formatDateTime(
+                                                        report.generatedAt,
+                                                    )}
+                                                </span>
                                             </td>
-                                            <td className="py-3">
+                                            <td className="py-2 sm:py-3">
                                                 <span
-                                                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getStatusColor(report.status)}`}
+                                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium sm:px-3 ${getStatusColor(report.status)}`}
                                                 >
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
                                                     {getStatusDisplay(
                                                         report.status,
                                                     )}
                                                 </span>
                                             </td>
-                                            <td className="py-3 text-right">
+                                            <td className="py-2 text-right sm:py-3">
                                                 <button
                                                     onClick={() =>
                                                         handleDownload(
                                                             report.id,
                                                         )
                                                     }
-                                                    className="p-1.5 text-[#6E43A3] hover:bg-[#F8F8F8] rounded-lg transition"
+                                                    className="rounded-lg p-1.5 text-[#6E43A3] transition hover:bg-[#F8F8F8] sm:p-2"
                                                     title="Download"
                                                 >
-                                                    <Download size={18} />
+                                                    <Download
+                                                        size={16}
+                                                        className="sm:size-[18px]"
+                                                    />
                                                 </button>
                                             </td>
                                         </tr>
@@ -1207,33 +1214,33 @@ const FleetReports: React.FC = () => {
 
                     {/* Pagination */}
                     {totalItems > 0 && (
-                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#E0E5EB]">
-                            <div
-                                className="flex items-center gap-3 text-sm text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                <span>Show</span>
+                        <div className="mt-4 flex flex-col gap-3 border-t border-[#E0E5EB] pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-[#8E98A8]">
+                                <span className="hidden sm:inline">Show</span>
                                 <select
                                     value={itemsPerPage}
                                     onChange={(e) => {
                                         setItemsPerPage(Number(e.target.value));
                                         setCurrentPage(1);
                                     }}
-                                    className="px-2 py-1 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
+                                    className="rounded-lg border border-[#E0E5EB] px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                 >
                                     <option value={5}>5</option>
                                     <option value={10}>10</option>
                                     <option value={20}>20</option>
                                     <option value={50}>50</option>
                                 </select>
-                                <span>entries</span>
-                                <span className="ml-4">
+                                <span className="hidden sm:inline">
+                                    entries
+                                </span>
+                                <span className="hidden text-xs sm:inline sm:text-sm">
                                     Showing {startIndex + 1} to{" "}
                                     {Math.min(endIndex, totalItems)} of{" "}
                                     {totalItems} results
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2">
+
+                            <div className="flex items-center gap-1">
                                 <button
                                     onClick={() =>
                                         setCurrentPage((prev) =>
@@ -1241,18 +1248,18 @@ const FleetReports: React.FC = () => {
                                         )
                                     }
                                     disabled={currentPage === 1}
-                                    className={`p-2 rounded-lg border border-[#E0E5EB] transition ${
+                                    className={`rounded-lg border border-[#E0E5EB] p-1.5 transition sm:p-2 ${
                                         currentPage === 1
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "hover:bg-[#F7F7F7] hover:border-[#6E43A3]"
+                                            ? "cursor-not-allowed opacity-50"
+                                            : "hover:bg-[#F7F7F7] active:bg-[#E5E7EB]"
                                     }`}
                                 >
                                     <ChevronRight
-                                        size={18}
-                                        className="rotate-180 text-[#8E98A8]"
+                                        size={16}
+                                        className="rotate-180 text-[#8E98A8] sm:size-[18px]"
                                     />
                                 </button>
-                                <span className="text-sm text-[#8E98A8]">
+                                <span className="text-xs text-[#8E98A8] sm:text-sm">
                                     Page {currentPage} of {totalPages}
                                 </span>
                                 <button
@@ -1262,15 +1269,15 @@ const FleetReports: React.FC = () => {
                                         )
                                     }
                                     disabled={currentPage === totalPages}
-                                    className={`p-2 rounded-lg border border-[#E0E5EB] transition ${
+                                    className={`rounded-lg border border-[#E0E5EB] p-1.5 transition sm:p-2 ${
                                         currentPage === totalPages
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "hover:bg-[#F7F7F7] hover:border-[#6E43A3]"
+                                            ? "cursor-not-allowed opacity-50"
+                                            : "hover:bg-[#F7F7F7] active:bg-[#E5E7EB]"
                                     }`}
                                 >
                                     <ChevronRight
-                                        size={18}
-                                        className="text-[#8E98A8]"
+                                        size={16}
+                                        className="text-[#8E98A8] sm:size-[18px]"
                                     />
                                 </button>
                             </div>
@@ -1279,22 +1286,16 @@ const FleetReports: React.FC = () => {
                 </div>
             </div>
 
-            {/* Generate Report Modal */}
+            {/* Generate Report Modal - Mobile friendly */}
             {showGenerateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="flex justify-between items-start mb-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8 max-h-[90vh] overflow-y-auto">
+                        <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Generate a new report
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Choose a report type and time period.
                                 </p>
                             </div>
@@ -1303,17 +1304,17 @@ const FleetReports: React.FC = () => {
                                     setShowGenerateModal(false);
                                     setGenerateForm({ type: "", period: "" });
                                 }}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                     Report type
                                 </label>
                                 <select
@@ -1324,8 +1325,7 @@ const FleetReports: React.FC = () => {
                                             type: e.target.value,
                                         }))
                                     }
-                                    className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                 >
                                     <option value="">Select</option>
                                     {reportTypes.map((type) => (
@@ -1340,7 +1340,7 @@ const FleetReports: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                     Period
                                 </label>
                                 <select
@@ -1351,8 +1351,7 @@ const FleetReports: React.FC = () => {
                                             period: e.target.value,
                                         }))
                                     }
-                                    className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 focus:border-[#6E43A3] focus:outline-none"
                                 >
                                     <option value="">Select</option>
                                     {periods.map((period) => (
@@ -1367,14 +1366,13 @@ const FleetReports: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-3 mt-6">
+                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 onClick={() => {
                                     setShowGenerateModal(false);
                                     setGenerateForm({ type: "", period: "" });
                                 }}
-                                className="flex-1 px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                style={{ fontFamily: "Outfit" }}
+                                className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm text-[#8E98A8] transition hover:bg-gray-50 active:scale-95 sm:flex-1 sm:px-6"
                             >
                                 Cancel
                             </button>
@@ -1385,19 +1383,18 @@ const FleetReports: React.FC = () => {
                                     !generateForm.period ||
                                     isSubmitting
                                 }
-                                className={`flex-1 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition disabled:cursor-not-allowed ${
+                                className={`w-full rounded-xl px-4 py-3 text-sm font-medium transition active:scale-95 sm:flex-1 sm:px-6 ${
                                     !generateForm.type ||
                                     !generateForm.period ||
                                     isSubmitting
-                                        ? "bg-[#8E98A8] text-white"
+                                        ? "cursor-not-allowed bg-[#8E98A8] text-white"
                                         : "bg-[#6E43A3] text-white hover:opacity-90"
                                 }`}
-                                style={{ fontFamily: "Outfit" }}
                             >
                                 {isSubmitting ? (
-                                    <>
+                                    <span className="flex items-center justify-center gap-2">
                                         <svg
-                                            className="animate-spin h-5 w-5 text-white"
+                                            className="h-5 w-5 animate-spin text-white"
                                             xmlns="http://www.w3.org/2000/svg"
                                             fill="none"
                                             viewBox="0 0 24 24"
@@ -1417,9 +1414,9 @@ const FleetReports: React.FC = () => {
                                             ></path>
                                         </svg>
                                         Generating...
-                                    </>
+                                    </span>
                                 ) : (
-                                    <>Generate</>
+                                    "Generate"
                                 )}
                             </button>
                         </div>
@@ -1429,30 +1426,21 @@ const FleetReports: React.FC = () => {
 
             {/* Success Modal */}
             {showSuccessModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
-                        <div className="w-16 h-16 rounded-full bg-[#D6F5DA] flex items-center justify-center mx-auto mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#D6F5DA]">
                             <CheckCircle size={32} className="text-[#267F50]" />
                         </div>
-                        <h3
-                            className="text-2xl font-bold text-[#1F083B] mb-2"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <h3 className="mb-2 text-xl font-bold text-[#1F083B] sm:text-2xl">
                             Report Generated Successfully
                         </h3>
-                        <p
-                            className="text-[#5B646F] mb-6"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <p className="mb-6 text-sm text-[#5B646F]">
                             Your report has been generated successfully and is
                             ready to view, download, or share.
                         </p>
                         <button
-                            onClick={() => {
-                                setShowSuccessModal(false);
-                            }}
-                            className="w-full bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition"
-                            style={{ fontFamily: "Outfit" }}
+                            onClick={() => setShowSuccessModal(false)}
+                            className="w-full rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90"
                         >
                             Done
                         </button>

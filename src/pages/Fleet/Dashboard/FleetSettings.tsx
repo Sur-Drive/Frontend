@@ -352,19 +352,16 @@ const FleetSettings: React.FC = () => {
 
     return (
         <DashSidebar>
-            <div className="p-8">
-                <h1
-                    className="text-2xl font-bold text-[#1F083B] mb-6"
-                    style={{ fontFamily: "Outfit" }}
-                >
+            <div className="p-3 sm:p-4 md:p-6 lg:p-8">
+                <h1 className="mb-4 text-xl font-bold text-[#1F083B] sm:mb-6 sm:text-2xl">
                     Settings
                 </h1>
 
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
                     {/* Left Column */}
-                    <div className="col-span-1 space-y-6">
+                    <div className="space-y-4 md:col-span-1">
                         {/* Profile Avatar */}
-                        <div className="bg-white rounded-xl p-6 text-center">
+                        <div className="rounded-xl bg-white p-4 text-center shadow-sm sm:p-6">
                             <div className="relative inline-block">
                                 <ProfilePicture
                                     userId={user?.id || ""}
@@ -382,16 +379,10 @@ const FleetSettings: React.FC = () => {
                                     onDeleteSuccess={handleProfilePictureDelete}
                                 />
                             </div>
-                            <h3
-                                className="mt-3 font-semibold text-[#1F083B]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                            <h3 className="mt-3 font-semibold text-[#1F083B]">
                                 {user?.firstName} {user?.lastName}
                             </h3>
-                            <p
-                                className="text-sm text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                            <p className="text-sm text-[#8E98A8]">
                                 {user?.role === "fleet_owner"
                                     ? "Fleet Owner"
                                     : user?.role || "User"}
@@ -399,31 +390,25 @@ const FleetSettings: React.FC = () => {
                         </div>
 
                         {/* Personal Information */}
-                        <div className="bg-white rounded-xl p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3
-                                    className="font-semibold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h3 className="font-semibold text-[#1F083B]">
                                     Personal Information
                                 </h3>
                                 <button
                                     onClick={() =>
                                         setEditingPersonal(!editingPersonal)
                                     }
-                                    className="text-[#6E43A3] hover:opacity-80 transition"
+                                    className="text-[#6E43A3] transition hover:opacity-80"
                                 >
                                     <Edit size={18} />
                                 </button>
                             </div>
 
                             {editingPersonal ? (
-                                <div className="space-y-4">
+                                <div className="space-y-3 sm:space-y-4">
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             First Name
                                         </label>
                                         <input
@@ -435,15 +420,11 @@ const FleetSettings: React.FC = () => {
                                                     firstName: e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         />
                                     </div>
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             Last Name
                                         </label>
                                         <input
@@ -455,15 +436,11 @@ const FleetSettings: React.FC = () => {
                                                     lastName: e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         />
                                     </div>
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             Occupation
                                         </label>
                                         <input
@@ -475,15 +452,13 @@ const FleetSettings: React.FC = () => {
                                                     occupation: e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         />
                                     </div>
                                     <button
                                         onClick={handleUpdateProfile}
                                         disabled={isSubmitting}
-                                        className="w-full bg-[#6E43A3] text-white px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#6E43A3] px-4 py-2 text-white transition hover:opacity-90 disabled:opacity-50"
                                     >
                                         <Save size={16} />
                                         Save Changes
@@ -492,75 +467,45 @@ const FleetSettings: React.FC = () => {
                             ) : (
                                 <div className="space-y-3">
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Full Name
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {user?.firstName} {user?.lastName}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Occupation
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {user?.occupation ||
                                                 "Not specified"}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Gender
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {user?.gender || "Not specified"}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Date of Birth
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {formatDate(
                                                 user?.dateOfBirth || null,
                                             )}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Phone
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {user?.phoneNumber ||
                                                 "Not specified"}
                                         </p>
@@ -571,28 +516,19 @@ const FleetSettings: React.FC = () => {
                     </div>
 
                     {/* Right Column */}
-                    <div className="col-span-2 space-y-6">
+                    <div className="space-y-4 md:col-span-2">
                         {/* Notification Settings */}
-                        <div className="bg-white rounded-xl p-6">
-                            <h3
-                                className="font-semibold text-[#1F083B] mb-4"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                            <h3 className="mb-4 font-semibold text-[#1F083B]">
                                 Notification Settings
                             </h3>
                             <div className="space-y-4">
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             Email notifications
                                         </p>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Receive important updates in your
                                             inbox.
                                         </p>
@@ -603,14 +539,14 @@ const FleetSettings: React.FC = () => {
                                                 "emailNotifications",
                                             )
                                         }
-                                        className={`w-12 h-6 rounded-full transition relative ${
+                                        className={`relative h-6 w-12 rounded-full transition ${
                                             notifications.emailNotifications
                                                 ? "bg-[#6E43A3]"
                                                 : "bg-[#D1D5DB]"
                                         }`}
                                     >
                                         <div
-                                            className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition ${
+                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
                                                 notifications.emailNotifications
                                                     ? "right-0.5"
                                                     : "left-0.5"
@@ -618,18 +554,12 @@ const FleetSettings: React.FC = () => {
                                         />
                                     </button>
                                 </div>
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             Push Notifications
                                         </p>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Get real-time alerts when action is
                                             needed.
                                         </p>
@@ -640,14 +570,14 @@ const FleetSettings: React.FC = () => {
                                                 "pushNotifications",
                                             )
                                         }
-                                        className={`w-12 h-6 rounded-full transition relative ${
+                                        className={`relative h-6 w-12 rounded-full transition ${
                                             notifications.pushNotifications
                                                 ? "bg-[#6E43A3]"
                                                 : "bg-[#D1D5DB]"
                                         }`}
                                     >
                                         <div
-                                            className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition ${
+                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
                                                 notifications.pushNotifications
                                                     ? "right-0.5"
                                                     : "left-0.5"
@@ -655,18 +585,12 @@ const FleetSettings: React.FC = () => {
                                         />
                                     </button>
                                 </div>
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             SOS alerts
                                         </p>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Immediate push + SMS when a driver
                                             triggers SOS.
                                         </p>
@@ -675,14 +599,14 @@ const FleetSettings: React.FC = () => {
                                         onClick={() =>
                                             toggleNotification("sosAlerts")
                                         }
-                                        className={`w-12 h-6 rounded-full transition relative ${
+                                        className={`relative h-6 w-12 rounded-full transition ${
                                             notifications.sosAlerts
                                                 ? "bg-[#6E43A3]"
                                                 : "bg-[#D1D5DB]"
                                         }`}
                                     >
                                         <div
-                                            className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition ${
+                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
                                                 notifications.sosAlerts
                                                     ? "right-0.5"
                                                     : "left-0.5"
@@ -694,31 +618,25 @@ const FleetSettings: React.FC = () => {
                         </div>
 
                         {/* Company Information */}
-                        <div className="bg-white rounded-xl p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3
-                                    className="font-semibold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h3 className="font-semibold text-[#1F083B]">
                                     Company Information
                                 </h3>
                                 <button
                                     onClick={() =>
                                         setEditingCompany(!editingCompany)
                                     }
-                                    className="text-[#6E43A3] hover:opacity-80 transition"
+                                    className="text-[#6E43A3] transition hover:opacity-80"
                                 >
                                     <Edit size={18} />
                                 </button>
                             </div>
 
                             {editingCompany ? (
-                                <div className="space-y-4">
+                                <div className="space-y-3 sm:space-y-4">
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             Company Name
                                         </label>
                                         <input
@@ -730,15 +648,11 @@ const FleetSettings: React.FC = () => {
                                                     companyName: e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         />
                                     </div>
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             Industry
                                         </label>
                                         <input
@@ -750,15 +664,11 @@ const FleetSettings: React.FC = () => {
                                                     industry: e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         />
                                     </div>
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             Operations Contact
                                         </label>
                                         <input
@@ -773,15 +683,11 @@ const FleetSettings: React.FC = () => {
                                                         e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         />
                                     </div>
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             Phone
                                         </label>
                                         <input
@@ -794,15 +700,11 @@ const FleetSettings: React.FC = () => {
                                                         e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         />
                                     </div>
                                     <div>
-                                        <label
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <label className="text-xs text-[#8E98A8]">
                                             Brief Description
                                         </label>
                                         <textarea
@@ -814,90 +716,58 @@ const FleetSettings: React.FC = () => {
                                                         e.target.value,
                                                 }))
                                             }
-                                            className="w-full px-3 py-2 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                            style={{ fontFamily: "Outfit" }}
+                                            className="w-full rounded-lg border border-[#E0E5EB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                             rows={3}
                                         />
                                     </div>
                                     <button
                                         onClick={handleUpdateCompany}
                                         disabled={isSubmitting}
-                                        className="w-full bg-[#6E43A3] text-white px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#6E43A3] px-4 py-2 text-white transition hover:opacity-90 disabled:opacity-50"
                                     >
                                         <Save size={16} />
                                         Save Changes
                                     </button>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Company Name
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {company?.companyName || "-"}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Industry
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {company?.industry || "-"}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Operations Contact
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {company?.operationsContact || "-"}
                                         </p>
                                     </div>
                                     <div>
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-xs text-[#8E98A8]">
                                             Phone
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {company?.companyPhone || "-"}
                                         </p>
                                     </div>
-                                    <div className="col-span-2">
-                                        <p
-                                            className="text-xs text-[#8E98A8]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                    <div className="col-span-1 sm:col-span-2">
+                                        <p className="text-xs text-[#8E98A8]">
                                             Brief Description
                                         </p>
-                                        <p
-                                            className="text-sm font-medium text-[#1F083B]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <p className="text-sm font-medium text-[#1F083B]">
                                             {company?.briefDescription || "-"}
                                         </p>
                                     </div>
@@ -906,22 +776,16 @@ const FleetSettings: React.FC = () => {
                         </div>
 
                         {/* Security Settings */}
-                        <div className="bg-white rounded-xl p-6">
-                            <h3
-                                className="font-semibold text-[#1F083B] mb-4"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                            <h3 className="mb-4 font-semibold text-[#1F083B]">
                                 Security Settings
                             </h3>
                             <button
                                 onClick={() => setShowPasswordModal(true)}
-                                className="flex items-center gap-3 px-4 py-3 border border-[#E0E5EB] rounded-lg hover:bg-[#F8F8F8] transition w-full"
+                                className="flex w-full items-center gap-3 rounded-lg border border-[#E0E5EB] px-4 py-3 transition hover:bg-[#F8F8F8]"
                             >
                                 <Lock size={18} className="text-[#6E43A3]" />
-                                <span
-                                    className="text-sm font-medium text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <span className="text-sm font-medium text-[#1F083B]">
                                     Update Password
                                 </span>
                             </button>
@@ -930,15 +794,12 @@ const FleetSettings: React.FC = () => {
                 </div>
             </div>
 
-            {/* Change Password Modal */}
+            {/* Change Password Modal - Mobile Friendly */}
             {showPasswordModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3
-                                className="text-2xl font-bold text-[#1F083B]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8 max-h-[90vh] overflow-y-auto">
+                        <div className="mb-4 flex items-start justify-between gap-4">
+                            <h3 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                 Change Password
                             </h3>
                             <button
@@ -950,19 +811,16 @@ const FleetSettings: React.FC = () => {
                                         confirmPassword: "",
                                     });
                                 }}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
                         <div className="space-y-4">
                             <div>
-                                <label
-                                    className="text-sm font-medium text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <label className="text-sm font-medium text-[#1F083B]">
                                     Current Password
                                 </label>
                                 <div className="relative">
@@ -977,8 +835,7 @@ const FleetSettings: React.FC = () => {
                                                 currentPassword: e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         placeholder="Enter current password"
                                     />
                                     <button
@@ -997,10 +854,7 @@ const FleetSettings: React.FC = () => {
                             </div>
 
                             <div>
-                                <label
-                                    className="text-sm font-medium text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <label className="text-sm font-medium text-[#1F083B]">
                                     New Password
                                 </label>
                                 <div className="relative">
@@ -1017,8 +871,7 @@ const FleetSettings: React.FC = () => {
                                                 newPassword: e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         placeholder="Enter new password"
                                     />
                                     <button
@@ -1037,10 +890,7 @@ const FleetSettings: React.FC = () => {
                             </div>
 
                             <div>
-                                <label
-                                    className="text-sm font-medium text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <label className="text-sm font-medium text-[#1F083B]">
                                     Confirm Password
                                 </label>
                                 <div className="relative">
@@ -1057,8 +907,7 @@ const FleetSettings: React.FC = () => {
                                                 confirmPassword: e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                         placeholder="Confirm new password"
                                     />
                                     <button
@@ -1086,12 +935,11 @@ const FleetSettings: React.FC = () => {
                                     !passwordForm.confirmPassword ||
                                     isSubmitting
                                 }
-                                className="w-full bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                                style={{ fontFamily: "Outfit" }}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90 disabled:opacity-50"
                             >
                                 {isSubmitting ? (
                                     <>
-                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                         Updating...
                                     </>
                                 ) : (
@@ -1106,23 +954,17 @@ const FleetSettings: React.FC = () => {
                 </div>
             )}
 
-            {/* Success Modal */}
+            {/* Success Modal - Mobile Friendly */}
             {showSuccessModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center">
-                        <div className="w-16 h-16 rounded-full bg-[#D6F5DA] flex items-center justify-center mx-auto mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl sm:p-8">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#D6F5DA]">
                             <CheckCircle size={32} className="text-[#267F50]" />
                         </div>
-                        <h3
-                            className="text-2xl font-bold text-[#1F083B] mb-2"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <h3 className="mb-2 text-xl font-bold text-[#1F083B] sm:text-2xl">
                             Success!
                         </h3>
-                        <p
-                            className="text-[#5B646F] mb-6"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <p className="mb-6 text-sm text-[#5B646F]">
                             {successMessage}
                         </p>
                         <button
@@ -1130,8 +972,7 @@ const FleetSettings: React.FC = () => {
                                 setShowSuccessModal(false);
                                 setSuccessMessage("");
                             }}
-                            className="w-full bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition"
-                            style={{ fontFamily: "Outfit" }}
+                            className="w-full rounded-xl bg-[#6E43A3] px-6 py-3 text-white transition hover:opacity-90"
                         >
                             Done
                         </button>

@@ -114,52 +114,31 @@ const LoginStep: React.FC<LoginStepProps> = ({
     };
 
     return (
-        <div
-            className="flex w-full flex-col items-center"
-            style={{ gap: "40px" }}
-        >
+        <div className="flex w-full flex-col items-center gap-6 px-4 sm:gap-8 sm:px-6 md:gap-10 md:px-8 lg:gap-[40px]">
             {/* Header */}
-            <div
-                className="flex flex-col items-center text-center"
-                style={{ width: "520px", gap: "8px" }}
-            >
-                <h1
-                    className="text-[40px] font-bold leading-[100%] text-black"
-                    style={{ fontFamily: "Outfit" }}
-                >
+            <div className="flex w-full max-w-[520px] flex-col items-center gap-2 text-center">
+                <h1 className="text-2xl font-bold leading-[100%] text-black sm:text-3xl md:text-[40px]">
                     Welcome Back
                 </h1>
-                <p
-                    className="text-[18px] font-normal leading-[150%]"
-                    style={{ fontFamily: "Outfit", color: "#8E98A8" }}
-                >
+                <p className="text-sm font-normal leading-[150%] text-[#8E98A8] sm:text-base md:text-[18px]">
                     Login to your fleet management dashboard
                 </p>
             </div>
 
-            <div className="w-full" style={{ maxWidth: "520px" }}>
+            {/* Google Button */}
+            <div className="w-full max-w-[520px]">
                 <GoogleLoginButton />
             </div>
 
             {/* Divider */}
-            <div className="flex w-full items-center gap-4">
-                <div
-                    className="flex-1 border-t"
-                    style={{ borderColor: "#7A8492" }}
-                />
+            <div className="flex w-full max-w-[520px] items-center gap-2 sm:gap-4">
+                <div className="flex-1 border-t border-[#7A8492]" />
                 <span className="text-sm text-[#7A8492]">OR</span>
-                <div
-                    className="flex-1 border-t"
-                    style={{ borderColor: "#7A8492" }}
-                />
+                <div className="flex-1 border-t border-[#7A8492]" />
             </div>
 
             {/* Login Form */}
-            <form
-                onSubmit={handleLogin}
-                className="w-full"
-                style={{ maxWidth: "520px" }}
-            >
+            <form onSubmit={handleLogin} className="w-full max-w-[520px]">
                 <div className="flex flex-col gap-6">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-[#1F083B]">
@@ -170,12 +149,7 @@ const LoginStep: React.FC<LoginStepProps> = ({
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
                             placeholder="Enter your email or phone number"
-                            className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
-                            style={{
-                                height: "56px",
-                                fontFamily: "Outfit",
-                                fontSize: "16px",
-                            }}
+                            className="h-14 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 font-['Outfit'] text-base outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
                             required
                         />
                     </div>
@@ -190,18 +164,13 @@ const LoginStep: React.FC<LoginStepProps> = ({
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Enter your password"
-                                className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
-                                style={{
-                                    height: "56px",
-                                    fontFamily: "Outfit",
-                                    fontSize: "16px",
-                                }}
+                                className="h-14 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 font-['Outfit'] text-base outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
                                 required
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E98A8] hover:text-[#1F083B]"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#8E98A8] hover:text-[#1F083B] sm:text-base"
                             >
                                 {showPassword ? "Hide" : "Show"}
                             </button>
@@ -216,8 +185,7 @@ const LoginStep: React.FC<LoginStepProps> = ({
                                 (window.location.href =
                                     "/fleet/forgot-password")
                             }
-                            className="text-sm font-medium text-[#6E43A3] hover:underline"
-                            style={{ fontFamily: "Outfit" }}
+                            className="text-sm font-medium text-[#6E43A3] hover:underline sm:text-base"
                         >
                             Forgot Password?
                         </button>
@@ -225,15 +193,7 @@ const LoginStep: React.FC<LoginStepProps> = ({
 
                     <button
                         type="submit"
-                        className="mt-4 w-full rounded-2xl px-6 py-3 text-white transition hover:opacity-90"
-                        style={{
-                            backgroundColor: "#6E43A3",
-                            height: "56px",
-                            borderRadius: "16px",
-                            fontFamily: "Outfit",
-                            fontSize: "16px",
-                            fontWeight: 600,
-                        }}
+                        className="mt-4 h-14 w-full rounded-2xl bg-[#6E43A3] px-6 py-3 font-['Outfit'] text-base font-semibold text-white transition hover:opacity-90"
                     >
                         Login
                     </button>
@@ -242,10 +202,7 @@ const LoginStep: React.FC<LoginStepProps> = ({
 
             {/* Sign up link */}
             <div className="text-center">
-                <p
-                    className="text-sm text-[#8E98A8]"
-                    style={{ fontFamily: "Outfit" }}
-                >
+                <p className="text-sm text-[#8E98A8] sm:text-base">
                     Don't have an account?{" "}
                     <button
                         type="button"

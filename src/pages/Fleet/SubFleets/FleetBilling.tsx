@@ -391,36 +391,22 @@ const Billing: React.FC = () => {
     const rightFeatures = currentPlanFeatures.slice(halfLength);
 
     return (
-        <div className="min-h-screen bg-[#F7F7F7] p-6">
-            <div className="max-w-[1126px] mx-auto space-y-6">
+        <div className="min-h-screen bg-[#F7F7F7] px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8">
+            <div className="mx-auto max-w-[1126px]">
                 {/* Header */}
-
-                <div className="bg-white rounded-xl p-6 flex justify-between items-center">
-                    <div>
-                        <h1
-                            className="text-2xl font-bold text-[#1F083B]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            Billing & Subscription
-                        </h1>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span
-                                className="text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Nigeria pricing · per vehicle / month
-                            </span>
-                        </div>
-                    </div>
+                <div className="mb-4 rounded-xl bg-white p-4 shadow-sm sm:mb-6 sm:p-6">
+                    <h1 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
+                        Billing & Subscription
+                    </h1>
+                    <p className="mt-1 text-sm text-[#8E98A8]">
+                        Nigeria pricing · per vehicle / month
+                    </p>
                 </div>
 
-                {/* Current Plan Section */}
-                <div className="bg-white rounded-2xl p-8">
-                    <div className="flex justify-between items-start mb-6">
-                        <h2
-                            className="text-xl font-bold text-[#1F083B]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                {/* Current Plan */}
+                <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm sm:mb-6 sm:p-6 md:p-8">
+                    <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+                        <h2 className="text-lg font-bold text-[#1F083B] sm:text-xl">
                             Current Plan
                         </h2>
                         <button
@@ -430,88 +416,51 @@ const Billing: React.FC = () => {
                                 );
                                 setShowIncreaseModal(true);
                             }}
-                            className="px-6 py-2.5 bg-[#6E43A3] text-white rounded-xl hover:opacity-90 transition font-medium text-sm flex items-center gap-2"
-                            style={{ fontFamily: "Outfit" }}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6E43A3] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 sm:w-auto sm:px-6 sm:py-2.5"
                         >
                             <Plus size={16} />
                             Increase Fleet Size
                         </button>
                     </div>
 
-                    {/* Current Plan Card */}
-                    <div className="bg-[#F8F8F8] rounded-2xl p-6">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h3
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                    <div className="rounded-2xl bg-[#F8F8F8] p-4 sm:p-6">
+                        {/* Plan Header */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex-1">
+                                <h3 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     {getPlanDisplayName(
                                         activeSubscription?.plan ||
                                             company?.plan ||
                                             "starter",
                                     )}
                                 </h3>
-                                <div className="flex items-center gap-6 mt-2">
-                                    <div>
-                                        <p
-                                            className="text-sm text-[#7A8492]"
-                                            style={{
-                                                fontFamily: "Outfit",
-                                                fontWeight: 400,
-                                                fontSize: "16px",
-                                                lineHeight: "150%",
-                                            }}
-                                        >
-                                            {getCurrentPlanDescription()}
-                                        </p>
-                                        <div className="flex items-end gap-1 mt-1">
-                                            <span
-                                                className="font-semibold text-[#170F49]"
-                                                style={{
-                                                    fontFamily: "Inter",
-                                                    fontWeight: 600,
-                                                    fontSize: "36px",
-                                                    lineHeight: "115%",
-                                                }}
-                                            >
-                                                {activeSubscription
-                                                    ? formatCurrency(
-                                                          activeSubscription.totalPrice,
-                                                      )
-                                                    : "₦0"}
-                                            </span>
-                                            <span
-                                                className="text-[#A0A3BD]"
-                                                style={{
-                                                    fontFamily: "Outfit",
-                                                    fontWeight: 400,
-                                                    fontSize: "20px",
-                                                    lineHeight: "115%",
-                                                }}
-                                            >
-                                                /month
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="h-8 w-px bg-[#E0E5EB]" />
+                                <p className="mt-1 text-sm text-[#7A8492]">
+                                    {getCurrentPlanDescription()}
+                                </p>
+                                <div className="mt-2 flex items-end gap-1">
+                                    <span className="text-2xl font-semibold text-[#170F49] sm:text-3xl">
+                                        {activeSubscription
+                                            ? formatCurrency(
+                                                  activeSubscription.totalPrice,
+                                              )
+                                            : "₦0"}
+                                    </span>
+                                    <span className="text-base text-[#A0A3BD] sm:text-lg">
+                                        /month
+                                    </span>
                                 </div>
                             </div>
-                            <div>
-                                <span
-                                    className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(activeSubscription?.status || "")}`}
-                                >
-                                    {activeSubscription?.status?.toUpperCase() ||
-                                        "ACTIVE"}
-                                </span>
-                            </div>
+                            <span className="inline-block self-start rounded-full px-3 py-1 text-xs font-medium sm:self-auto">
+                                {activeSubscription?.status?.toUpperCase() ||
+                                    "ACTIVE"}
+                            </span>
                         </div>
 
-                        {/* Plan Features - 2 columns */}
+                        {/* Features */}
                         {currentPlanFeatures.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-[#E0E5EB]">
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                                    {leftFeatures.map((feature, idx) => (
+                            <div className="mt-4 border-t border-[#E0E5EB] pt-4">
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-x-6">
+                                    {currentPlanFeatures.map((feature, idx) => (
                                         <div
                                             key={idx}
                                             className="flex items-start gap-2"
@@ -522,29 +471,7 @@ const Billing: React.FC = () => {
                                                     className="text-white"
                                                 />
                                             </div>
-                                            <span
-                                                className="text-sm text-[#7A8492]"
-                                                style={{ fontFamily: "Outfit" }}
-                                            >
-                                                {feature}
-                                            </span>
-                                        </div>
-                                    ))}
-                                    {rightFeatures.map((feature, idx) => (
-                                        <div
-                                            key={idx + halfLength}
-                                            className="flex items-start gap-2"
-                                        >
-                                            <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#13243A]">
-                                                <Check
-                                                    size={12}
-                                                    className="text-white"
-                                                />
-                                            </div>
-                                            <span
-                                                className="text-sm text-[#7A8492]"
-                                                style={{ fontFamily: "Outfit" }}
-                                            >
+                                            <span className="text-sm text-[#7A8492]">
                                                 {feature}
                                             </span>
                                         </div>
@@ -553,360 +480,192 @@ const Billing: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Next Billing Date with Change Plan button */}
-                        <div className="mt-4 pt-4 border-t border-[#E0E5EB]">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <p
-                                        className="text-sm text-[#8E98A8]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
-                                        Next Billing Date
-                                    </p>
-                                    <p
-                                        className="text-base font-semibold text-[#1F083B]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
-                                        {formatDate(
-                                            activeSubscription?.endDate || "",
-                                        )}
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => setShowChangePlanModal(true)}
-                                    className="px-6 py-2.5 bg-[#6E43A3] text-white rounded-xl hover:opacity-90 transition font-medium text-sm"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
-                                    Change Plan
-                                </button>
+                        {/* Next Billing */}
+                        <div className="mt-4 flex flex-col gap-3 border-t border-[#E0E5EB] pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-[#8E98A8]">
+                                    Next Billing Date
+                                </p>
+                                <p className="text-base font-semibold text-[#1F083B]">
+                                    {formatDate(
+                                        activeSubscription?.endDate || "",
+                                    )}
+                                </p>
                             </div>
+                            <button
+                                onClick={() => setShowChangePlanModal(true)}
+                                className="w-full rounded-xl bg-[#6E43A3] px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 sm:w-auto sm:px-6 sm:py-2.5"
+                            >
+                                Change Plan
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Available Plans Section */}
-                <div className="bg-white rounded-2xl p-8">
-                    <h2
-                        className="text-xl font-bold text-[#1F083B] mb-6"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                {/* Available Plans */}
+                <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm sm:mb-6 sm:p-6 md:p-8">
+                    <h2 className="mb-4 text-lg font-bold text-[#1F083B] sm:mb-6 sm:text-xl">
                         Available Plans
                     </h2>
 
-                    {/* Filter out the current plan */}
-                    {(() => {
-                        const availablePlans = allPlans.filter(
-                            (plan) =>
-                                plan.id !==
-                                (activeSubscription?.plan ||
-                                    company?.plan ||
-                                    "starter"),
-                        );
-                        const lastPlan =
-                            availablePlans[availablePlans.length - 1];
-                        const otherPlans = availablePlans.slice(0, -1);
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {allPlans
+                            .filter(
+                                (plan) =>
+                                    plan.id !==
+                                    (activeSubscription?.plan ||
+                                        company?.plan ||
+                                        "starter"),
+                            )
+                            .map((plan) => (
+                                <div
+                                    key={plan.id}
+                                    className="flex flex-col rounded-2xl border border-[#E5E7EB] bg-white p-4 transition hover:shadow-lg sm:p-6"
+                                >
+                                    <h3 className="text-lg font-bold text-[#1F083B] sm:text-xl">
+                                        {plan.name}
+                                    </h3>
+                                    <p className="mt-1 text-sm text-[#8E98A8]">
+                                        {plan.description}
+                                    </p>
+                                    <p className="mt-2 text-lg font-bold text-[#1F083B]">
+                                        {plan.price}
+                                    </p>
 
-                        return (
-                            <div className="grid grid-cols-2 gap-6">
-                                {/* First row - 2 columns for other plans */}
-                                {otherPlans.map((plan) => {
-                                    const isCurrentPlan =
-                                        plan.id ===
-                                        (activeSubscription?.plan ||
-                                            company?.plan ||
-                                            "starter");
+                                    <button
+                                        onClick={() => {
+                                            setSelectedPlan(plan.id);
+                                            setShowChangePlanModal(true);
+                                        }}
+                                        className="mt-4 w-full rounded-xl bg-[#1B235512] px-4 py-3 font-semibold text-[#170F49] transition hover:opacity-80 sm:px-6"
+                                    >
+                                        {plan.id === "enterprise"
+                                            ? "Send a message"
+                                            : "Switch to Plan"}
+                                    </button>
 
-                                    return (
-                                        <div
-                                            key={plan.id}
-                                            className="flex flex-col rounded-2xl border border-[#E5E7EB] p-6 hover:shadow-lg transition bg-white"
-                                        >
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h3
-                                                        className="text-xl font-bold text-[#1F083B]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
+                                    <div className="mt-4 border-t border-[#E0E5EB] pt-4">
+                                        <div className="space-y-2">
+                                            {plan.features.map(
+                                                (feature, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="flex items-start gap-2"
                                                     >
-                                                        {plan.name}
-                                                    </h3>
-                                                    <p
-                                                        className="mt-1 text-sm text-[#8E98A8]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
-                                                        {plan.description}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-2">
-                                                <div
-                                                    className="text-lg font-bold text-[#1F083B]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {plan.price}
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedPlan(plan.id);
-                                                    setShowChangePlanModal(
-                                                        true,
-                                                    );
-                                                }}
-                                                className="mt-4 w-full rounded-xl px-6 py-3 font-semibold transition hover:opacity-80"
-                                                style={{
-                                                    fontFamily: "Outfit",
-                                                    backgroundColor:
-                                                        "#1B235512",
-                                                    color: "#170F49",
-                                                }}
-                                            >
-                                                {plan.id === "enterprise"
-                                                    ? "Send a message"
-                                                    : "Switch to Plan"}
-                                            </button>
-
-                                            {/* Features - Single column */}
-                                            <div className="mt-4 pt-4 border-t border-[#E0E5EB]">
-                                                <div className="flex flex-col gap-y-2">
-                                                    {plan.features.map(
-                                                        (feature, idx) => (
-                                                            <div
-                                                                key={idx}
-                                                                className="flex items-start gap-2"
-                                                            >
-                                                                <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#13243A]">
-                                                                    <Check
-                                                                        size={
-                                                                            12
-                                                                        }
-                                                                        className="text-white"
-                                                                    />
-                                                                </div>
-                                                                <span
-                                                                    className="text-sm text-[#7A8492]"
-                                                                    style={{
-                                                                        fontFamily:
-                                                                            "Outfit",
-                                                                    }}
-                                                                >
-                                                                    {feature}
-                                                                </span>
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-
-                                {/* Last plan - Full width row with 2 columns for features */}
-                                {lastPlan && (
-                                    <div className="col-span-2 flex flex-col rounded-2xl border border-[#E5E7EB] p-6 hover:shadow-lg transition bg-white">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3
-                                                    className="text-xl font-bold text-[#1F083B]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {lastPlan.name}
-                                                </h3>
-                                                <p
-                                                    className="mt-1 text-sm text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {lastPlan.description}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-2">
-                                            <div
-                                                className="text-lg font-bold text-[#1F083B]"
-                                                style={{ fontFamily: "Outfit" }}
-                                            >
-                                                {lastPlan.price}
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={() => {
-                                                setSelectedPlan(lastPlan.id);
-                                                setShowChangePlanModal(true);
-                                            }}
-                                            className="mt-4 w-full rounded-xl px-6 py-3 font-semibold transition hover:opacity-80"
-                                            style={{
-                                                fontFamily: "Outfit",
-                                                backgroundColor: "#1B235512",
-                                                color: "#170F49",
-                                            }}
-                                        >
-                                            {lastPlan.id === "enterprise"
-                                                ? "Send a message"
-                                                : "Switch to Plan"}
-                                        </button>
-
-                                        {/* Features - 2 columns for last plan */}
-                                        <div className="mt-4 pt-4 border-t border-[#E0E5EB]">
-                                            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                                                {(() => {
-                                                    const halfLength =
-                                                        Math.ceil(
-                                                            lastPlan.features
-                                                                .length / 2,
-                                                        );
-                                                    const leftFeatures =
-                                                        lastPlan.features.slice(
-                                                            0,
-                                                            halfLength,
-                                                        );
-                                                    const rightFeatures =
-                                                        lastPlan.features.slice(
-                                                            halfLength,
-                                                        );
-
-                                                    return (
-                                                        <>
-                                                            {leftFeatures.map(
-                                                                (
-                                                                    feature,
-                                                                    idx,
-                                                                ) => (
-                                                                    <div
-                                                                        key={
-                                                                            idx
-                                                                        }
-                                                                        className="flex items-start gap-2"
-                                                                    >
-                                                                        <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#13243A]">
-                                                                            <Check
-                                                                                size={
-                                                                                    12
-                                                                                }
-                                                                                className="text-white"
-                                                                            />
-                                                                        </div>
-                                                                        <span
-                                                                            className="text-sm text-[#7A8492]"
-                                                                            style={{
-                                                                                fontFamily:
-                                                                                    "Outfit",
-                                                                            }}
-                                                                        >
-                                                                            {
-                                                                                feature
-                                                                            }
-                                                                        </span>
-                                                                    </div>
-                                                                ),
-                                                            )}
-                                                            {rightFeatures.map(
-                                                                (
-                                                                    feature,
-                                                                    idx,
-                                                                ) => (
-                                                                    <div
-                                                                        key={
-                                                                            idx +
-                                                                            halfLength
-                                                                        }
-                                                                        className="flex items-start gap-2"
-                                                                    >
-                                                                        <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#13243A]">
-                                                                            <Check
-                                                                                size={
-                                                                                    12
-                                                                                }
-                                                                                className="text-white"
-                                                                            />
-                                                                        </div>
-                                                                        <span
-                                                                            className="text-sm text-[#7A8492]"
-                                                                            style={{
-                                                                                fontFamily:
-                                                                                    "Outfit",
-                                                                            }}
-                                                                        >
-                                                                            {
-                                                                                feature
-                                                                            }
-                                                                        </span>
-                                                                    </div>
-                                                                ),
-                                                            )}
-                                                        </>
-                                                    );
-                                                })()}
-                                            </div>
+                                                        <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#13243A]">
+                                                            <Check
+                                                                size={12}
+                                                                className="text-white"
+                                                            />
+                                                        </div>
+                                                        <span className="text-sm text-[#7A8492]">
+                                                            {feature}
+                                                        </span>
+                                                    </div>
+                                                ),
+                                            )}
                                         </div>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })()}
+                                </div>
+                            ))}
+                    </div>
                 </div>
 
                 {/* Payment History */}
-                <div className="bg-white rounded-2xl p-8">
-                    <h2
-                        className="text-xl font-bold text-[#1F083B] mb-6"
-                        style={{ fontFamily: "Outfit" }}
-                    >
+                <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-6 md:p-8">
+                    <h2 className="mb-4 text-lg font-bold text-[#1F083B] sm:mb-6 sm:text-xl">
                         Payment History
                     </h2>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    {/* Mobile Card View */}
+                    <div className="space-y-3 sm:hidden">
+                        {company?.subscriptions &&
+                        company.subscriptions.length > 0 ? (
+                            company.subscriptions.map((sub) => (
+                                <div
+                                    key={sub.id}
+                                    className="rounded-lg border border-[#E0E5EB] p-4"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-[#111827]">
+                                            {sub.paymentReference?.slice(
+                                                0,
+                                                12,
+                                            ) || "-"}
+                                        </span>
+                                        <span
+                                            className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${getStatusBadge(sub.paymentStatus)}`}
+                                        >
+                                            {sub.paymentStatus
+                                                ?.charAt(0)
+                                                .toUpperCase() +
+                                                sub.paymentStatus?.slice(1) ||
+                                                "Unknown"}
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 grid grid-cols-2 gap-2">
+                                        <div>
+                                            <p className="text-[10px] text-[#8E98A8]">
+                                                Plan
+                                            </p>
+                                            <p className="text-sm font-medium text-[#111827]">
+                                                {getPlanDisplayName(sub.plan)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-[#8E98A8]">
+                                                Amount
+                                            </p>
+                                            <p className="text-sm font-medium text-[#111827]">
+                                                {formatCurrency(sub.totalPrice)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-[#8E98A8]">
+                                                Date
+                                            </p>
+                                            <p className="text-sm font-medium text-[#111827]">
+                                                {formatDate(
+                                                    sub.paidAt || sub.createdAt,
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-end justify-end">
+                                            <button className="rounded-lg p-2 text-[#6E43A3] transition hover:bg-[#F8F8F8]">
+                                                <Download size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="py-8 text-center text-sm text-[#8E98A8]">
+                                No payment history available
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden overflow-x-auto sm:block">
+                        <table className="w-full min-w-[600px]">
                             <thead>
                                 <tr className="border-b border-[#E0E5EB]">
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-3 text-left text-sm font-medium text-[#8E98A8]">
                                         Reference
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-3 text-left text-sm font-medium text-[#8E98A8]">
                                         Plan
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-3 text-left text-sm font-medium text-[#8E98A8]">
                                         Amount
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-3 text-left text-sm font-medium text-[#8E98A8]">
                                         Date
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-3 text-left text-sm font-medium text-[#8E98A8]">
                                         Status
                                     </th>
-                                    <th
-                                        className="text-right py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-3 text-right text-sm font-medium text-[#8E98A8]">
                                         Action
                                     </th>
                                 </tr>
@@ -917,61 +676,28 @@ const Billing: React.FC = () => {
                                     company.subscriptions.map((sub) => (
                                         <tr
                                             key={sub.id}
-                                            className="border-b border-[#E0E5EB] hover:bg-[#F7F7F7] transition"
+                                            className="border-b border-[#E0E5EB] transition hover:bg-[#F7F7F7]"
                                         >
-                                            <td className="py-3">
-                                                <span
-                                                    className="text-sm text-[#111827]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {sub.paymentReference?.slice(
-                                                        0,
-                                                        12,
-                                                    ) || "-"}
-                                                </span>
+                                            <td className="py-3 text-sm text-[#111827]">
+                                                {sub.paymentReference?.slice(
+                                                    0,
+                                                    12,
+                                                ) || "-"}
+                                            </td>
+                                            <td className="py-3 text-sm text-[#111827]">
+                                                {getPlanDisplayName(sub.plan)}
+                                            </td>
+                                            <td className="py-3 text-sm text-[#111827]">
+                                                {formatCurrency(sub.totalPrice)}
+                                            </td>
+                                            <td className="py-3 text-sm text-[#111827]">
+                                                {formatDate(
+                                                    sub.paidAt || sub.createdAt,
+                                                )}
                                             </td>
                                             <td className="py-3">
                                                 <span
-                                                    className="text-sm text-[#111827]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {getPlanDisplayName(
-                                                        sub.plan,
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className="text-sm text-[#111827]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {formatCurrency(
-                                                        sub.totalPrice,
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className="text-sm text-[#111827]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {formatDate(
-                                                        sub.paidAt ||
-                                                            sub.createdAt,
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(sub.paymentStatus)}`}
+                                                    className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${getStatusBadge(sub.paymentStatus)}`}
                                                 >
                                                     {sub.paymentStatus
                                                         ?.charAt(0)
@@ -982,7 +708,7 @@ const Billing: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td className="py-3 text-right">
-                                                <button className="p-1.5 text-[#6E43A3] hover:bg-[#F8F8F8] rounded-lg transition">
+                                                <button className="rounded-lg p-2 text-[#6E43A3] transition hover:bg-[#F8F8F8]">
                                                     <Download size={18} />
                                                 </button>
                                             </td>
@@ -992,7 +718,7 @@ const Billing: React.FC = () => {
                                     <tr>
                                         <td
                                             colSpan={6}
-                                            className="text-center py-8 text-[#8E98A8]"
+                                            className="py-8 text-center text-sm text-[#8E98A8]"
                                         >
                                             No payment history available
                                         </td>
@@ -1006,13 +732,11 @@ const Billing: React.FC = () => {
 
             {/* Change Plan Modal */}
             {showChangePlanModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3
-                                className="text-2xl font-bold text-[#1F083B]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8 max-h-[90vh] overflow-y-auto">
+                        {/* Header */}
+                        <div className="mb-4 flex items-start justify-between gap-4">
+                            <h3 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                 Change Plan
                             </h3>
                             <button
@@ -1021,27 +745,21 @@ const Billing: React.FC = () => {
                                     setSelectedPlan("");
                                     setNewVehicleCount(10);
                                 }}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
-                        <p
-                            className="text-[#5B646F] mb-4"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <p className="mb-4 text-sm text-[#5B646F] sm:text-base">
                             Select a new plan and configure your vehicle count.
                         </p>
 
                         {/* Plan Selection */}
-                        <div className="space-y-2 mb-4">
-                            <label
-                                className="block text-sm font-medium text-[#5B646F] mb-1.5"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        <div className="mb-4">
+                            <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                 Select Plan
                             </label>
                             <div className="grid grid-cols-2 gap-2">
@@ -1058,7 +776,6 @@ const Billing: React.FC = () => {
                                             key={plan.id}
                                             onClick={() => {
                                                 setSelectedPlan(plan.id);
-                                                // Set default vehicle count based on plan
                                                 if (plan.id === "starter")
                                                     setNewVehicleCount(10);
                                                 else if (plan.id === "pro")
@@ -1069,22 +786,16 @@ const Billing: React.FC = () => {
                                                     setNewVehicleCount(50);
                                                 else setNewVehicleCount(5);
                                             }}
-                                            className={`p-3 rounded-xl border-2 transition text-left ${
+                                            className={`rounded-xl border-2 p-3 text-left transition ${
                                                 selectedPlan === plan.id
                                                     ? "border-[#6E43A3] bg-[#6E43A310]"
                                                     : "border-[#E0E5EB] hover:border-[#6E43A3]"
                                             }`}
                                         >
-                                            <div
-                                                className="font-semibold text-[#1F083B] text-sm"
-                                                style={{ fontFamily: "Outfit" }}
-                                            >
+                                            <div className="text-sm font-semibold text-[#1F083B] sm:text-base">
                                                 {plan.name}
                                             </div>
-                                            <div
-                                                className="text-xs text-[#8E98A8] mt-0.5"
-                                                style={{ fontFamily: "Outfit" }}
-                                            >
+                                            <div className="mt-0.5 text-xs text-[#8E98A8] sm:text-sm">
                                                 {plan.price}
                                             </div>
                                         </button>
@@ -1093,22 +804,19 @@ const Billing: React.FC = () => {
                         </div>
 
                         {/* Vehicle Count */}
-                        <div className="bg-[#F8F8F8] rounded-xl p-4 mb-4">
-                            <div className="flex justify-between items-center">
-                                <span
-                                    className="text-sm text-[#8E98A8]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        <div className="mb-4 rounded-xl bg-[#F8F8F8] p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <span className="text-sm text-[#8E98A8]">
                                     Vehicle Count
                                 </span>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center gap-2">
                                     <button
                                         onClick={() =>
                                             setNewVehicleCount((prev) =>
                                                 Math.max(1, prev - 1),
                                             )
                                         }
-                                        className="w-8 h-8 rounded-lg border border-[#E0E5EB] flex items-center justify-center hover:bg-gray-50 transition"
+                                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#E0E5EB] bg-white transition hover:bg-gray-50 active:scale-95"
                                     >
                                         <Minus
                                             size={16}
@@ -1127,8 +835,7 @@ const Billing: React.FC = () => {
                                                 ),
                                             )
                                         }
-                                        className="w-20 px-3 py-1.5 text-center border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="w-16 rounded-lg border border-[#E0E5EB] px-3 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3] sm:w-20"
                                         min="1"
                                     />
                                     <button
@@ -1137,7 +844,7 @@ const Billing: React.FC = () => {
                                                 (prev) => prev + 1,
                                             )
                                         }
-                                        className="w-8 h-8 rounded-lg border border-[#E0E5EB] flex items-center justify-center hover:bg-gray-50 transition"
+                                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#E0E5EB] bg-white transition hover:bg-gray-50 active:scale-95"
                                     >
                                         <Plus
                                             size={16}
@@ -1149,16 +856,16 @@ const Billing: React.FC = () => {
 
                             {/* Validation Messages */}
                             {selectedPlan === "starter" && (
-                                <div className="flex items-center gap-2 mt-2">
+                                <div className="mt-2 flex items-start gap-2">
                                     {newVehicleCount < 10 ? (
                                         <AlertCircle
                                             size={14}
-                                            className="text-[#FE3F21] flex-shrink-0"
+                                            className="mt-0.5 flex-shrink-0 text-[#FE3F21]"
                                         />
                                     ) : (
                                         <CheckCircle
                                             size={14}
-                                            className="text-[#2E7D32] flex-shrink-0"
+                                            className="mt-0.5 flex-shrink-0 text-[#2E7D32]"
                                         />
                                     )}
                                     <span
@@ -1167,7 +874,6 @@ const Billing: React.FC = () => {
                                                 ? "text-[#FE3F21]"
                                                 : "text-[#2E7D32]"
                                         }`}
-                                        style={{ fontFamily: "Outfit" }}
                                     >
                                         {newVehicleCount < 10
                                             ? `Minimum 10 vehicles required (currently ${newVehicleCount})`
@@ -1176,16 +882,16 @@ const Billing: React.FC = () => {
                                 </div>
                             )}
                             {selectedPlan === "pro" && (
-                                <div className="flex items-center gap-2 mt-2">
+                                <div className="mt-2 flex items-start gap-2">
                                     {newVehicleCount < 30 ? (
                                         <AlertCircle
                                             size={14}
-                                            className="text-[#FE3F21] flex-shrink-0"
+                                            className="mt-0.5 flex-shrink-0 text-[#FE3F21]"
                                         />
                                     ) : (
                                         <CheckCircle
                                             size={14}
-                                            className="text-[#2E7D32] flex-shrink-0"
+                                            className="mt-0.5 flex-shrink-0 text-[#2E7D32]"
                                         />
                                     )}
                                     <span
@@ -1194,7 +900,6 @@ const Billing: React.FC = () => {
                                                 ? "text-[#FE3F21]"
                                                 : "text-[#2E7D32]"
                                         }`}
-                                        style={{ fontFamily: "Outfit" }}
                                     >
                                         {newVehicleCount < 30
                                             ? `Minimum 30 vehicles required (currently ${newVehicleCount})`
@@ -1203,16 +908,16 @@ const Billing: React.FC = () => {
                                 </div>
                             )}
                             {selectedPlan === "enterprise" && (
-                                <div className="flex items-center gap-2 mt-2">
+                                <div className="mt-2 flex items-start gap-2">
                                     {newVehicleCount < 50 ? (
                                         <AlertCircle
                                             size={14}
-                                            className="text-[#FE3F21] flex-shrink-0"
+                                            className="mt-0.5 flex-shrink-0 text-[#FE3F21]"
                                         />
                                     ) : (
                                         <CheckCircle
                                             size={14}
-                                            className="text-[#2E7D32] flex-shrink-0"
+                                            className="mt-0.5 flex-shrink-0 text-[#2E7D32]"
                                         />
                                     )}
                                     <span
@@ -1221,7 +926,6 @@ const Billing: React.FC = () => {
                                                 ? "text-[#FE3F21]"
                                                 : "text-[#2E7D32]"
                                         }`}
-                                        style={{ fontFamily: "Outfit" }}
                                     >
                                         {newVehicleCount < 50
                                             ? `Minimum 50 vehicles recommended (currently ${newVehicleCount})`
@@ -1232,18 +936,12 @@ const Billing: React.FC = () => {
                         </div>
 
                         {/* Current Plan Summary */}
-                        <div className="bg-[#F8F8F8] rounded-xl p-4 mb-4">
-                            <div className="flex justify-between items-center">
-                                <span
-                                    className="text-sm text-[#8E98A8]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        <div className="mb-4 rounded-xl bg-[#F8F8F8] p-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <span className="text-sm text-[#8E98A8]">
                                     Current Plan
                                 </span>
-                                <span
-                                    className="text-sm font-semibold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <span className="text-sm font-semibold text-[#1F083B]">
                                     {getPlanDisplayName(
                                         activeSubscription?.plan ||
                                             company?.plan ||
@@ -1252,17 +950,11 @@ const Billing: React.FC = () => {
                                 </span>
                             </div>
                             {selectedPlan && (
-                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-[#E0E5EB]">
-                                    <span
-                                        className="text-sm text-[#8E98A8]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                <div className="mt-2 flex flex-col gap-2 border-t border-[#E0E5EB] pt-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <span className="text-sm text-[#8E98A8]">
                                         New Plan
                                     </span>
-                                    <span
-                                        className="text-sm font-semibold text-[#6E43A3]"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <span className="text-sm font-semibold text-[#6E43A3]">
                                         {selectedPlan
                                             ? allPlans.find(
                                                   (p) => p.id === selectedPlan,
@@ -1273,15 +965,15 @@ const Billing: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="flex flex-col-reverse gap-3">
+                        {/* Buttons */}
+                        <div className="flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 onClick={() => {
                                     setShowChangePlanModal(false);
                                     setSelectedPlan("");
                                     setNewVehicleCount(10);
                                 }}
-                                className="w-full px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                style={{ fontFamily: "Outfit" }}
+                                className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm text-[#8E98A8] transition hover:bg-gray-50 active:scale-95 sm:flex-1 sm:px-6"
                             >
                                 Cancel
                             </button>
@@ -1297,7 +989,7 @@ const Billing: React.FC = () => {
                                     (selectedPlan === "enterprise" &&
                                         newVehicleCount < 50)
                                 }
-                                className={`w-full px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition disabled:cursor-not-allowed ${
+                                className={`w-full rounded-xl px-4 py-3 text-sm font-medium transition active:scale-95 sm:flex-1 sm:px-6 ${
                                     !selectedPlan ||
                                     isSubmitting ||
                                     (selectedPlan === "starter" &&
@@ -1306,15 +998,14 @@ const Billing: React.FC = () => {
                                         newVehicleCount < 30) ||
                                     (selectedPlan === "enterprise" &&
                                         newVehicleCount < 50)
-                                        ? "bg-[#8E98A8] text-white"
+                                        ? "cursor-not-allowed bg-[#8E98A8] text-white"
                                         : "bg-[#6E43A3] text-white hover:opacity-90"
                                 }`}
-                                style={{ fontFamily: "Outfit" }}
                             >
                                 {isSubmitting ? (
-                                    <>
+                                    <span className="flex items-center justify-center gap-2">
                                         <svg
-                                            className="animate-spin h-5 w-5 text-white"
+                                            className="h-5 w-5 animate-spin text-white"
                                             xmlns="http://www.w3.org/2000/svg"
                                             fill="none"
                                             viewBox="0 0 24 24"
@@ -1334,19 +1025,18 @@ const Billing: React.FC = () => {
                                             ></path>
                                         </svg>
                                         Processing...
-                                    </>
+                                    </span>
                                 ) : (
-                                    <>
-                                        Proceed to Payment{" "}
+                                    <span className="flex items-center justify-center gap-2">
+                                        Proceed to Payment
                                         <ArrowRight size={18} />
-                                    </>
+                                    </span>
                                 )}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
-
             {/* Increase Fleet Size Modal */}
             {showIncreaseModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">

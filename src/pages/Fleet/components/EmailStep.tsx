@@ -41,25 +41,13 @@ const EmailStep: React.FC<EmailStepProps> = ({
     };
 
     return (
-        <div
-            className="flex w-full flex-col items-center"
-            style={{ gap: "40px" }}
-        >
+        <div className="flex w-full flex-col items-center gap-6 px-4 sm:gap-8 sm:px-6 md:gap-10 md:px-8 lg:gap-[40px]">
             {/* Header */}
-            <div
-                className="flex flex-col items-center text-center"
-                style={{ width: "520px", height: "120px", gap: "16px" }}
-            >
-                <h1
-                    className="text-[40px] font-bold leading-[100%] text-black"
-                    style={{ fontFamily: "Outfit" }}
-                >
+            <div className="flex w-full max-w-[520px] flex-col items-center gap-4 text-center">
+                <h1 className="text-2xl font-bold leading-[100%] text-black sm:text-3xl md:text-[40px]">
                     Create a Fleet Account
                 </h1>
-                <p
-                    className="text-[18px] font-normal leading-[150%]"
-                    style={{ fontFamily: "Outfit", color: "#8E98A8" }}
-                >
+                <p className="text-sm font-normal leading-[150%] text-[#8E98A8] sm:text-base md:text-[18px]">
                     Register your company to start managing vehicles, drivers,
                     and operations from one central dashboard.
                 </p>
@@ -69,20 +57,14 @@ const EmailStep: React.FC<EmailStepProps> = ({
             <GoogleLoginButton />
 
             {/* Divider */}
-            <div className="flex w-full items-center gap-4">
-                <div
-                    className="flex-1 border-t"
-                    style={{ borderColor: "#7A8492" }}
-                />
+            <div className="flex w-full max-w-[520px] items-center gap-2 sm:gap-4">
+                <div className="flex-1 border-t border-[#7A8492]" />
                 <span className="text-sm text-[#7A8492]">OR</span>
-                <div
-                    className="flex-1 border-t"
-                    style={{ borderColor: "#7A8492" }}
-                />
+                <div className="flex-1 border-t border-[#7A8492]" />
             </div>
 
             {/* Email Form */}
-            <form onSubmit={handleEmailSubmit} className="w-full">
+            <form onSubmit={handleEmailSubmit} className="w-full max-w-[520px]">
                 <div className="flex flex-col gap-2">
                     <label
                         htmlFor="email"
@@ -96,27 +78,14 @@ const EmailStep: React.FC<EmailStepProps> = ({
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Enter your email address"
-                        className="w-full rounded-xl border border-[#D1D5DB] px-4 py-3 outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
-                        style={{
-                            height: "56px",
-                            fontFamily: "Outfit",
-                            fontSize: "16px",
-                        }}
+                        className="h-14 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 font-['Outfit'] text-base outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
                         required
                     />
                 </div>
 
                 <button
                     type="submit"
-                    className="mt-6 w-full rounded-2xl px-6 py-3 text-white transition hover:opacity-90"
-                    style={{
-                        backgroundColor: "#6E43A3",
-                        height: "56px",
-                        borderRadius: "16px",
-                        fontFamily: "Outfit",
-                        fontSize: "16px",
-                        fontWeight: 600,
-                    }}
+                    className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] px-6 py-3 font-['Outfit'] text-base font-semibold text-white transition hover:opacity-90"
                 >
                     Continue
                 </button>
