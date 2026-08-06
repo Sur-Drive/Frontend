@@ -631,13 +631,7 @@ const Billing: React.FC = () => {
                                             </p>
                                         </div>
                                         <div className="flex items-end justify-end">
-                                            <button
-                                                onClick={() =>
-                                                    handleDownload(sub.id)
-                                                }
-                                                className="flex h-10 w-10 items-center justify-center rounded-lg text-[#6E43A3] transition active:scale-95 hover:bg-[#F8F8F8]"
-                                                aria-label="Download receipt"
-                                            >
+                                            <button className="rounded-lg p-2 text-[#6E43A3] transition hover:bg-[#F8F8F8]">
                                                 <Download size={18} />
                                             </button>
                                         </div>
@@ -714,13 +708,7 @@ const Billing: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td className="py-3 text-right">
-                                                <button
-                                                    onClick={() =>
-                                                        handleDownload(sub.id)
-                                                    }
-                                                    className="rounded-lg p-2 text-[#6E43A3] transition hover:bg-[#F8F8F8] active:scale-95"
-                                                    aria-label="Download receipt"
-                                                >
+                                                <button className="rounded-lg p-2 text-[#6E43A3] transition hover:bg-[#F8F8F8]">
                                                     <Download size={18} />
                                                 </button>
                                             </td>

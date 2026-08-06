@@ -341,6 +341,7 @@ const ManagerVehicles: React.FC = () => {
 
     useEffect(() => {
         fetchVehicles();
+        fetchManagerProfile();
         fetchVehicleUsage();
         fetchSubFleets();
         fetchDrivers();
@@ -651,94 +652,132 @@ const ManagerVehicles: React.FC = () => {
     const currentVehicles = filteredVehicles.slice(startIndex, endIndex);
 
     return (
-        <div className="min-h-screen bg-[#F7F7F7] p-6">
-            <div className="max-w-[1190px] mx-auto space-y-6">
+        <div className="min-h-screen bg-[#F7F7F7] p-3 sm:p-4 md:p-6">
+            <div className="mx-auto max-w-[1190px] space-y-3 sm:space-y-4 md:space-y-6">
                 {/* Header Section */}
-                <div className="bg-white rounded-xl p-6 flex justify-between items-center">
+                <div className="flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
                     <div>
-                        <h1
-                            className="text-2xl font-bold text-[#1F083B]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                        <h1 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                             Vehicles
                         </h1>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span
-                                className="text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
+                        <div className="mt-1 flex flex-wrap items-center gap-1 text-sm text-[#8E98A8] sm:gap-2">
+                            <span>
                                 {stats.totalVehicles} vehicles in your fleet
                             </span>
-                            {usage && (
-                                <span
-                                    className="text-[#8E98A8] text-sm"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
-                                    • {usage.message}
-                                </span>
-                            )}
+                            {usage && <span>• {usage.message}</span>}
                         </div>
                     </div>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="bg-[#6E43A3] text-white px-6 py-2.5 rounded-xl hover:opacity-90 transition flex items-center gap-2"
-                        style={{ fontFamily: "Outfit" }}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#6E43A3] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 sm:w-auto sm:px-6"
                     >
-                        <Plus size={20} />
-                        Add Vehicle
+                        <Plus size={18} className="sm:size-[20px]" />
+                        <span>Add Vehicle</span>
                     </button>
                 </div>
 
+                {/* Stats Cards - Responsive Grid */}
                 {/* Stats Cards */}
-                <div className="flex gap-4 flex-wrap">
-                    <StatCard
-                        icon={Car}
-                        label="Total Vehicles"
-                        value={stats.totalVehicles}
-                        subtext="Across all fleets"
-                        valueColor="text-[#6E43A3]"
-                    />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* Total Vehicles */}
+                    <div className="rounded-xl bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-[#8E98A8]">
+                                    Total Vehicles
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-[#6E43A3] sm:text-3xl">
+                                    {stats.totalVehicles}
+                                </p>
+                                <p className="mt-0.5 text-xs text-[#8E98A8]">
+                                    Across all fleets
+                                </p>
+                            </div>
+                            <div className="rounded-full bg-[#6E43A310] p-3">
+                                <Car size={20} className="text-[#6E43A3]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <StatCard
-                        icon={UserCheck}
-                        label="Assigned Vehicles"
-                        value={stats.assignedVehicles}
-                        subtext="Driver Assigned"
-                        valueColor="text-[#2E7D32]"
-                    />
+                    {/* Assigned Vehicles */}
+                    <div className="rounded-xl bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-[#8E98A8]">
+                                    Assigned Vehicles
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-[#2E7D32] sm:text-3xl">
+                                    {stats.assignedVehicles}
+                                </p>
+                                <p className="mt-0.5 text-xs text-[#8E98A8]">
+                                    Driver Assigned
+                                </p>
+                            </div>
+                            <div className="rounded-full bg-[#2E7D3220] p-3">
+                                <UserCheck
+                                    size={20}
+                                    className="text-[#2E7D32]"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
-                    <StatCard
-                        icon={UserX}
-                        label="Unassigned Vehicles"
-                        value={stats.unassignedVehicles}
-                        subtext="No driver assigned yet"
-                        valueColor="text-[#0B0015]"
-                    />
+                    {/* Unassigned Vehicles */}
+                    <div className="rounded-xl bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-[#8E98A8]">
+                                    Unassigned Vehicles
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-[#0B0015] sm:text-3xl">
+                                    {stats.unassignedVehicles}
+                                </p>
+                                <p className="mt-0.5 text-xs text-[#8E98A8]">
+                                    No driver assigned
+                                </p>
+                            </div>
+                            <div className="rounded-full bg-[#0B001510] p-3">
+                                <UserX size={20} className="text-[#0B0015]" />
+                            </div>
+                        </div>
+                    </div>
 
-                    <StatCard
-                        icon={Calendar}
-                        label="Due for Service"
-                        value={stats.dueForService}
-                        subtext="Due within 30 days"
-                        valueColor="text-[#F2A618]"
-                    />
+                    {/* Due for Service */}
+                    <div className="rounded-xl bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-[#8E98A8]">
+                                    Due for Service
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-[#F2A618] sm:text-3xl">
+                                    {stats.dueForService}
+                                </p>
+                                <p className="mt-0.5 text-xs text-[#8E98A8]">
+                                    Due within 30 days
+                                </p>
+                            </div>
+                            <div className="rounded-full bg-[#F2A61820] p-3">
+                                <Calendar
+                                    size={20}
+                                    className="text-[#F2A618]"
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Table Section */}
-                <div className="bg-white rounded-xl p-6">
+                <div className="rounded-xl bg-white p-3 shadow-sm sm:p-4 md:p-6">
                     {/* Table Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h2
-                            className="text-lg font-semibold text-[#1F083B]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
+                    <div className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <h2 className="text-base font-semibold text-[#1F083B] sm:text-lg">
                             All Vehicles ({totalItems})
                         </h2>
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                            <div className="relative w-full sm:w-48 md:w-64">
                                 <Search
-                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#8E98A8]"
-                                    size={18}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8E98A8]"
+                                    size={16}
                                 />
                                 <input
                                     type="text"
@@ -747,19 +786,17 @@ const ManagerVehicles: React.FC = () => {
                                     onChange={(e) =>
                                         setSearchTerm(e.target.value)
                                     }
-                                    className="pl-10 pr-4 py-2 bg-[#F8F8F8] rounded-xl text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-xl bg-[#F8F8F8] py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                 />
                             </div>
                             <div className="flex items-center gap-2">
-                                <Filter size={18} className="text-[#8E98A8]" />
+                                <Filter size={16} className="text-[#8E98A8]" />
                                 <select
                                     value={selectedStatus}
                                     onChange={(e) =>
                                         setSelectedStatus(e.target.value)
                                     }
-                                    className="bg-[#F8F8F8] px-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="rounded-xl bg-[#F8F8F8] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3] sm:px-4"
                                 >
                                     <option value="all">All Status</option>
                                     <option value="AVAILABLE">Available</option>
@@ -775,65 +812,209 @@ const ManagerVehicles: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    {/* Mobile Cards */}
+                    <div className="space-y-3 sm:hidden">
+                        {loading ? (
+                            <div className="py-8 text-center text-sm text-[#8E98A8]">
+                                Loading vehicles...
+                            </div>
+                        ) : currentVehicles.length === 0 ? (
+                            <div className="py-8 text-center text-sm text-[#8E98A8]">
+                                No vehicles found
+                            </div>
+                        ) : (
+                            currentVehicles.map((vehicle) => {
+                                const isDropdownOpen =
+                                    activeDropdown === vehicle.id;
+                                return (
+                                    <div
+                                        key={vehicle.id}
+                                        className="rounded-lg border border-[#E0E5EB] bg-white p-4"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="truncate text-sm font-medium text-[#111827]">
+                                                    {vehicle.deviceId?.slice(
+                                                        0,
+                                                        17,
+                                                    ) ||
+                                                        vehicle.id?.slice(0, 8)}
+                                                    ...
+                                                </div>
+                                                <div className="truncate text-xs text-[#8E98A8]">
+                                                    {vehicle.registrationNumber ||
+                                                        "-"}
+                                                </div>
+                                                <div className="mt-1 flex items-center gap-2">
+                                                    <span className="text-xs text-[#111827]">
+                                                        {vehicle.vehicleType ||
+                                                            "Car"}
+                                                    </span>
+                                                    <span className="text-xs text-[#8E98A8]">
+                                                        {vehicle.make}{" "}
+                                                        {vehicle.model}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span
+                                                className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(vehicle.status)}`}
+                                            >
+                                                <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
+                                                {getStatusDisplay(
+                                                    vehicle.status,
+                                                )}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-3 grid grid-cols-2 gap-3 border-t border-[#E0E5EB] pt-3">
+                                            <div>
+                                                <p className="text-[10px] text-[#8E98A8]">
+                                                    Driver
+                                                </p>
+                                                <p className="truncate text-sm font-medium text-[#111827]">
+                                                    {vehicle.assignedDriver
+                                                        ?.name || "—"}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-[#8E98A8]">
+                                                    Sub-fleet
+                                                </p>
+                                                <p className="truncate text-sm font-medium text-[#111827]">
+                                                    {subFleet?.name || "—"}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-[#8E98A8]">
+                                                    Next Service
+                                                </p>
+                                                <p className="truncate text-sm font-medium text-[#111827]">
+                                                    {formatDate(
+                                                        vehicle.nextService,
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-end justify-end">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedVehicle(
+                                                            vehicle,
+                                                        );
+                                                        setActiveDropdown(
+                                                            isDropdownOpen
+                                                                ? null
+                                                                : vehicle.id,
+                                                        );
+                                                    }}
+                                                    className="rounded-lg p-2 transition hover:bg-gray-100 active:bg-gray-200"
+                                                >
+                                                    <MoreVertical
+                                                        size={20}
+                                                        className="text-[#8E98A8]"
+                                                    />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {isDropdownOpen && (
+                                            <div className="mt-3 rounded-lg border border-[#E0E5EB] bg-white shadow-lg">
+                                                <button
+                                                    onClick={() => {
+                                                        setActiveDropdown(null);
+                                                        setSelectedVehicle(
+                                                            vehicle,
+                                                        );
+                                                        setShowViewModal(true);
+                                                    }}
+                                                    className="flex w-full items-center gap-3 rounded-t-lg px-4 py-3 text-sm text-[#0B0015] transition hover:bg-[#F7F7F7]"
+                                                >
+                                                    <Eye size={16} /> View
+                                                    Details
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setActiveDropdown(null);
+                                                        handleOpenEditModal(
+                                                            vehicle,
+                                                        );
+                                                    }}
+                                                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[#0B0015] transition hover:bg-[#F7F7F7]"
+                                                >
+                                                    <Edit size={16} /> Edit
+                                                </button>
+                                                {vehicle.assignedDriver && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setActiveDropdown(
+                                                                null,
+                                                            );
+                                                            handleUnassignDriver(
+                                                                vehicle.id,
+                                                            );
+                                                        }}
+                                                        className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[#F2A618] transition hover:bg-[#F7F7F7]"
+                                                    >
+                                                        <UserX size={16} />{" "}
+                                                        Unassign Driver
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => {
+                                                        setActiveDropdown(null);
+                                                        setSelectedVehicle(
+                                                            vehicle,
+                                                        );
+                                                        setShowRemoveModal(
+                                                            true,
+                                                        );
+                                                    }}
+                                                    className="flex w-full items-center gap-3 rounded-b-lg border-t border-[#E0E5EB] px-4 py-3 text-sm text-[#B71C1C] transition hover:bg-[#F7F7F7]"
+                                                >
+                                                    <Trash2 size={16} /> Remove
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden overflow-x-auto sm:block">
+                        <table className="w-full min-w-[800px]">
                             <thead>
                                 <tr className="border-b border-[#E0E5EB]">
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-2 text-left text-xs font-medium text-[#8E98A8] sm:py-3 sm:text-sm">
                                         Vehicle
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="hidden py-2 text-left text-xs font-medium text-[#8E98A8] md:table-cell sm:py-3 sm:text-sm">
                                         Type
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
-                                        Trips
-                                    </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="hidden py-2 text-left text-xs font-medium text-[#8E98A8] lg:table-cell sm:py-3 sm:text-sm">
                                         Driver
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="hidden py-2 text-left text-xs font-medium text-[#8E98A8] xl:table-cell sm:py-3 sm:text-sm">
                                         Sub-fleet
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="hidden py-2 text-left text-xs font-medium text-[#8E98A8] xl:table-cell sm:py-3 sm:text-sm">
                                         Next Service
                                     </th>
-                                    <th
-                                        className="text-left py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    >
+                                    <th className="py-2 text-left text-xs font-medium text-[#8E98A8] sm:py-3 sm:text-sm">
                                         Status
                                     </th>
-                                    <th
-                                        className="text-right py-3 text-sm text-[#8E98A8] font-medium"
-                                        style={{ fontFamily: "Outfit" }}
-                                    ></th>
+                                    <th className="py-2 text-right text-xs font-medium text-[#8E98A8] sm:py-3 sm:text-sm">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={8}
-                                            className="text-center py-8 text-[#8E98A8]"
+                                            colSpan={7}
+                                            className="py-8 text-center text-sm text-[#8E98A8]"
                                         >
                                             Loading vehicles...
                                         </td>
@@ -841,232 +1022,190 @@ const ManagerVehicles: React.FC = () => {
                                 ) : currentVehicles.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={8}
-                                            className="text-center py-8 text-[#8E98A8]"
+                                            colSpan={7}
+                                            className="py-8 text-center text-sm text-[#8E98A8]"
                                         >
                                             No vehicles found
                                         </td>
                                     </tr>
                                 ) : (
-                                    currentVehicles.map((vehicle) => (
-                                        <tr
-                                            key={vehicle.id}
-                                            className="border-b border-[#E0E5EB] hover:bg-[#F7F7F7] transition"
-                                        >
-                                            <td className="py-3">
-                                                <div>
-                                                    <div
-                                                        className="text-sm font-medium text-[#111827]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
-                                                        {vehicle.deviceId?.slice(
-                                                            0,
-                                                            17,
-                                                        ) ||
-                                                            vehicle.id?.slice(
+                                    currentVehicles.map((vehicle) => {
+                                        const isDropdownOpen =
+                                            activeDropdown === vehicle.id;
+                                        return (
+                                            <tr
+                                                key={vehicle.id}
+                                                className="border-b border-[#E0E5EB] transition hover:bg-[#F7F7F7]"
+                                            >
+                                                <td className="py-2 sm:py-3">
+                                                    <div>
+                                                        <div className="truncate text-sm font-medium text-[#111827]">
+                                                            {vehicle.deviceId?.slice(
                                                                 0,
-                                                                8,
-                                                            )}
-                                                        ...
+                                                                17,
+                                                            ) ||
+                                                                vehicle.id?.slice(
+                                                                    0,
+                                                                    8,
+                                                                )}
+                                                            ...
+                                                        </div>
+                                                        <div className="truncate text-xs text-[#8E98A8]">
+                                                            {vehicle.registrationNumber ||
+                                                                "-"}
+                                                        </div>
                                                     </div>
-                                                    <div
-                                                        className="text-xs text-[#8E98A8]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
-                                                        {vehicle.registrationNumber ||
-                                                            "-"}
+                                                </td>
+                                                <td className="hidden py-2 md:table-cell sm:py-3">
+                                                    <div>
+                                                        <div className="text-sm text-[#111827]">
+                                                            {vehicle.vehicleType ||
+                                                                "Car"}
+                                                        </div>
+                                                        <div className="text-xs text-[#8E98A8]">
+                                                            {vehicle.make}{" "}
+                                                            {vehicle.model}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-3">
-                                                <div>
-                                                    <div
-                                                        className="text-sm text-[#111827]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
+                                                </td>
+                                                <td className="hidden py-2 lg:table-cell sm:py-3">
+                                                    <span className="text-sm text-[#111827]">
+                                                        {vehicle.assignedDriver
+                                                            ?.name || "—"}
+                                                    </span>
+                                                </td>
+                                                <td className="hidden py-2 xl:table-cell sm:py-3">
+                                                    <span className="text-sm text-[#111827]">
+                                                        {subFleet?.name || "—"}
+                                                    </span>
+                                                </td>
+                                                <td className="hidden py-2 xl:table-cell sm:py-3">
+                                                    <span className="text-sm text-[#111827]">
+                                                        {formatDate(
+                                                            vehicle.nextService,
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2 sm:py-3">
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium sm:px-3 ${getStatusColor(vehicle.status)}`}
                                                     >
-                                                        {vehicle.vehicleType ||
-                                                            "Car"}
-                                                    </div>
-                                                    <div
-                                                        className="text-xs text-[#8E98A8]"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
-                                                    >
-                                                        {vehicle.make}{" "}
-                                                        {vehicle.model}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className="text-sm text-[#8E98A8]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    -
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className="text-sm text-[#111827]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {vehicle.assignedDriver
-                                                        ?.name || "-"}
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className="text-sm text-[#111827]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {subFleet?.name || "-"}
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className="text-sm text-[#111827]"
-                                                    style={{
-                                                        fontFamily: "Outfit",
-                                                    }}
-                                                >
-                                                    {formatDate(
-                                                        vehicle.nextService,
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <span
-                                                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getStatusColor(vehicle.status)}`}
-                                                >
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                                                    {getStatusDisplay(
-                                                        vehicle.status,
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="py-3">
-                                                <div className="relative">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedVehicle(
-                                                                vehicle,
-                                                            );
-                                                            setActiveDropdown(
-                                                                activeDropdown ===
-                                                                    vehicle.id
-                                                                    ? null
-                                                                    : vehicle.id,
-                                                            );
-                                                        }}
-                                                        className="p-1.5 hover:bg-gray-100 rounded-lg transition"
-                                                    >
-                                                        <MoreVertical
-                                                            size={18}
-                                                            className="text-[#8E98A8]"
-                                                        />
-                                                    </button>
-
-                                                    {activeDropdown ===
-                                                        vehicle.id && (
-                                                        <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-[#E0E5EB] min-w-[180px] z-10 py-1">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setActiveDropdown(
-                                                                        null,
-                                                                    );
-                                                                    setSelectedVehicle(
-                                                                        vehicle,
-                                                                    );
-                                                                    setShowViewModal(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                                className="w-full px-4 py-2 text-left text-sm text-[#0B0015] hover:bg-[#F7F7F7] flex items-center gap-2"
-                                                            >
-                                                                <Eye
-                                                                    size={16}
-                                                                />
-                                                                View Details
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setActiveDropdown(
-                                                                        null,
-                                                                    );
-                                                                    handleOpenEditModal(
-                                                                        vehicle,
-                                                                    );
-                                                                }}
-                                                                className="w-full px-4 py-2 text-left text-sm text-[#0B0015] hover:bg-[#F7F7F7] flex items-center gap-2"
-                                                            >
-                                                                <Edit
-                                                                    size={16}
-                                                                />
-                                                                Edit
-                                                            </button>
-                                                            {vehicle.assignedDriver && (
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
+                                                        {getStatusDisplay(
+                                                            vehicle.status,
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2 text-right sm:py-3">
+                                                    <div className="relative">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedVehicle(
+                                                                    vehicle,
+                                                                );
+                                                                setActiveDropdown(
+                                                                    isDropdownOpen
+                                                                        ? null
+                                                                        : vehicle.id,
+                                                                );
+                                                            }}
+                                                            className="rounded-lg p-1.5 transition hover:bg-gray-100 sm:p-2"
+                                                        >
+                                                            <MoreVertical
+                                                                size={16}
+                                                                className="text-[#8E98A8] sm:size-[18px]"
+                                                            />
+                                                        </button>
+                                                        {isDropdownOpen && (
+                                                            <div className="absolute right-0 top-full z-10 mt-1 min-w-[160px] rounded-xl border border-[#E0E5EB] bg-white py-1 shadow-lg sm:min-w-[180px]">
                                                                 <button
                                                                     onClick={() => {
                                                                         setActiveDropdown(
                                                                             null,
                                                                         );
-                                                                        handleUnassignDriver(
-                                                                            vehicle.id,
+                                                                        setSelectedVehicle(
+                                                                            vehicle,
+                                                                        );
+                                                                        setShowViewModal(
+                                                                            true,
                                                                         );
                                                                     }}
-                                                                    className="w-full px-4 py-2 text-left text-sm text-[#F2A618] hover:bg-[#F7F7F7] flex items-center gap-2 border-t border-[#E0E5EB] mt-1 pt-1"
+                                                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[#0B0015] transition hover:bg-[#F7F7F7] sm:px-4 sm:text-sm"
                                                                 >
-                                                                    <UserX
+                                                                    <Eye
                                                                         size={
-                                                                            16
+                                                                            14
                                                                         }
-                                                                    />
-                                                                    Unassign
-                                                                    Driver
+                                                                    />{" "}
+                                                                    View Details
                                                                 </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setActiveDropdown(
-                                                                        null,
-                                                                    );
-                                                                    setSelectedVehicle(
-                                                                        vehicle,
-                                                                    );
-                                                                    setShowRemoveModal(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                                className="w-full px-4 py-2 text-left text-sm text-[#B71C1C] hover:bg-[#F7F7F7] flex items-center gap-2 border-t border-[#E0E5EB] mt-1 pt-1"
-                                                            >
-                                                                <Trash2
-                                                                    size={16}
-                                                                />
-                                                                Remove
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setActiveDropdown(
+                                                                            null,
+                                                                        );
+                                                                        handleOpenEditModal(
+                                                                            vehicle,
+                                                                        );
+                                                                    }}
+                                                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[#0B0015] transition hover:bg-[#F7F7F7] sm:px-4 sm:text-sm"
+                                                                >
+                                                                    <Edit
+                                                                        size={
+                                                                            14
+                                                                        }
+                                                                    />{" "}
+                                                                    Edit
+                                                                </button>
+                                                                {vehicle.assignedDriver && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setActiveDropdown(
+                                                                                null,
+                                                                            );
+                                                                            handleUnassignDriver(
+                                                                                vehicle.id,
+                                                                            );
+                                                                        }}
+                                                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[#F2A618] transition hover:bg-[#F7F7F7] sm:px-4 sm:text-sm"
+                                                                    >
+                                                                        <UserX
+                                                                            size={
+                                                                                14
+                                                                            }
+                                                                        />{" "}
+                                                                        Unassign
+                                                                        Driver
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setActiveDropdown(
+                                                                            null,
+                                                                        );
+                                                                        setSelectedVehicle(
+                                                                            vehicle,
+                                                                        );
+                                                                        setShowRemoveModal(
+                                                                            true,
+                                                                        );
+                                                                    }}
+                                                                    className="mt-1 flex w-full items-center gap-2 border-t border-[#E0E5EB] px-3 py-2 text-left text-xs text-[#B71C1C] transition hover:bg-[#F7F7F7] sm:px-4 sm:text-sm"
+                                                                >
+                                                                    <Trash2
+                                                                        size={
+                                                                            14
+                                                                        }
+                                                                    />{" "}
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
@@ -1074,30 +1213,28 @@ const ManagerVehicles: React.FC = () => {
 
                     {/* Pagination */}
                     {totalItems > 0 && (
-                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#E0E5EB]">
-                            <div
-                                className="flex items-center gap-3 text-sm text-[#8E98A8]"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                <span>Show</span>
+                        <div className="mt-4 flex flex-col gap-3 border-t border-[#E0E5EB] pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2 text-sm text-[#8E98A8]">
+                                <span className="hidden sm:inline">Show</span>
                                 <select
                                     value={itemsPerPage}
                                     onChange={(e) => {
                                         setItemsPerPage(Number(e.target.value));
                                         setCurrentPage(1);
                                     }}
-                                    className="px-2 py-1 border border-[#E0E5EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
+                                    className="rounded-lg border border-[#E0E5EB] px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-[#6E43A3]"
                                 >
                                     <option value={5}>5</option>
                                     <option value={10}>10</option>
                                     <option value={20}>20</option>
                                     <option value={50}>50</option>
                                 </select>
-                                <span>entries</span>
-                                <span className="ml-4"></span>
+                                <span className="hidden sm:inline">
+                                    entries
+                                </span>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                                 <button
                                     onClick={() =>
                                         setCurrentPage((prev) =>
@@ -1105,14 +1242,14 @@ const ManagerVehicles: React.FC = () => {
                                         )
                                     }
                                     disabled={currentPage === 1}
-                                    className={`p-2 rounded-lg border border-[#E0E5EB] transition ${
+                                    className={`rounded-lg border border-[#E0E5EB] p-1.5 transition sm:p-2 ${
                                         currentPage === 1
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "hover:bg-[#F7F7F7] hover:border-[#6E43A3]"
+                                            ? "cursor-not-allowed opacity-50"
+                                            : "hover:bg-[#F7F7F7] active:bg-[#E5E7EB]"
                                     }`}
                                 >
                                     <svg
-                                        className="w-4 h-4 text-[#8E98A8]"
+                                        className="h-3 w-3 text-[#8E98A8] sm:h-4 sm:w-4"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -1146,7 +1283,6 @@ const ManagerVehicles: React.FC = () => {
                                                     pageNum =
                                                         currentPage - 2 + i;
                                                 }
-
                                                 return (
                                                     <button
                                                         key={i}
@@ -1155,16 +1291,12 @@ const ManagerVehicles: React.FC = () => {
                                                                 pageNum,
                                                             )
                                                         }
-                                                        className={`w-8 h-8 rounded-lg text-sm transition ${
+                                                        className={`h-7 w-7 rounded-lg text-xs transition sm:h-8 sm:w-8 sm:text-sm ${
                                                             currentPage ===
                                                             pageNum
                                                                 ? "bg-[#6E43A3] text-white"
                                                                 : "text-[#8E98A8] hover:bg-[#F7F7F7]"
                                                         }`}
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit",
-                                                        }}
                                                     >
                                                         {pageNum}
                                                     </button>
@@ -1181,14 +1313,14 @@ const ManagerVehicles: React.FC = () => {
                                         )
                                     }
                                     disabled={currentPage === totalPages}
-                                    className={`p-2 rounded-lg border border-[#E0E5EB] transition ${
+                                    className={`rounded-lg border border-[#E0E5EB] p-1.5 transition sm:p-2 ${
                                         currentPage === totalPages
-                                            ? "opacity-50 cursor-not-allowed"
-                                            : "hover:bg-[#F7F7F7] hover:border-[#6E43A3]"
+                                            ? "cursor-not-allowed opacity-50"
+                                            : "hover:bg-[#F7F7F7] active:bg-[#E5E7EB]"
                                     }`}
                                 >
                                     <svg
-                                        className="w-4 h-4 text-[#8E98A8]"
+                                        className="h-3 w-3 text-[#8E98A8] sm:h-4 sm:w-4"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -1209,37 +1341,32 @@ const ManagerVehicles: React.FC = () => {
 
             {/* ADD VEHICLE MODAL */}
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-                        <div className="flex justify-between items-start mb-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8">
+                        <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Add Vehicle
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Add a new vehicle to your fleet
                                 </p>
                             </div>
                             <button
                                 onClick={() => setShowAddModal(false)}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                            {/* Row 1: Vehicle Type & Sub-fleet */}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Vehicle Type
                                     </label>
                                     <select
@@ -1250,8 +1377,7 @@ const ManagerVehicles: React.FC = () => {
                                                 vehicleType: e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     >
                                         <option value="">Select type</option>
                                         <option value="sedan">Sedan</option>
@@ -1268,14 +1394,14 @@ const ManagerVehicles: React.FC = () => {
                                     </select>
                                 </div>
                                 {subFleet && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                    <div className="flex-1">
+                                        <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                             Sub-fleet
                                         </label>
-                                        <div className="w-full px-4 py-3 bg-[#F8F8F8] border border-[#E0E5EB] rounded-xl text-[#1F083B]">
+                                        <div className="h-12 w-full rounded-xl border border-[#E0E5EB] bg-[#F8F8F8] px-4 py-3 text-sm text-[#1F083B] sm:h-14 sm:text-base">
                                             {subFleet.name}
                                         </div>
-                                        <p className="text-xs text-[#8E98A8] mt-1">
+                                        <p className="mt-1 text-xs text-[#8E98A8]">
                                             Drivers will be assigned to this
                                             sub-fleet automatically
                                         </p>
@@ -1283,9 +1409,10 @@ const ManagerVehicles: React.FC = () => {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                            {/* Row 2: Make & Model & Registration Number */}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Make & Model
                                     </label>
                                     <input
@@ -1298,12 +1425,11 @@ const ManagerVehicles: React.FC = () => {
                                             }))
                                         }
                                         placeholder="Toyota Camry 2024"
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Registration Number
                                     </label>
                                     <input
@@ -1317,15 +1443,15 @@ const ManagerVehicles: React.FC = () => {
                                             }))
                                         }
                                         placeholder="ABC-456"
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                            {/* Row 3: Next Service & Assign Driver */}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Next Service
                                     </label>
                                     <input
@@ -1337,12 +1463,11 @@ const ManagerVehicles: React.FC = () => {
                                                 nextService: e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Assign Driver (Optional)
                                     </label>
                                     <select
@@ -1354,8 +1479,7 @@ const ManagerVehicles: React.FC = () => {
                                                     e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     >
                                         <option value="">Select driver</option>
                                         {drivers.map((driver) => (
@@ -1370,11 +1494,11 @@ const ManagerVehicles: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 mt-6">
+                            {/* Buttons */}
+                            <div className="mt-4 flex flex-col-reverse gap-3 sm:mt-6 sm:flex-row sm:gap-3">
                                 <button
                                     onClick={() => setShowAddModal(false)}
-                                    className="flex-1 px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm text-[#8E98A8] transition hover:bg-gray-50 sm:flex-1 sm:px-6"
                                 >
                                     Cancel
                                 </button>
@@ -1387,7 +1511,7 @@ const ManagerVehicles: React.FC = () => {
                                         !addForm.registrationNumber ||
                                         isSubmitting
                                     }
-                                    className={`flex-1 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition disabled:cursor-not-allowed ${
+                                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed sm:flex-1 sm:px-6 ${
                                         !addForm.vehicleType ||
                                         !addForm.subFleetId ||
                                         !addForm.makeAndModel ||
@@ -1395,12 +1519,11 @@ const ManagerVehicles: React.FC = () => {
                                             ? "bg-[#8E98A8] text-white"
                                             : "bg-[#6E43A3] text-white hover:opacity-90"
                                     }`}
-                                    style={{ fontFamily: "Outfit" }}
                                 >
                                     {isSubmitting ? (
                                         <>
                                             <svg
-                                                className="animate-spin h-5 w-5 text-white"
+                                                className="h-5 w-5 animate-spin text-white"
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
                                                 viewBox="0 0 24 24"
@@ -1423,7 +1546,11 @@ const ManagerVehicles: React.FC = () => {
                                         </>
                                     ) : (
                                         <>
-                                            Add Vehicle <ArrowRight size={18} />
+                                            Add Vehicle
+                                            <ArrowRight
+                                                size={16}
+                                                className="sm:size-[18px]"
+                                            />
                                         </>
                                     )}
                                 </button>
@@ -1512,22 +1639,15 @@ const ManagerVehicles: React.FC = () => {
             )}
 
             {/* VIEW VEHICLE DETAILS MODAL */}
-
             {showViewModal && selectedVehicle && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-                        <div className="flex justify-between items-start mb-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8">
+                        <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Vehicle Details
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Vehicle information and status
                                 </p>
                             </div>
@@ -1536,159 +1656,114 @@ const ManagerVehicles: React.FC = () => {
                                     setShowViewModal(false);
                                     setSelectedVehicle(null);
                                 }}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
                         {/* Vehicle Header with Status */}
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-[#EDE8F4] flex items-center justify-center text-[#6E43A3]">
+                                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#EDE8F4] text-[#6E43A3]">
                                         <Car size={24} />
                                     </div>
                                     <div>
-                                        <div
-                                            className="text-xl font-bold text-[#1A2A3F]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <div className="text-lg font-bold text-[#1A2A3F] sm:text-xl">
                                             {selectedVehicle.registrationNumber}
                                         </div>
-                                        <div
-                                            className="text-sm text-[#5B646F]"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <div className="text-sm text-[#5B646F]">
                                             {selectedVehicle.make}{" "}
                                             {selectedVehicle.model}
                                         </div>
-                                        <div
-                                            className="text-xs text-[#8E98A8] mt-0.5"
-                                            style={{ fontFamily: "Outfit" }}
-                                        >
+                                        <div className="mt-0.5 text-xs text-[#8E98A8]">
                                             ID: {selectedVehicle.id}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div>
+                            <div className="flex-shrink-0">
                                 <span
-                                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${getStatusColor(selectedVehicle.status)}`}
+                                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(selectedVehicle.status)}`}
                                 >
-                                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
                                     {getStatusDisplay(selectedVehicle.status)}
                                 </span>
                             </div>
                         </div>
 
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-4 gap-3 mt-6">
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-4 sm:gap-3">
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Sub-fleet
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-sm font-bold text-[#1A2A3F] sm:text-base">
                                     {subFleet?.name || "-"}
                                 </div>
                             </div>
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Vehicle Type
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-sm font-bold text-[#1A2A3F] sm:text-base">
                                     {selectedVehicle.vehicleType || "Car"}
                                 </div>
                             </div>
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Driver
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
-                                    {selectedVehicle.assignedDriver?.name}
+                                <div className="mt-1 text-sm font-bold text-[#1A2A3F] sm:text-base">
+                                    {selectedVehicle.assignedDriver?.name ||
+                                        "Unassigned"}
                                 </div>
                             </div>
-                            <div className="bg-[#7A84921A] rounded-xl p-4 text-center">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#7A84921A] p-3 text-center sm:p-4">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Next Service
                                 </div>
-                                <div
-                                    className="text-base font-bold text-[#1A2A3F] mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-1 text-sm font-bold text-[#1A2A3F] sm:text-base">
                                     {formatDate(selectedVehicle.nextService)}
                                 </div>
                             </div>
                         </div>
 
                         {/* Additional Info */}
-                        <div className="mt-4 grid grid-cols-2 gap-3">
-                            <div className="bg-[#F8F8F8] rounded-xl p-3">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                        <div className="mt-3 grid grid-cols-1 gap-2 sm:mt-4 sm:grid-cols-2 sm:gap-3">
+                            <div className="rounded-xl bg-[#F8F8F8] p-3">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Device ID
                                 </div>
-                                <div
-                                    className="text-sm font-medium text-[#1A2A3F] mt-0.5"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-0.5 truncate text-sm font-medium text-[#1A2A3F]">
                                     {selectedVehicle.deviceId || "-"}
                                 </div>
                             </div>
-                            <div className="bg-[#F8F8F8] rounded-xl p-3">
-                                <div
-                                    className="text-xs text-[#7A8492] font-medium"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                            <div className="rounded-xl bg-[#F8F8F8] p-3">
+                                <div className="text-xs font-medium text-[#7A8492]">
                                     Device Type
                                 </div>
-                                <div
-                                    className="text-sm font-medium text-[#1A2A3F] mt-0.5"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <div className="mt-0.5 text-sm font-medium text-[#1A2A3F]">
                                     {selectedVehicle.deviceType || "-"}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] my-6" />
+                        <div className="my-4 h-px w-full bg-[#E5E7EB] sm:my-6" />
 
                         {/* Action Buttons */}
-                        <div className="flex gap-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                             <button
                                 onClick={() => {
                                     setShowViewModal(false);
                                     handleOpenEditModal(selectedVehicle);
                                 }}
-                                className="flex-1 px-6 py-3 rounded-xl text-[#6E43A3] border border-[#6E43A3] hover:bg-[#6E43A3] hover:text-white transition flex items-center justify-center gap-2"
-                                style={{ fontFamily: "Outfit" }}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#6E43A3] px-4 py-3 text-sm text-[#6E43A3] transition hover:bg-[#6E43A3] hover:text-white sm:flex-1 sm:px-6"
                             >
-                                <Edit size={18} />
+                                <Edit size={16} className="sm:size-[18px]" />
                                 Edit Vehicle
                             </button>
                             <button
@@ -1696,10 +1771,9 @@ const ManagerVehicles: React.FC = () => {
                                     setShowViewModal(false);
                                     setShowRemoveModal(true);
                                 }}
-                                className="flex-1 px-6 py-3 rounded-xl text-[#B71C1C] border border-[#B71C1C] hover:bg-[#B71C1C] hover:text-white transition flex items-center justify-center gap-2"
-                                style={{ fontFamily: "Outfit" }}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#B71C1C] px-4 py-3 text-sm text-[#B71C1C] transition hover:bg-[#B71C1C] hover:text-white sm:flex-1 sm:px-6"
                             >
-                                <Trash2 size={18} />
+                                <Trash2 size={16} className="sm:size-[18px]" />
                                 Remove Vehicle
                             </button>
                         </div>
@@ -1803,20 +1877,14 @@ const ManagerVehicles: React.FC = () => {
 
             {/* EDIT VEHICLE MODAL */}
             {showEditModal && selectedVehicle && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
-                        <div className="flex justify-between items-start mb-4">
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                    <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-6 md:p-8">
+                        <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <h2
-                                    className="text-2xl font-bold text-[#1F083B]"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <h2 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
                                     Edit Vehicle
                                 </h2>
-                                <p
-                                    className="text-[#5B646F] text-sm mt-1"
-                                    style={{ fontFamily: "Outfit" }}
-                                >
+                                <p className="mt-1 text-sm text-[#5B646F]">
                                     Update vehicle information
                                 </p>
                             </div>
@@ -1825,18 +1893,19 @@ const ManagerVehicles: React.FC = () => {
                                     setShowEditModal(false);
                                     setSelectedVehicle(null);
                                 }}
-                                className="text-[#5B646F] hover:text-[#1F083B] transition"
+                                className="flex-shrink-0 rounded-lg p-1 text-[#5B646F] transition hover:bg-gray-100 hover:text-[#1F083B]"
                             >
-                                <X size={24} />
+                                <X size={20} className="sm:size-[24px]" />
                             </button>
                         </div>
 
-                        <div className="h-px w-full bg-[#E5E7EB] mb-6" />
+                        <div className="mb-4 h-px w-full bg-[#E5E7EB] sm:mb-6" />
 
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                            {/* Row 1: Vehicle Type & Sub-fleet */}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Vehicle Type
                                     </label>
                                     <select
@@ -1847,8 +1916,7 @@ const ManagerVehicles: React.FC = () => {
                                                 vehicleType: e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     >
                                         <option value="">Select type</option>
                                         <option value="sedan">Sedan</option>
@@ -1864,22 +1932,23 @@ const ManagerVehicles: React.FC = () => {
                                         <option value="other">Other</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Sub-fleet
                                     </label>
-                                    <div className="w-full px-4 py-3 bg-[#F8F8F8] border border-[#E0E5EB] rounded-xl text-[#1F083B]">
+                                    <div className="h-12 w-full rounded-xl border border-[#E0E5EB] bg-[#F8F8F8] px-4 py-3 text-sm text-[#1F083B] sm:h-14 sm:text-base">
                                         {subFleet?.name || "Loading..."}
                                     </div>
-                                    <p className="text-xs text-[#8E98A8] mt-1">
+                                    <p className="mt-1 text-xs text-[#8E98A8]">
                                         Vehicle belongs to this sub-fleet
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                            {/* Row 2: Make & Model & Registration Number */}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Make & Model
                                     </label>
                                     <input
@@ -1892,12 +1961,11 @@ const ManagerVehicles: React.FC = () => {
                                             }))
                                         }
                                         placeholder="Toyota Camry 2024"
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Registration Number
                                     </label>
                                     <input
@@ -1911,15 +1979,15 @@ const ManagerVehicles: React.FC = () => {
                                             }))
                                         }
                                         placeholder="ABC-456"
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                            {/* Row 3: Next Service & Assign Driver */}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Next Service
                                     </label>
                                     <input
@@ -1931,12 +1999,11 @@ const ManagerVehicles: React.FC = () => {
                                                 nextService: e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#5B646F] mb-1.5">
+                                <div className="flex-1">
+                                    <label className="mb-1.5 block text-sm font-medium text-[#5B646F]">
                                         Assign Driver (Optional)
                                     </label>
                                     <select
@@ -1948,8 +2015,7 @@ const ManagerVehicles: React.FC = () => {
                                                     e.target.value,
                                             }))
                                         }
-                                        className="w-full px-4 py-3 border border-[#E0E5EB] rounded-xl focus:outline-none focus:border-[#6E43A3] transition bg-white"
-                                        style={{ fontFamily: "Outfit" }}
+                                        className="h-12 w-full rounded-xl border border-[#E0E5EB] bg-white px-4 py-3 text-sm focus:border-[#6E43A3] focus:outline-none sm:h-14 sm:text-base"
                                     >
                                         <option value="">Select driver</option>
                                         {drivers.map((driver) => (
@@ -1964,31 +2030,30 @@ const ManagerVehicles: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 mt-6">
+                            {/* Buttons */}
+                            <div className="mt-4 flex flex-col-reverse gap-3 sm:mt-6 sm:flex-row sm:gap-3">
                                 <button
                                     onClick={() => {
                                         setShowEditModal(false);
                                         setSelectedVehicle(null);
                                     }}
-                                    className="flex-1 px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                    style={{ fontFamily: "Outfit" }}
+                                    className="w-full rounded-xl border border-[#E0E5EB] px-4 py-3 text-sm text-[#8E98A8] transition hover:bg-gray-50 sm:flex-1 sm:px-6"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleEditVehicle}
                                     disabled={isSubmitting}
-                                    className={`flex-1 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition disabled:cursor-not-allowed ${
+                                    className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed sm:flex-1 sm:px-6 ${
                                         isSubmitting
                                             ? "bg-[#8E98A8] text-white"
                                             : "bg-[#6E43A3] text-white hover:opacity-90"
                                     }`}
-                                    style={{ fontFamily: "Outfit" }}
                                 >
                                     {isSubmitting ? (
                                         <>
                                             <svg
-                                                className="animate-spin h-5 w-5 text-white"
+                                                className="h-5 w-5 animate-spin text-white"
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
                                                 viewBox="0 0 24 24"
@@ -2011,8 +2076,11 @@ const ManagerVehicles: React.FC = () => {
                                         </>
                                     ) : (
                                         <>
-                                            Update Vehicle{" "}
-                                            <ArrowRight size={18} />
+                                            Update Vehicle
+                                            <ArrowRight
+                                                size={16}
+                                                className="sm:size-[18px]"
+                                            />
                                         </>
                                     )}
                                 </button>
