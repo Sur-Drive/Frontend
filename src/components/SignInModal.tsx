@@ -447,6 +447,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLogin } from '../hooks/useAuth'
+import { setStoredRole, resolveRoleFromAuthResponse, type UserRole } from '../lib/userRole'
 
 type InputMode = 'phone' | 'email'
 
@@ -471,6 +472,7 @@ export default function SignInModal({
   countryCode = '+234',
 }: SignInModalProps) {
   const [inputMode, setInputMode] = useState<InputMode>('phone')
+  const [role, setRole] = useState<UserRole>('driver')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -536,6 +538,7 @@ export default function SignInModal({
 
     try {
       const result = await login.mutateAsync(payload)
+      setStoredRole(resolveRoleFromAuthResponse(result, role))
       onSignInSuccess?.(result.user)
       onClose()
     } catch (err: any) {
@@ -615,6 +618,35 @@ export default function SignInModal({
             >
               Sign in to access real-time road alerts, safer routes, and your personalised driving experience.
             </motion.p>
+
+            {/* ─── Toggle: Driver / Fleet Owner ─── */}
+            <motion.div
+              className="flex p-1 mt-6 bg-gray-100 rounded-xl shrink-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.4 }}
+            >
+              <button
+                onClick={() => setRole('driver')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  role === 'driver'
+                    ? 'bg-white text-[#6E43A3] shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Driver
+              </button>
+              <button
+                onClick={() => setRole('fleet_owner')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  role === 'fleet_owner'
+                    ? 'bg-white text-[#6E43A3] shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Fleet Owner
+              </button>
+            </motion.div>
 
             {/* ─── Toggle: Phone / Email ─── */}
             <motion.div

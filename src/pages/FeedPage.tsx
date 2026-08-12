@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { useCurrentLocation } from '../hooks/useCurrentLocation'
 import { useNearbyFeed, useVoteHazard } from '../hooks/useFeed'
 import AuthFlow from '../components/AuthFlow'
+import { useFleetOwnerGate } from '../hooks/useFleetOwnerGate'
 import type { BackendHazardType, Hazard } from '../types/hazard'
 
 
@@ -290,6 +291,19 @@ export default function FeedPage() {
   const [showAuthWall, setShowAuthWall] = useState(false)
   const [pendingVote, setPendingVote] = useState<PendingAction | null>(null)
 
+  // Fleet owners don't get the guest-browsing experience — force the
+  // auth wall + sign-in modal open (and keep it open) until they've
+  // authenticated.
+  const mustAuthenticateAsFleetOwner = useFleetOwnerGate()
+
+  useEffect(() => {
+    if (mustAuthenticateAsFleetOwner) {
+      setShowAuthWall(true)
+      setAuthMode('signin')
+      setShowAuth(true)
+    }
+  }, [mustAuthenticateAsFleetOwner])
+
   const { coords, isLoading: isLocating, error: locationError } = useCurrentLocation()
 
   const feedParams = coords
@@ -408,7 +422,7 @@ export default function FeedPage() {
         {showAuth && (
           <AuthFlow
             initialScreen={authMode}
-            onClose={() => setShowAuth(false)}
+            onClose={mustAuthenticateAsFleetOwner ? () => {} : () => setShowAuth(false)}
             onAuthSuccess={handleAuthSuccess}
           />
         )}
@@ -487,7 +501,7 @@ export default function FeedPage() {
         {showAuth && (
           <AuthFlow
             initialScreen={authMode}
-            onClose={() => setShowAuth(false)}
+            onClose={mustAuthenticateAsFleetOwner ? () => {} : () => setShowAuth(false)}
             onAuthSuccess={handleAuthSuccess}
           />
         )}

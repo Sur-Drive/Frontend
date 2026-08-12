@@ -256,6 +256,37 @@ export async function getOnboardingStatus(): Promise<OnboardingStatusResponse> {
     return data;
 }
 
+// export async function verifyOtp(
+//     payload: VerifyOtpPayload,
+// ): Promise<VerifyOtpResponse> {
+//     console.log("📤 Verifying OTP:", JSON.stringify(payload));
+
+//     const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+//         method: "POST",
+//         headers: {
+//             "Content-Type": "application/json",
+//             Accept: "application/json",
+//         },
+//         body: JSON.stringify(payload),
+//     });
+
+//     const data = await parseResponse(res, "Invalid OTP");
+
+//     const token = data.user?.accessToken || data.token;
+//     if (token) {
+//         localStorage.setItem("token", token);
+//         console.log(
+//             "🔑 Token saved to localStorage:",
+//             token.substring(0, 30) + "...",
+//         );
+//     } else {
+//         console.warn("⚠️ No accessToken found in verify-otp response");
+//     }
+
+//     return data;
+// }
+
+
 export async function verifyOtp(
     payload: VerifyOtpPayload,
 ): Promise<VerifyOtpResponse> {
@@ -272,7 +303,9 @@ export async function verifyOtp(
 
     const data = await parseResponse(res, "Invalid OTP");
 
-    const token = data.user?.accessToken || data.token;
+    const token = data.tokens?.accessToken || data.user?.accessToken || data.token;
+    const refreshTokenValue = data.tokens?.refreshToken || data.refreshToken;
+
     if (token) {
         localStorage.setItem("token", token);
         console.log(
@@ -283,8 +316,15 @@ export async function verifyOtp(
         console.warn("⚠️ No accessToken found in verify-otp response");
     }
 
+    if (refreshTokenValue) {
+        localStorage.setItem("refreshToken", refreshTokenValue);
+        console.log("🔑 Refresh token saved");
+    } else {
+        console.warn("⚠️ No refreshToken found in verify-otp response");
+    }
+
     return data;
-}
+} 
 
 export async function sendPersonalInfo(
     payload: PersonalInfoPayload,

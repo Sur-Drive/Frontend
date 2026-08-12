@@ -730,6 +730,7 @@ import { ApiError } from '../lib/apiClient'
 import { useQueryClient } from '@tanstack/react-query'
 import { useGoogleSignIn, prefetchOnboardingStatus } from '../hooks/useAuth'
 import { getGoogleIdToken } from '../lib/googleIdentity'
+import { useFleetOwnerGate } from '../hooks/useFleetOwnerGate'
 
 const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792]
 const FEED_RADIUS_KM = 10
@@ -783,6 +784,17 @@ export default function HomePage() {
   const googleSignInMutation = useGoogleSignIn()
 
   const isAuthenticated = typeof window !== 'undefined' && !!localStorage.getItem('token')
+
+  // Fleet owners don't get the guest-browsing experience — force the
+  // sign-in modal open (and keep it open) until they've authenticated.
+  const mustAuthenticateAsFleetOwner = useFleetOwnerGate()
+
+  useEffect(() => {
+    if (mustAuthenticateAsFleetOwner) {
+      setShowCreateAccount(false)
+      setShowSignIn(true)
+    }
+  }, [mustAuthenticateAsFleetOwner])
 
   const feedParams = mapReady
     ? {
@@ -1090,24 +1102,34 @@ export default function HomePage() {
     setShowSignIn(false)
   }
 
-  // Shared by both the sign-in and create-account modals' "Continue with
-  // Google" button. Grabs a real idToken from Google, exchanges it for
-  // our own tokens via POST /auth/google, then routes the user based on
-  // whether they still need to finish onboarding.
+  // Common tail end once Google tokens are saved (called after either the
+  // sign-in modal's popup flow, or the create-account modal's own internal
+  // <GoogleLogin> success) — closes whichever modal is open and routes the
+  // user based on whether they still need to finish onboarding.
+  const handleGoogleAuthComplete = async (data: any) => {
+    console.log('Google sign-in success:', data)
+    setShowCreateAccount(false)
+    setShowSignIn(false)
+
+    try {
+      const status = await prefetchOnboardingStatus(queryClient)
+      if (!status.hasCompletedOnboarding) {
+        setShowPersonalInfo(true)
+      }
+    } catch (err) {
+      console.error('Failed to fetch onboarding status after Google sign-in:', err)
+    }
+  }
+
+  // Used by the sign-in modal's "Continue with Google" button. Grabs a real
+  // idToken from Google, exchanges it for our own tokens via POST
+  // /auth/google, then hands off to handleGoogleAuthComplete.
   const handleGoogleSignIn = async () => {
     setGoogleSignInError(null)
     try {
       const idToken = await getGoogleIdToken()
       const data = await googleSignInMutation.mutateAsync({ idToken, role: 'driver' })
-      console.log('Google sign-in success:', data)
-
-      setShowCreateAccount(false)
-      setShowSignIn(false)
-
-      const status = await prefetchOnboardingStatus(queryClient)
-      if (!status.hasCompletedOnboarding) {
-        setShowPersonalInfo(true)
-      }
+      await handleGoogleAuthComplete(data)
     } catch (err) {
       console.error('Google sign-in failed:', err)
       setGoogleSignInError(err instanceof Error ? err.message : 'Google sign-in failed')
@@ -1301,11 +1323,10 @@ export default function HomePage() {
       <AnimatePresence>
         {showCreateAccount && (
           <CreateAccountModal
-            onClose={() => setShowCreateAccount(false)}
+            onClose={mustAuthenticateAsFleetOwner ? () => {} : () => setShowCreateAccount(false)}
             onSendCode={handleSendCode}
             onSendCodeSuccess={handleSendCodeSuccess}
-            onGoogleSignIn={handleGoogleSignIn}
-            googleError={googleSignInError}
+            onGoogleSuccess={handleGoogleAuthComplete}
             onSignIn={handleSwitchToSignIn}
           />
         )}
@@ -1314,7 +1335,7 @@ export default function HomePage() {
       <AnimatePresence>
         {showSignIn && (
           <SignInModal
-            onClose={() => setShowSignIn(false)}
+            onClose={mustAuthenticateAsFleetOwner ? () => {} : () => setShowSignIn(false)}
             onSignInSuccess={handleSignInSuccess}
             onGoogleSignIn={handleGoogleSignIn}
             googleError={googleSignInError}

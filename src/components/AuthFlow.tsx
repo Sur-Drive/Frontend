@@ -13,6 +13,8 @@ import ResetPasswordSuccess from './Resetpasswordsuccess'
 import OTP from './OTP'
 import PersonalInformation from './PersonalInformation'
 import CreatePassword from './CreatePassword'
+import { useGoogleSignIn } from '../hooks/useAuth'
+import { getGoogleIdToken } from '../lib/googleIdentity'
 
 type Screen =
   | 'signin'
@@ -55,12 +57,32 @@ export default function AuthFlow({
   // Shared state across the forgot-password sub-flow
   const [resetPhone, setResetPhone] = useState('')
 
+  // Google sign-in (used by both the sign-in and create-account screens'
+  // "Continue with Google" button). Without this the modal never learns
+  // that Google auth finished, so it just stays open on screen.
+  const [googleError, setGoogleError] = useState<string | null>(null)
+  const googleSignInMutation = useGoogleSignIn()
+
+  const handleGoogleSignIn = async () => {
+    setGoogleError(null)
+    try {
+      const idToken = await getGoogleIdToken()
+      const data = await googleSignInMutation.mutateAsync({ idToken, role: 'driver' })
+      onAuthSuccess(data)
+    } catch (err) {
+      console.error('Google sign-in failed:', err)
+      setGoogleError(err instanceof Error ? err.message : 'Google sign-in failed')
+    }
+  }
+
   switch (screen) {
     case 'signin':
       return (
         <SignInModal
           onClose={onClose}
           onSignInSuccess={(user) => onAuthSuccess(user)}
+          onGoogleSignIn={handleGoogleSignIn}
+          googleError={googleError}
           onForgotPassword={() => setScreen('forgot')}
           onSignUp={() => setScreen('signup')}
         />
@@ -71,6 +93,7 @@ export default function AuthFlow({
         <CreateAccountModal
           onClose={onClose}
           onSignIn={() => setScreen('signin')}
+          onGoogleSuccess={(data) => onAuthSuccess(data)}
           onSendCodeSuccess={(identifier) => {
             setSignupIdentifier(identifier)
             setScreen('signup-otp')
