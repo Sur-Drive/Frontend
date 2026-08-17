@@ -85,16 +85,20 @@ export default function StreetViewModal({ isOpen, onClose, lat, lng, label }: St
       {/* Panorama fills the screen */}
       <div ref={containerRef} className="absolute inset-0" />
 
-      {/* Top chrome — gradient + back button + label, styled like Google's own Street View header */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] pb-10 pointer-events-none bg-gradient-to-b from-black/55 to-transparent">
+      {/* Top chrome — gradient + back button + label, styled like Google's own Street View
+          header. z-30: this must stay ABOVE the loading/error/unavailable states below (z-20),
+          otherwise the close button is invisible and unclickable for the entire time the panorama
+          is loading — which is most of the time this modal is open. */}
+      <div className="absolute top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] pb-10 pointer-events-none bg-gradient-to-b from-black/55 to-transparent">
         <button
           onClick={onClose}
           aria-label="Exit Street View"
-          className="flex items-center justify-center flex-shrink-0 text-gray-800 bg-white rounded-full shadow-lg pointer-events-auto w-10 h-10"
+          className="flex items-center gap-1.5 flex-shrink-0 text-gray-800 bg-white rounded-full shadow-lg pointer-events-auto h-10 pl-2.5 pr-3.5"
         >
           <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
+          <span className="text-sm font-semibold">Close</span>
         </button>
         <div className="min-w-0 pointer-events-none">
           <p className="text-[11px] font-semibold tracking-wide text-white/70">STREET VIEW</p>

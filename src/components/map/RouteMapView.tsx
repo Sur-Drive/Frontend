@@ -43,6 +43,14 @@ export interface RouteMapViewProps {
    * Omit or leave empty (e.g. during live navigation) to hide these.
    */
   secondaryRoutes?: SecondaryRoute[]
+  /** Standard/Satellite/Terrain — forwarded to GoogleMapView. */
+  mapTypeId?: 'roadmap' | 'satellite' | 'terrain' | 'hybrid'
+  /** Simulated 3D/tilted view — forwarded to GoogleMapView. */
+  tilt?: number
+  /** Live traffic (green/orange/red/dark-red congestion) — forwarded to GoogleMapView. */
+  showTraffic?: boolean
+  /** Exposes the underlying google.maps.Map once it's created, so a parent can drive zoom/recenter/etc. directly. */
+  onReady?: (map: google.maps.Map) => void
 }
 
 /**
@@ -69,8 +77,17 @@ export default function RouteMapView({
   interactive = true,
   followMode = false,
   secondaryRoutes = NO_SECONDARY_ROUTES,
+  mapTypeId = 'roadmap',
+  tilt = 0,
+  showTraffic = false,
+  onReady,
 }: RouteMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null)
+
+  const handleReady = (m: google.maps.Map) => {
+    setMap(m)
+    onReady?.(m)
+  }
 
   const path = useMemo(() => getRoutePath(route), [route])
 
@@ -120,12 +137,15 @@ export default function RouteMapView({
         center={center}
         zoom={zoom}
         markers={markers}
-        onReady={setMap}
+        onReady={handleReady}
         className="absolute inset-0"
         loadingFallback={loadingFallback}
-        heading={followMode ? heading : 0}
+        heading={heading}
         interactive={interactive}
         followMode={followMode}
+        mapTypeId={mapTypeId}
+        tilt={tilt}
+        showTraffic={showTraffic}
       />
 
       <AnimatedRoutePolyline

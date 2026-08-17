@@ -1,13 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
 import RouteMapView from '../components/map/RouteMapView'
 import StreetViewModal, { StreetViewPegman } from '../components/map/StreetView'
+import TurnByTurnCard from '../components/map/TurnByTurnCard'
+import VoiceGuidanceControl from '../components/map/VoiceGuidanceControl'
 import { getRoutePath, pickDefaultMode } from '../api/route'
 import type { RouteModeKey, RoutePlanResponse } from '../types/routePlan'
 import { ROUTE_MODE_ORDER } from '../types/routePlan'
 import { sampleRoutePlan } from '../fixtures/sampleRoutePlan'
 import { useRouteAnimation } from '../hooks/useRouteAnimation'
+import { useTurnByTurn } from '../hooks/useTurnByTurn'
+import { useVoiceGuidance } from '../hooks/useVoiceGuidance'
+import { describeManeuver } from '../components/map/TurnByTurnCard'
+import { formatManeuverDistance } from '../lib/maneuvers'
 
 const MODE_LABEL: Record<RouteModeKey, string> = {
   driving: 'Drive',
@@ -109,6 +115,10 @@ export default function RouteResultsPage() {
     loop: true,
   })
 
+  // ── Turn-by-turn maneuvers + voice guidance ──────────────────────
+  const voiceGuidance = useVoiceGuidance()
+  const turnByTurn = useTurnByTurn(path, progress, true)
+
   const upcomingHazard = useMemo(() => describeUpcomingHazard(activeRoute?.hazards), [activeRoute])
 
   // The hazard alert behaves like Google Maps' incident toast: it slides
@@ -149,6 +159,40 @@ export default function RouteResultsPage() {
   const etaMin = activeRoute ? Math.max(0, Math.round(activeRoute.duration * (1 - progress))) : 0
   const hazardCount = activeRoute?.hazards?.length ?? 0
 
+  // ── Turn-by-turn maneuver call-outs ──────────────────
+  // This page loops its demo trip animation, so "arrival" isn't a real
+  // end state here — just announce each maneuver once per lap.
+  const MANEUVER_WARN_METERS = 300
+  const MANEUVER_NOW_METERS = 30
+  const announcedWarnRef = useRef<string | null>(null)
+  const announcedNowRef = useRef<string | null>(null)
+  const prevProgressRef = useRef(0)
+
+  useEffect(() => {
+    // A big backward jump in progress means the loop restarted — reset
+    // what's been announced so the next lap calls out maneuvers again.
+    if (progress < prevProgressRef.current - 0.5) {
+      announcedWarnRef.current = null
+      announcedNowRef.current = null
+    }
+    prevProgressRef.current = progress
+
+    const step = turnByTurn.currentStep
+    if (!step || step.type === 'arrive') return
+    const distance = turnByTurn.distanceToNextManeuverMeters
+    const instruction = describeManeuver(step, turnByTurn.nextRoadName)
+
+    if (distance <= MANEUVER_WARN_METERS && announcedWarnRef.current !== step.id) {
+      announcedWarnRef.current = step.id
+      voiceGuidance.speak(`In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`)
+    }
+    if (distance <= MANEUVER_NOW_METERS && announcedNowRef.current !== step.id) {
+      announcedNowRef.current = step.id
+      voiceGuidance.speak(`${instruction} now.`, { interrupt: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, turnByTurn.currentStep?.id, turnByTurn.distanceToNextManeuverMeters])
+
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-[#e4e4e4]">
       {/* Live map — always full-bleed behind every panel below, on any
@@ -166,23 +210,40 @@ export default function RouteResultsPage() {
       {/* Top instruction banner + mode switcher — constrained to a
           phone-card width on mobile, centered as a floating panel on
           larger screens, same pattern used across the rest of the app. */}
-      <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-4 mx-auto max-w-[430px] lg:max-w-md">
+      <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-4 mx-auto max-w-[430px] lg:max-w-md space-y-2">
         <div className="flex items-center gap-3 px-5 py-4 shadow-lg bg-emerald-500 rounded-2xl">
           <div className="flex items-center justify-center flex-shrink-0 w-9 h-9 bg-white/25 rounded-xl">
             <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 19V5M5 12l7-7 7 7" />
             </svg>
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-xs font-semibold tracking-wide text-white/80">
               {activeRoute ? `${remainingKm.toFixed(1)} KM LEFT` : ''}
             </p>
             <p className="text-[17px] font-bold leading-tight text-white">Head out and follow the route</p>
           </div>
+          {voiceGuidance.isSupported && (
+            <VoiceGuidanceControl
+              muted={voiceGuidance.muted}
+              toggleMuted={voiceGuidance.toggleMuted}
+              volume={voiceGuidance.volume}
+              setVolume={voiceGuidance.setVolume}
+            />
+          )}
         </div>
 
+        {turnByTurn.currentStep && (
+          <TurnByTurnCard
+            step={turnByTurn.currentStep}
+            distanceMeters={turnByTurn.distanceToNextManeuverMeters}
+            currentRoadName={turnByTurn.currentRoadName}
+            nextRoadName={turnByTurn.nextRoadName}
+          />
+        )}
+
         {availableModes.length > 1 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto">
+          <div className="flex gap-2 overflow-x-auto">
             {availableModes.map((mode) => (
               <button
                 key={mode}
