@@ -58,6 +58,34 @@ export const navArrowPinHtml = `
 
 export const NAV_ARROW_ANCHOR: [number, number] = [14, 14]
 
+// Classic teardrop pin for the trip destination — Google-Maps-red with a
+// white dot, anchored at the point of the drop so it sits exactly on the
+// coordinate rather than floating above it.
+export function destinationPinHtml(color = '#ea4335'): string {
+  return `
+    <div style="position:relative;width:34px;height:46px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35));">
+      <svg width="34" height="46" viewBox="0 0 34 46" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 0C7.6 0 0 7.6 0 17c0 12.75 17 29 17 29s17-16.25 17-29C34 7.6 26.4 0 17 0z" fill="${color}"/>
+        <circle cx="17" cy="17" r="6.5" fill="white"/>
+      </svg>
+    </div>
+  `
+}
+
+export const DESTINATION_PIN_ANCHOR: [number, number] = [17, 46]
+
+// Small filled dot for the trip's starting point — mirrors the plain
+// circular "origin" marker Google Maps draws at the start of a route.
+export const startPinHtml = `
+  <div style="
+    width:18px;height:18px;border-radius:50%;
+    background:#22c55e;border:3px solid white;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+  "></div>
+`
+
+export const START_PIN_ANCHOR: [number, number] = [9, 9]
+
 // Same nav puck as navArrowPinHtml, but rotatable — used for the moving
 // position marker on an animated route (heading updates every frame as
 // the marker travels along the path).

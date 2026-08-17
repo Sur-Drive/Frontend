@@ -12,11 +12,6 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string |
 const CALLBACK_NAME = '__surdriveGoogleMapsLoaded'
 // 'places' → Autocomplete/Place Details for address search.
 // 'marker' → AdvancedMarkerElement (not yet used, but valid to preload).
-// NOTE: don't add 'maps' here — unlike the newer importLibrary() bootstrap,
-// this legacy `libraries=` URL param doesn't recognize "maps" as a
-// library name (the core Map/StreetView classes are already included by
-// default). Requesting it anyway left google.maps.Map as an unresolved
-// placeholder instead of the real constructor ("is not a constructor").
 // We intentionally do NOT load or call the Geocoding API from the frontend.
 const LIBRARIES = 'places,marker'
 
@@ -29,43 +24,63 @@ declare global {
 
 let loadPromise: Promise<void> | null = null
 
+// With `loading=async`, the bootstrap <script>'s callback only means the
+// base loader is ready — it does NOT mean google.maps.Map (or Polyline,
+// TrafficLayer, StreetViewService, StreetViewPanorama, LatLng, ...) are
+// real constructors yet. Those all live in the core "maps" library, which
+// — just like every other library — is only populated once you explicitly
+// importLibrary() it. Skipping this step is exactly what produced
+// "google.maps.Map is not a constructor": the callback had already fired,
+// but google.maps.Map was still an unresolved stub. 'places' and 'marker'
+// don't have this problem because requesting them via the `libraries=`
+// URL param does load them eagerly — only the core library needs the
+// explicit import.
+async function ensureCoreLibraryLoaded(): Promise<void> {
+  await google.maps.importLibrary('maps')
+}
+
 export function loadGoogleMaps(): Promise<void> {
   if (loadPromise) return loadPromise
 
-  loadPromise = new Promise((resolve, reject) => {
+  loadPromise = (async () => {
     if (typeof window === 'undefined') {
-      reject(new Error('Google Maps can only be loaded in a browser environment'))
+      throw new Error('Google Maps can only be loaded in a browser environment')
+    }
+
+    if (window.google?.maps?.Map) {
       return
     }
 
-    if (window.google?.maps) {
-      resolve()
-      return
+    if (!window.google?.maps) {
+      if (!GOOGLE_MAPS_API_KEY) {
+        throw new Error('Missing VITE_GOOGLE_MAPS_API_KEY — add it to your .env file')
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        window[CALLBACK_NAME] = () => resolve()
+
+        const script = document.createElement('script')
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=${LIBRARIES}&loading=async&callback=${CALLBACK_NAME}`
+        script.async = true
+        script.onerror = () => {
+          loadPromise = null // allow a retry on the next call
+          reject(new Error('Failed to load the Google Maps script'))
+        }
+        document.head.appendChild(script)
+      })
     }
 
-    if (!GOOGLE_MAPS_API_KEY) {
-      reject(new Error('Missing VITE_GOOGLE_MAPS_API_KEY — add it to your .env file'))
-      return
-    }
-
-    window[CALLBACK_NAME] = () => resolve()
-
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=${LIBRARIES}&loading=async&callback=${CALLBACK_NAME}`
-    script.async = true
-    script.onerror = () => {
-      loadPromise = null // allow a retry on the next call
-      reject(new Error('Failed to load the Google Maps script'))
-    }
-    document.head.appendChild(script)
-  })
+    // Base loader is ready (either just now, or already present from an
+    // earlier mount) — now make sure the core library is actually resolved.
+    await ensureCoreLibraryLoaded()
+  })()
 
   return loadPromise
 }
 
 export function useGoogleMaps(): { isLoaded: boolean; error: string | null } {
   const [isLoaded, setIsLoaded] = useState(
-    typeof window !== 'undefined' && !!window.google?.maps
+    typeof window !== 'undefined' && !!window.google?.maps?.Map
   )
   const [error, setError] = useState<string | null>(null)
 

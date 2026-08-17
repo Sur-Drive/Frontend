@@ -1687,6 +1687,7 @@ import { useQuery } from "@tanstack/react-query";
 import LazyGoogleMap from "../components/map/LazyGoogleMap";
 import RouteMapView from "../components/map/RouteMapView";
 import type { MapMarkerSpec } from "../components/map/GoogleMapView";
+import MapControls, { type MapTypeId } from "../components/map/MapControls";
 import StreetViewModal, {
   StreetViewPegman,
 } from "../components/map/StreetView";
@@ -1699,6 +1700,10 @@ import {
   REPORT_PIN_SELECTED_ANCHOR,
   userLocationPinHtml,
   USER_LOCATION_ANCHOR,
+  destinationPinHtml,
+  DESTINATION_PIN_ANCHOR,
+  startPinHtml,
+  START_PIN_ANCHOR,
 } from "../components/map/mapMarkerIcons";
 import BottomNav from "../components/BottomNav";
 import AuthFlow from "../components/AuthFlow";
@@ -1730,12 +1735,22 @@ import {
   cumulativeDistances,
   pointAtFraction,
   projectPointOntoPath,
+  haversineMeters,
   type LatLng,
 } from "../lib/geoPath";
 import { useVoiceGuidance } from "../hooks/useVoiceGuidance";
+import { useTurnByTurn } from "../hooks/useTurnByTurn";
 import { useWakeWord, useVoiceSearch } from "../hooks/useVoiceSearch";
 import { forwardGeocode } from "../api/geocoding";
-import { Volume2, VolumeX, Mic } from "lucide-react";
+import { Mic } from "lucide-react";
+import TurnByTurnCard, {
+  describeManeuver,
+} from "../components/map/TurnByTurnCard";
+import VoiceGuidanceControl from "../components/map/VoiceGuidanceControl";
+import { formatManeuverDistance } from "../lib/maneuvers";
+import { useCollisionGuard } from "../hooks/useCollisionGuard";
+import CollisionGuardView from "../components/map/CollisionGuardView";
+import { describeWarning } from "../lib/collisionDetection";
 
 // ─── Types ─────────────────────────────────────────────
 type ReportType =
@@ -2201,6 +2216,12 @@ export default function PlanRoutePage() {
 
   const [navPanelExpanded, setNavPanelExpanded] = useState(true);
 
+  // Collapses the turn-by-turn card + status alerts stacked under the top
+  // status bar while navigating, so the map isn't permanently covered by
+  // 3-4 cards. Mirrors the collapse pattern already used for the bottom
+  // trip panel (navPanelExpanded above).
+  const [topStackExpanded, setTopStackExpanded] = useState(true);
+
   // Fix: this state was referenced by mapMarkers below but never declared,
   // which caused "Cannot find name 'selectedPin'" (TS2552).
   const [selectedPin, setSelectedPin] = useState<string | null>(null);
@@ -2356,6 +2377,22 @@ export default function PlanRoutePage() {
   );
   const [mapReady, setMapReady] = useState(false);
 
+  // ── Map display controls (Google-Maps-style chrome) ─────
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(
+    null,
+  );
+  const [mapTypeId, setMapTypeId] = useState<MapTypeId>("roadmap");
+  const [mapTilt, setMapTilt] = useState(0);
+  // Live traffic layer (green/orange/red/dark-red congestion, Google's
+  // own tiles). Defaults on while actively driving a route, since that's
+  // when it's most useful; user can flip it off from the layers menu.
+  const [showTraffic, setShowTraffic] = useState(true);
+  // User-driven compass rotation while just browsing/previewing a route.
+  // Live navigation drives its own heading (see displayHeading below) and
+  // ignores this.
+  const [manualHeading, setManualHeading] = useState(0);
+
   const routeCum = useMemo(() => cumulativeDistances(routePath), [routePath]);
   const [liveProgress, setLiveProgress] = useState<number | null>(null);
   const [liveHeading, setLiveHeading] = useState(0);
@@ -2378,7 +2415,10 @@ export default function PlanRoutePage() {
     if (!navigator.geolocation) {
       setGpsStatus("error");
       setGpsErrorMessage("Geolocation is not supported on this device");
-      trip.play();
+      // Note: previously fell back to trip.play(), which auto-drove a
+      // simulated trip to completion (~20-90s) and made the app look like
+      // it had "ended" the trip on its own. Now we just surface the error
+      // and wait — the trip only completes on real, user-confirmed arrival.
       return;
     }
 
@@ -2422,8 +2462,10 @@ export default function PlanRoutePage() {
 
           setGpsStatus("error");
           setGpsErrorMessage(err.message || "Unable to get your location");
-
-          trip.play();
+          // No trip.play() fallback here anymore — a GPS error should not
+          // silently fake-drive the trip to "arrived". The banner below
+          // tells the driver GPS is down; they stay in control of when
+          // the trip ends.
         },
         options,
       );
@@ -2442,6 +2484,13 @@ export default function PlanRoutePage() {
     isNavigating &&
     liveProgress != null &&
     (routeDeviationMeters ?? 0) > OFF_ROUTE_THRESHOLD_METERS;
+
+  // ── Turn-by-turn maneuvers — derived from the route's own geometry
+  // (see src/lib/maneuvers.ts), since the backend gives us no street-level
+  // maneuver data. Only resolves road names while actually navigating, so
+  // planning/previewing a route doesn't fire geocode calls for turns the
+  // driver may never take.
+  const turnByTurn = useTurnByTurn(routePath, displayProgress, isNavigating);
 
   const sosTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(
     null,
@@ -2547,10 +2596,11 @@ export default function PlanRoutePage() {
       ];
       setUserLocation(loc);
       setMapReady(true);
-      reverseGeocodeStartPoint(
-        position.coords.latitude,
-        position.coords.longitude,
-      );
+      // Previously also called reverseGeocodeStartPoint() here, which
+      // silently overwrote the Start point field with your current
+      // location the instant the page loaded — before you'd asked for
+      // it. Start point now only gets filled when you explicitly tap
+      // "Use my location".
     };
 
     const onFinalError = (error: GeolocationPositionError) => {
@@ -2570,16 +2620,28 @@ export default function PlanRoutePage() {
       setMapReady(true);
     };
 
+    const requestAccuratePosition = () => {
+      navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      });
+    };
+
     navigator.geolocation.getCurrentPosition(
-      onSuccess,
-      () => {
-        // Fast attempt failed/timed out — retry with GPS + longer timeout.
-        navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        });
+      (position) => {
+        // A fast/coarse fix (Wi-Fi or IP-based) almost always "succeeds" —
+        // it just isn't precise, often off by a city block or more, which
+        // is why reverse geocoding it lands on a generic Plus Code instead
+        // of a real street address. Only accept it if it's actually
+        // accurate; otherwise get a real GPS fix, same as the error path.
+        if (position.coords.accuracy <= 100) {
+          onSuccess(position);
+        } else {
+          requestAccuratePosition();
+        }
       },
+      requestAccuratePosition,
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
     );
   }, []);
@@ -2629,19 +2691,42 @@ export default function PlanRoutePage() {
       setIsGettingLocation(false);
     };
 
+    const requestAccuratePosition = () => {
+      navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      });
+    };
+
     navigator.geolocation.getCurrentPosition(
-      onSuccess,
-      () => {
-        // Fast attempt failed/timed out — retry with GPS + longer timeout.
-        navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        });
+      (position) => {
+        // See the mount-time effect above for why we don't just accept
+        // whatever the fast/coarse fix returns.
+        if (position.coords.accuracy <= 100) {
+          onSuccess(position);
+        } else {
+          requestAccuratePosition();
+        }
       },
+      requestAccuratePosition,
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
     );
   }, [reverseGeocodeStartPoint]);
+
+  // "My location" button on the map chrome: if we already know where the
+  // user is, just snap the camera back there; otherwise fall back to a
+  // fresh geolocation request (also refreshes the pin once it resolves).
+  const handleRecenter = useCallback(() => {
+    if (userLocation && mapInstance) {
+      mapInstance.panTo({ lat: userLocation[0], lng: userLocation[1] });
+      if ((mapInstance.getZoom() ?? 15) < 15) {
+        mapInstance.setZoom(16);
+      }
+      return;
+    }
+    handleUseMyLocation();
+  }, [userLocation, mapInstance, handleUseMyLocation]);
 
   // ── Route Logic ─────────────────────────────────────
   const handleScanRoute = () => {
@@ -2747,16 +2832,161 @@ export default function PlanRoutePage() {
     setGpsStatus("waiting");
     setGpsErrorMessage(null);
     planRouteMutation.reset();
+    lastTrafficDurationRef.current = null;
+    setTrafficNotice(null);
   };
+
+  // ── Live traffic: periodic re-plan while navigating ───────────
+  // The backend's own route engine already factors current conditions
+  // into distance/duration/hazards for a given origin — so "keeping
+  // traffic current" and "rerouting around it" are the same call:
+  // re-run planRouteOptions from wherever the driver actually is right
+  // now: this refreshes the live traffic layer's context, the hazard
+  // list, and (if the backend picks a different path around
+  // congestion) the drawn route itself, all in one request. userLocation
+  // is read from a ref so the interval doesn't get torn down/rebuilt on
+  // every single GPS tick.
+  const userLocationRef = useRef(userLocation);
+  userLocationRef.current = userLocation;
+
+  const lastTrafficDurationRef = useRef<number | null>(null);
+  const [trafficNotice, setTrafficNotice] = useState<string | null>(null);
+  const TRAFFIC_RECALC_INTERVAL_MS = 120000; // 2 minutes
+  const TRAFFIC_NOTICE_THRESHOLD_MIN = 2;
+
+  useEffect(() => {
+    if (!isNavigating || !destinationCoords) return;
+    const dest = destinationCoords;
+
+    // Seed the baseline the first time we start navigating, so the very
+    // first recalculation has something to compare against.
+    if (lastTrafficDurationRef.current == null && effectiveRoute) {
+      lastTrafficDurationRef.current = effectiveRoute.duration;
+    }
+
+    const interval = setInterval(() => {
+      const loc = userLocationRef.current;
+      if (!loc) return;
+
+      planRouteMutation.mutate(
+        { origin: { lat: loc[0], lng: loc[1] }, destination: dest },
+        {
+          onSuccess: (data) => {
+            const updated = data.routes[selectedMode];
+            if (!updated) return;
+
+            const previous = lastTrafficDurationRef.current;
+            lastTrafficDurationRef.current = updated.duration;
+
+            if (previous == null) return;
+            const deltaMin = Math.round(updated.duration - previous);
+
+            if (Math.abs(deltaMin) >= TRAFFIC_NOTICE_THRESHOLD_MIN) {
+              setTrafficNotice(
+                deltaMin > 0
+                  ? `Traffic ahead — route updated, +${deltaMin} min`
+                  : `Traffic cleared — route updated, ${Math.abs(deltaMin)} min faster`,
+              );
+              setTimeout(() => setTrafficNotice(null), 7000);
+            }
+          },
+        },
+      );
+    }, TRAFFIC_RECALC_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNavigating, destinationCoords, selectedMode]);
+
+  // ── Collision Guard — camera-based forward-collision warning ──────
+  // Separate technology stack from routing/traffic: on-device object
+  // detection off the phone's road-facing camera. Off by default (it
+  // needs camera permission and a model download), only runs while
+  // actually navigating. See useCollisionGuard.ts for the detection
+  // pipeline and lib/collisionDetection.ts for the classification and
+  // severity logic.
+  const [collisionGuardEnabled, setCollisionGuardEnabled] = useState(false);
+  const [collisionGuardExpanded, setCollisionGuardExpanded] = useState(false);
+  const collisionGuard = useCollisionGuard(
+    collisionGuardEnabled && isNavigating,
+  );
+
+  // Spoken warnings — throttled so the same hazard doesn't get
+  // re-announced every detection tick (~220ms) while it's still in
+  // frame; a high-severity hazard can interrupt, low/medium queue
+  // normally like the rest of the voice guidance.
+  const lastSpokenCollisionRef = useRef<{
+    id: string;
+    severity: string;
+    at: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const warning = collisionGuard.activeWarning;
+    if (!collisionGuardEnabled || !isNavigating || !warning) return;
+
+    const last = lastSpokenCollisionRef.current;
+    const sameAndRecent =
+      last &&
+      last.id === warning.id &&
+      last.severity === warning.severity &&
+      Date.now() - last.at < 8000;
+    if (sameAndRecent) return;
+
+    lastSpokenCollisionRef.current = {
+      id: warning.id,
+      severity: warning.severity,
+      at: Date.now(),
+    };
+    voiceGuidance.speak(describeWarning(warning), {
+      interrupt: warning.severity === "high",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collisionGuard.activeWarning, collisionGuardEnabled, isNavigating]);
+
+  // ── Arrival — real distance to the destination, not just path fraction ──
+  // projectPointOntoPath() always snaps a GPS fix to the *nearest* point on
+  // the route, even if you're nowhere near it (no minimum-distance check).
+  // That nearest point can land close to the route's end purely by
+  // geometry, which made the app claim "arrived" from a GPS fix that was
+  // never actually near the destination. Arrival now also requires being
+  // genuinely close (in real meters) to the destination coordinates.
+  const ARRIVAL_RADIUS_METERS = 50;
+  const distanceToDestinationMeters =
+    userLocation && destinationCoords
+      ? haversineMeters(
+          { lat: userLocation[0], lng: userLocation[1] },
+          destinationCoords,
+        )
+      : null;
 
   const hasArrived =
     isNavigating &&
+    liveProgress != null &&
     displayProgress >= 0.995 &&
-    (liveProgress != null || !trip.isPlaying);
+    distanceToDestinationMeters != null &&
+    distanceToDestinationMeters <= ARRIVAL_RADIUS_METERS;
 
   // ── Upcoming hazard — real, not mock. `null` when the route has no
   // hazard data, in which case no banner is shown at all.
   const upcomingHazard = describeUpcomingHazard(effectiveRoute?.hazards);
+
+  // ── Top-stack alert priority ──────────────────────────
+  // Collision/off-route/GPS/hazard banners used to render simultaneously,
+  // stacking on top of the map. Only the single most urgent one is shown
+  // at a time now, in this priority order.
+  const activeTopAlert: "collision" | "offroute" | "gpserror" | "gpswaiting" | "hazard" | null =
+    collisionGuardEnabled && collisionGuard.activeWarning
+      ? "collision"
+      : isOffRoute
+        ? "offroute"
+        : gpsStatus === "error"
+          ? "gpserror"
+          : gpsStatus === "waiting"
+            ? "gpswaiting"
+            : showUpcomingAlert && !hasArrived && upcomingHazard
+              ? "hazard"
+              : null;
 
   const navHazardCount = activeRoute?.hazards?.length || scanHazards.length;
   const remainingKm = effectiveRoute
@@ -2765,6 +2995,22 @@ export default function PlanRoutePage() {
   const etaMinutes = effectiveRoute
     ? Math.max(0, Math.round(effectiveRoute.duration * (1 - displayProgress)))
     : 0;
+
+  // ── Arrival time (ETA as a clock time, not just minutes remaining) ──
+  const formatClockTime = useCallback((minutesFromNow: number) => {
+    const arrival = new Date(Date.now() + Math.max(0, minutesFromNow) * 60000);
+    return arrival.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }, []);
+
+  // Planned arrival, shown on the scan-results sheet before the trip starts.
+  const plannedArrivalLabel = effectiveRoute
+    ? formatClockTime(effectiveRoute.duration)
+    : null;
+
+  // Live arrival, recalculated against remaining time while navigating.
+  const liveArrivalLabel = effectiveRoute
+    ? formatClockTime(etaMinutes)
+    : null;
 
   // ── Turn-by-turn voice guidance ──────────────────────
   // The backend doesn't give us street-level maneuver text (no "turn left
@@ -2833,6 +3079,57 @@ export default function PlanRoutePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showUpcomingAlert]);
+
+  // ── Turn-by-turn maneuver call-outs ──────────────────
+  // Two-stage, like real nav apps: a heads-up around 300m out, then the
+  // "do it now" instruction right as the maneuver arrives. Tracked per
+  // maneuver id so a step that's already been announced doesn't repeat
+  // just because progress ticks past it again.
+  const MANEUVER_WARN_METERS = 300;
+  const MANEUVER_NOW_METERS = 30;
+  const announcedWarnRef = useRef<string | null>(null);
+  const announcedNowRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isNavigating || hasArrived) return;
+    const step = turnByTurn.currentStep;
+    if (!step || step.type === "arrive") return;
+
+    const distance = turnByTurn.distanceToNextManeuverMeters;
+    const instruction = describeManeuver(step, turnByTurn.nextRoadName);
+
+    if (
+      distance <= MANEUVER_WARN_METERS &&
+      announcedWarnRef.current !== step.id
+    ) {
+      announcedWarnRef.current = step.id;
+      voiceGuidance.speak(
+        `In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`,
+      );
+    }
+
+    if (
+      distance <= MANEUVER_NOW_METERS &&
+      announcedNowRef.current !== step.id
+    ) {
+      announcedNowRef.current = step.id;
+      voiceGuidance.speak(`${instruction} now.`, { interrupt: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isNavigating,
+    hasArrived,
+    turnByTurn.currentStep?.id,
+    turnByTurn.distanceToNextManeuverMeters,
+    turnByTurn.nextRoadName,
+  ]);
+
+  useEffect(() => {
+    if (!isNavigating) {
+      announcedWarnRef.current = null;
+      announcedNowRef.current = null;
+    }
+  }, [isNavigating]);
 
   const [wakeWordEnabled, setWakeWordEnabled] = useState(
     () =>
@@ -2928,8 +3225,42 @@ export default function PlanRoutePage() {
       });
     }
 
+    // Destination + starting-point pins for the planned/active route —
+    // the moving nav puck (AnimatedRoutePolyline) already covers the
+    // "current position" marker while a trip is in progress, so these
+    // are the fixed endpoints of the trip itself.
+    if (effectiveRoute && routePath.length > 0) {
+      const destPoint = destinationCoords ?? routePath[routePath.length - 1];
+      markers.push({
+        id: "__destination__",
+        lat: destPoint.lat,
+        lng: destPoint.lng,
+        html: destinationPinHtml(),
+        anchor: DESTINATION_PIN_ANCHOR,
+      });
+
+      if (!isNavigating) {
+        const originPoint = startCoords ?? routePath[0];
+        markers.push({
+          id: "__start__",
+          lat: originPoint.lat,
+          lng: originPoint.lng,
+          html: startPinHtml,
+          anchor: START_PIN_ANCHOR,
+        });
+      }
+    }
+
     return markers;
-  }, [selectedPin, userLocation, isNavigating]);
+  }, [
+    selectedPin,
+    userLocation,
+    isNavigating,
+    effectiveRoute,
+    routePath,
+    destinationCoords,
+    startCoords,
+  ]);
 
   // ── Profile Helpers ──────────────────────────────────
   const avatarInitials = useMemo(() => {
@@ -2991,7 +3322,10 @@ export default function PlanRoutePage() {
     //   style={{ overscrollBehavior: 'none' }}
     // >
 
-    <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden bg-gray-100">
+    <div
+      ref={pageContainerRef}
+      className="fixed inset-0 w-full h-[100dvh] overflow-hidden bg-gray-100"
+    >
       <div className="absolute inset-0 z-0">
         {effectiveRoute ? (
           <RouteMapView
@@ -3000,10 +3334,14 @@ export default function PlanRoutePage() {
             zoom={isNavigating ? 17 : 15}
             progress={isNavigating ? displayProgress : undefined}
             flowing={!isNavigating}
-            heading={isNavigating ? displayHeading : 0}
+            heading={isNavigating ? displayHeading : manualHeading}
             interactive={!isNavigating}
             followMode={isNavigating}
             secondaryRoutes={isNavigating ? undefined : secondaryRoutes}
+            mapTypeId={mapTypeId}
+            tilt={mapTilt}
+            showTraffic={showTraffic}
+            onReady={setMapInstance}
             className="w-full h-full"
           />
         ) : (
@@ -3011,9 +3349,40 @@ export default function PlanRoutePage() {
             center={{ lat: mapCenter[0], lng: mapCenter[1] }}
             zoom={15}
             markers={mapMarkers}
+            heading={manualHeading}
+            mapTypeId={mapTypeId}
+            tilt={mapTilt}
+            showTraffic={showTraffic}
+            onReady={setMapInstance}
           />
         )}
       </div>
+
+      {/* Google-Maps-style floating chrome: map type, zoom, compass/rotate, 3D, my-location, full screen */}
+      {!showPlanModal && !showScanResults && !showSOS && (
+        <MapControls
+          map={mapInstance}
+          mapTypeId={mapTypeId}
+          onMapTypeChange={setMapTypeId}
+          tilt={mapTilt}
+          onToggleTilt={() => setMapTilt((t) => (t > 0 ? 0 : 45))}
+          trafficEnabled={showTraffic}
+          onToggleTraffic={() => setShowTraffic((t) => !t)}
+          heading={isNavigating ? displayHeading : manualHeading}
+          onHeadingChange={setManualHeading}
+          rotatable={!isNavigating}
+          onRecenter={handleRecenter}
+          isLocating={isGettingLocation}
+          fullscreenTargetRef={pageContainerRef}
+          className={`transition-[bottom] ${
+            isNavigating
+              ? navPanelExpanded
+                ? "bottom-[21rem]"
+                : "bottom-[13rem]"
+              : "bottom-[15rem]"
+          }`}
+        />
+      )}
 
       {/* Location error toast */}
       {locationError && !showPlanModal && !showScanResults && !showSOS && (
@@ -3027,6 +3396,27 @@ export default function PlanRoutePage() {
               Showing default area
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Collision Guard — camera PiP with live bounding-box overlay */}
+      {collisionGuardEnabled && isNavigating && (
+        <CollisionGuardView
+          guard={collisionGuard}
+          expanded={collisionGuardExpanded}
+          onToggleExpanded={() => setCollisionGuardExpanded((v) => !v)}
+          onClose={() => setCollisionGuardEnabled(false)}
+        />
+      )}
+
+      {/* Traffic recalculation toast — appears when a periodic re-plan during
+          navigation finds the ETA has meaningfully changed due to traffic. */}
+      {trafficNotice && isNavigating && (
+        <div className="absolute top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-md z-[500] bg-white shadow-lg border border-gray-100 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-lg">🚦</span>
+          <p className="text-xs font-medium text-gray-800 sm:text-sm">
+            {trafficNotice}
+          </p>
         </div>
       )}
 
@@ -3230,25 +3620,78 @@ export default function PlanRoutePage() {
                 </p>
               </div>
               {voiceGuidance.isSupported && (
+                <VoiceGuidanceControl
+                  muted={voiceGuidance.muted}
+                  toggleMuted={voiceGuidance.toggleMuted}
+                  volume={voiceGuidance.volume}
+                  setVolume={voiceGuidance.setVolume}
+                />
+              )}
+              {collisionGuard.isSupported && (
                 <button
-                  onClick={voiceGuidance.toggleMuted}
+                  onClick={() => setCollisionGuardEnabled((v) => !v)}
                   aria-label={
-                    voiceGuidance.muted
-                      ? "Unmute voice guidance"
-                      : "Mute voice guidance"
+                    collisionGuardEnabled
+                      ? "Turn off Collision Guard"
+                      : "Turn on Collision Guard"
                   }
-                  className="flex items-center justify-center flex-shrink-0 text-white w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20"
+                  title="Collision Guard — forward-collision warning"
+                  className={`flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition ${
+                    collisionGuardEnabled
+                      ? "bg-white text-emerald-600"
+                      : "bg-white/20 text-white"
+                  }`}
                 >
-                  {voiceGuidance.muted ? (
-                    <VolumeX size={18} />
-                  ) : (
-                    <Volume2 size={18} />
-                  )}
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7l8-4z" />
+                    <path d="M9.5 12l1.8 1.8L15 10" />
+                  </svg>
                 </button>
               )}
+              {/* Collapse toggle — hides the turn-by-turn card and status
+                  alerts below so the map is fully visible; the status bar
+                  itself always stays put as your anchor. */}
+              <button
+                onClick={() => setTopStackExpanded((v) => !v)}
+                aria-label={
+                  topStackExpanded
+                    ? "Collapse trip details"
+                    : "Expand trip details"
+                }
+                className="flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 text-white transition rounded-xl bg-white/20 hover:bg-white/30"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform ${topStackExpanded ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
             </div>
 
-            {gpsStatus === "waiting" && (
+            {topStackExpanded && !hasArrived && turnByTurn.currentStep && (
+              <TurnByTurnCard
+                step={turnByTurn.currentStep}
+                distanceMeters={turnByTurn.distanceToNextManeuverMeters}
+                currentRoadName={turnByTurn.currentRoadName}
+                nextRoadName={turnByTurn.nextRoadName}
+              />
+            )}
+
+            {topStackExpanded && activeTopAlert === "gpswaiting" && (
               <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 bg-blue-100 rounded-lg w-7 h-7 sm:w-8 sm:h-8">
                   <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-blue-500 rounded-full border-t-transparent animate-spin" />
@@ -3264,7 +3707,7 @@ export default function PlanRoutePage() {
               </div>
             )}
 
-            {gpsStatus === "error" && (
+            {topStackExpanded && activeTopAlert === "gpserror" && (
               <div className="flex items-center gap-3 px-4 py-3 border shadow-sm bg-amber-50 border-amber-200 rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-amber-100">
                   <svg
@@ -3281,7 +3724,7 @@ export default function PlanRoutePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[9px] sm:text-[10px] text-amber-500 font-medium uppercase tracking-wide">
-                    Demo mode — GPS unavailable
+                    GPS unavailable
                   </p>
                   <p className="text-xs font-medium truncate text-amber-900 sm:text-sm">
                     {gpsErrorMessage}
@@ -3290,7 +3733,7 @@ export default function PlanRoutePage() {
               </div>
             )}
 
-            {isOffRoute && (
+            {topStackExpanded && activeTopAlert === "offroute" && (
               <div className="flex items-center gap-3 px-4 py-3 border border-red-200 shadow-sm bg-red-50 rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 bg-red-100 rounded-lg w-7 h-7 sm:w-8 sm:h-8">
                   <svg
@@ -3317,7 +3760,51 @@ export default function PlanRoutePage() {
               </div>
             )}
 
-            {showUpcomingAlert && !hasArrived && upcomingHazard && (
+            {/* Collision warnings stay visible even when the stack is
+                collapsed — this one's safety-critical, not cosmetic. */}
+            {activeTopAlert === "collision" &&
+              collisionGuard.activeWarning &&
+              (() => {
+                const warning = collisionGuard.activeWarning;
+                const isHigh = warning.severity === "high";
+                return (
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3 border shadow-sm rounded-xl animate-in slide-in-from-top-2 ${
+                      isHigh
+                        ? "bg-red-50 border-red-200"
+                        : "bg-amber-50 border-amber-200"
+                    }`}
+                  >
+                    <div
+                      className={`flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 ${
+                        isHigh ? "bg-red-100" : "bg-amber-100"
+                      }`}
+                    >
+                      <span className="text-sm leading-none sm:text-base">
+                        {isHigh ? "🚨" : "⚠️"}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-[9px] sm:text-[10px] font-medium uppercase tracking-wide ${
+                          isHigh ? "text-red-400" : "text-amber-500"
+                        }`}
+                      >
+                        Collision Guard
+                      </p>
+                      <p
+                        className={`text-xs font-medium truncate sm:text-sm ${
+                          isHigh ? "text-red-900" : "text-amber-900"
+                        }`}
+                      >
+                        {describeWarning(warning)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+            {topStackExpanded && activeTopAlert === "hazard" && upcomingHazard && (
               <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-sm rounded-xl animate-in slide-in-from-top-2">
                 <div className="flex items-center justify-center flex-shrink-0 rounded-lg w-7 h-7 sm:w-8 sm:h-8 bg-amber-100">
                   <span className="text-sm leading-none sm:text-base">
@@ -3393,6 +3880,11 @@ export default function PlanRoutePage() {
                     <p className="text-lg font-bold text-gray-900 sm:text-xl">
                       {hasArrived ? "0 min" : `${etaMinutes} min`}
                     </p>
+                    {!hasArrived && liveArrivalLabel && (
+                      <p className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5">
+                        Arrive {liveArrivalLabel}
+                      </p>
+                    )}
                   </div>
                   <div className="min-w-0 text-center">
                     <p className="text-[11px] sm:text-xs text-gray-400 mb-0.5">
@@ -3426,7 +3918,9 @@ export default function PlanRoutePage() {
                 <span className="flex-1 text-xs font-semibold text-left text-gray-900 sm:text-sm">
                   {hasArrived
                     ? "You've arrived"
-                    : `${etaMinutes} min · ${remainingKm.toFixed(1)} km left`}
+                    : `${etaMinutes} min · ${remainingKm.toFixed(1)} km left${
+                        liveArrivalLabel ? ` · Arrive ${liveArrivalLabel}` : ""
+                      }`}
                 </span>
                 <svg
                   viewBox="0 0 24 24"
@@ -3812,6 +4306,26 @@ export default function PlanRoutePage() {
                       </p>
                     </div>
                   </div>
+
+                  {plannedArrivalLabel && (
+                    <div className="flex items-center justify-center gap-1.5 px-4 py-2.5 mb-4 bg-purple-50 rounded-xl">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="flex-shrink-0 w-4 h-4 text-purple-600"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 3" />
+                      </svg>
+                      <p className="text-xs font-semibold text-purple-700 sm:text-sm">
+                        Arrive by {plannedArrivalLabel}
+                      </p>
+                    </div>
+                  )}
 
                   {(() => {
                     const liveHazards = activeRoute?.hazards as
