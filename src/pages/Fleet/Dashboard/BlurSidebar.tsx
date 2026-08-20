@@ -1,3 +1,4 @@
+// BlurSidebar.tsx
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -21,12 +22,12 @@ import {
 
 interface BlurSidebarProps {
     children?: React.ReactNode;
-    status?: "pending" | "expired" | "payment_pending";
+    status?: "pending" | "expired" | "payment_pending" | "active";
 }
 
 const BlurSidebar: React.FC<BlurSidebarProps> = ({
     children,
-    status = "pending",
+    status = "active",
 }) => {
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -73,15 +74,19 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
                 };
             default:
                 return {
-                    icon: <Clock size={16} className="text-[#F2A618]" />,
-                    label: "Restricted",
-                    bgColor: "bg-[#F2A61820]",
-                    textColor: "text-[#F2A618]",
+                    icon: null,
+                    label: "",
+                    bgColor: "",
+                    textColor: "",
                 };
         }
     };
 
     const statusConfig = getStatusConfig();
+    const isRestricted =
+        status === "expired" ||
+        status === "pending" ||
+        status === "payment_pending";
 
     const menuItems = [
         { icon: LayoutDashboard, label: "Overview", path: "/fleet/dashboard" },
@@ -102,10 +107,16 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
         navigate("/fleet");
     };
 
-    const handleLinkClick = () => {
+    const handleLinkClick = (path: string) => {
+        // If restricted, prevent navigation
+        if (isRestricted) {
+            return;
+        }
+
         if (isMobile) {
             setMobileOpen(false);
         }
+        navigate(path);
     };
 
     const sidebarWidth = collapsed ? "w-[72px]" : "w-[250px]";
@@ -121,6 +132,7 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
                     md:relative md:translate-x-0
                     ${isMobile ? mobilePosition : sidebarWidth}
                     ${!isMobile && sidebarWidth}
+                    ${isRestricted ? "pointer-events-none" : ""}
                 `}
                 style={{
                     borderRight: "1.21px solid rgba(255,255,255,0.1)",
@@ -179,45 +191,42 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
                     </div>
 
                     {/* Status Badge */}
-                    <div
-                        className={`mb-6 flex items-center gap-2 rounded-lg px-4 py-2 ${statusConfig.bgColor}`}
-                    >
-                        {statusConfig.icon}
-                        {!collapsed && (
-                            <span
-                                className={`text-xs font-medium ${statusConfig.textColor}`}
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                {statusConfig.label}
-                            </span>
-                        )}
-                    </div>
+                    {isRestricted && (
+                        <div
+                            className={`mb-6 flex items-center gap-2 rounded-lg px-4 py-2 ${statusConfig.bgColor}`}
+                        >
+                            {statusConfig.icon}
+                            {!collapsed && (
+                                <span
+                                    className={`text-xs font-medium ${statusConfig.textColor}`}
+                                    style={{ fontFamily: "Outfit" }}
+                                >
+                                    {statusConfig.label}
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {/* Menu Items */}
                     <nav className="flex-1 space-y-1 overflow-y-auto">
                         {menuItems.map((item) => {
                             const isActive = location.pathname === item.path;
                             return (
-                                <Link
+                                <div
                                     key={item.path}
-                                    to={item.path}
-                                    onClick={handleLinkClick}
                                     className={`
-                                        flex items-center gap-3 rounded-lg px-3 py-3 
+                                        flex w-full items-center gap-3 rounded-lg px-3 py-3 
                                         transition-all duration-200
                                         sm:px-4 sm:py-3
+                                        ${isRestricted ? "cursor-not-allowed opacity-40" : ""}
                                         ${
-                                            isActive
+                                            isActive && !isRestricted
                                                 ? "bg-[#E8E6EB] text-[#6E43A3]"
-                                                : "text-[#EDE8F4] hover:bg-[#E8E6EB] hover:text-[#6E43A3]"
+                                                : "text-[#EDE8F4]"
                                         }
                                         ${collapsed && !isMobile ? "justify-center px-2" : ""}
                                     `}
-                                    title={
-                                        collapsed && !isMobile
-                                            ? item.label
-                                            : undefined
-                                    }
+                                    onClick={() => handleLinkClick(item.path)}
                                 >
                                     <item.icon
                                         size={20}
@@ -228,7 +237,7 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
                                             {item.label}
                                         </span>
                                     )}
-                                </Link>
+                                </div>
                             );
                         })}
                     </nav>
@@ -240,10 +249,11 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
                             flex items-center gap-3 rounded-lg px-3 py-3 
                             font-['Outfit'] text-white transition-all 
                             hover:opacity-90 active:scale-95
-                            sm:px-4 sm:py-3
                             ${collapsed && !isMobile ? "justify-center px-2" : ""}
+                            ${isRestricted ? "pointer-events-none opacity-40" : ""}
                         `}
                         style={{ backgroundColor: "#FB2323" }}
+                        disabled={isRestricted}
                     >
                         <LogOut size={20} className="flex-shrink-0" />
                         {(!collapsed || isMobile) && (
@@ -286,42 +296,44 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
                 )}
 
                 {/* Status Banner at top of content */}
-                <div
-                    className={`${statusConfig.bgColor} flex flex-col gap-2 border-b border-[#E5E7EB] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6`}
-                >
-                    <div className="flex flex-wrap items-center gap-2">
-                        {statusConfig.icon}
-                        <span
-                            className={`text-sm font-medium ${statusConfig.textColor}`}
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            {statusConfig.label}
-                        </span>
-                        <span
-                            className="text-sm text-[#8E98A8]"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            • Access restricted until resolved
-                        </span>
-                    </div>
-                    <button
-                        onClick={() => {
-                            if (status === "pending") {
-                                navigate("/fleet/kyc-pending");
-                            } else if (status === "expired") {
-                                navigate("/fleet/subscription/renew");
-                            } else {
-                                navigate("/fleet/payment/pending");
-                            }
-                        }}
-                        className="w-full rounded-lg bg-[#6E43A3] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 sm:w-auto"
-                        style={{ fontFamily: "Outfit" }}
+                {isRestricted && (
+                    <div
+                        className={`${statusConfig.bgColor} flex flex-col gap-2 border-b border-[#E5E7EB] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6`}
                     >
-                        Resolve Now
-                    </button>
-                </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {statusConfig.icon}
+                            <span
+                                className={`text-sm font-medium ${statusConfig.textColor}`}
+                                style={{ fontFamily: "Outfit" }}
+                            >
+                                {statusConfig.label}
+                            </span>
+                            <span
+                                className="text-sm text-[#8E98A8]"
+                                style={{ fontFamily: "Outfit" }}
+                            >
+                                • Access restricted until resolved
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => {
+                                if (status === "pending") {
+                                    navigate("/fleet/kyc-pending");
+                                } else if (status === "expired") {
+                                    navigate("/fleet/subscription/renew");
+                                } else {
+                                    navigate("/fleet/payment/pending");
+                                }
+                            }}
+                            className="w-full rounded-lg bg-[#6E43A3] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 sm:w-auto"
+                            style={{ fontFamily: "Outfit" }}
+                        >
+                            Resolve Now
+                        </button>
+                    </div>
+                )}
 
-                {/* Page Content */}
+                {/* Page Content - NO OVERLAY, just the content */}
                 <div className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
                     {children}
                 </div>

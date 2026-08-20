@@ -86,6 +86,9 @@ const NO_NAV_PAGES = [
     "/payment/success",
     "/payment/cancel",
     "/payment/* ",
+    "/fleet/payment/callback",
+    "/fleet/payment/success",
+    "/fleet/payment/cancel",
     "/fleet/payment/pending",
     "/fleet/subscription/renew",
     "/fleet/kyc-pending",
@@ -176,6 +179,18 @@ function AppRoutes() {
                     />
                     <Route
                         path="/payment/cancel"
+                        element={<PaymentCallback />}
+                    />
+                    <Route
+                        path="/fleet/payment/callback"
+                        element={<PaymentCallback />}
+                    />
+                    <Route
+                        path="/fleet/payment/success"
+                        element={<PaymentCallback />}
+                    />
+                    <Route
+                        path="/fleet/payment/cancel"
                         element={<PaymentCallback />}
                     />
                     <Route
