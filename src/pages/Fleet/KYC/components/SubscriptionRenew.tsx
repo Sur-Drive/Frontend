@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     AlertCircle,
     Calendar,
     CreditCard,
     ArrowRight,
-    CheckCircle,
     Loader2,
 } from "lucide-react";
 import BlurSidebar from "../../Dashboard/BlurSidebar";
-import { useNavigate } from "react-router-dom";
 
 const API_BASE = "https://backend-production-01de.up.railway.app";
 
@@ -140,13 +139,9 @@ const SubscriptionRenew: React.FC = () => {
             setError(null);
             const token = localStorage.getItem("token");
 
-            // The renew endpoint doesn't accept a plan field
-            // It renews with the existing plan
-            const payload = {}; // Empty payload
-
-            console.log("📤 Sending renewal request (no payload needed)");
-
-            const response = await fetch(
+            // Step 1: Create a pending subscription
+            console.log("📤 Step 1: Creating pending subscription...");
+            const renewResponse = await fetch(
                 `${API_BASE}/fleet/subscription/renew`,
                 {
                     method: "POST",
@@ -154,59 +149,96 @@ const SubscriptionRenew: React.FC = () => {
                         Authorization: `Bearer ${token}`,
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify({}), // Empty payload
                 },
             );
 
-            const data = await response.json();
-            console.log("📥 Renewal response:", data);
+            const renewData = await renewResponse.json();
+            console.log("📥 Renew response:", renewData);
 
-            if (!response.ok) {
-                throw new Error(data.message || "Failed to renew subscription");
+            if (!renewResponse.ok) {
+                throw new Error(
+                    renewData.message || "Failed to renew subscription",
+                );
             }
 
-            // Handle the response based on the backend structure
+            // Check if payment is required
             const paymentRequired =
-                data.paymentRequired || data.data?.paymentRequired || false;
-            const paymentUrl = data.paymentUrl || data.data?.paymentUrl;
-            const paymentReference =
-                data.paymentReference || data.data?.paymentReference;
-            const subscription = data.subscription || data.data?.subscription;
+                renewData.paymentRequired ||
+                renewData.data?.paymentRequired ||
+                false;
             const isFreeTrial =
-                data.isFreeTrial || data.data?.isFreeTrial || false;
-            const message = data.message || data.data?.message || "";
+                renewData.isFreeTrial || renewData.data?.isFreeTrial || false;
+            const paymentReference =
+                renewData.paymentReference || renewData.data?.paymentReference;
 
-            console.log("🔗 Payment Required:", paymentRequired);
-            console.log("🔗 Payment URL:", paymentUrl);
-            console.log("📝 Payment Reference:", paymentReference);
-            console.log("📝 Message:", message);
+            // If free trial, activate immediately
+            if (isFreeTrial || !paymentRequired) {
+                console.log("✅ Free trial - subscription activated!");
+                localStorage.setItem("subscriptionStatus", "active");
+                alert("Subscription renewed successfully!");
+                window.location.href = "/fleet/dashboard";
+                return;
+            }
 
-            // If payment is required and we have a URL, redirect to payment
-            if (paymentRequired && paymentUrl) {
+            // Step 2: Initialize payment with Flutterwave
+            console.log("📤 Step 2: Initializing payment...");
+
+            // Calculate total amount
+            const planPrices: Record<string, number> = {
+                starter: 2250,
+                pro: 3500,
+                enterprise: 0,
+            };
+            const pricePerVehicle = planPrices[selectedPlan] || 0;
+            const totalAmount =
+                pricePerVehicle * (company?.numberOfVehicles || 34);
+
+            const paymentResponse = await fetch(
+                `${API_BASE}/payment/initialize`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        plan: selectedPlan,
+                        amount: totalAmount,
+                    }),
+                },
+            );
+
+            const paymentData = await paymentResponse.json();
+            console.log("📥 Payment initialization response:", paymentData);
+
+            if (!paymentResponse.ok) {
+                throw new Error(
+                    paymentData.message || "Failed to initialize payment",
+                );
+            }
+
+            // Step 3: Redirect to payment URL
+            if (paymentData.paymentUrl) {
+                console.log(
+                    "🔗 Redirecting to payment URL:",
+                    paymentData.paymentUrl,
+                );
+                // Store the return URL for after payment
                 localStorage.setItem("returnUrl", "/fleet/dashboard");
-                if (paymentReference) {
-                    localStorage.setItem("paymentReference", paymentReference);
+                if (paymentData.reference) {
+                    localStorage.setItem(
+                        "paymentReference",
+                        paymentData.reference,
+                    );
                 }
                 // Redirect to payment
-                window.location.href = paymentUrl;
-            } else if (!paymentRequired || isFreeTrial) {
-                // Free trial or no payment required - subscription activated immediately
-                console.log(
-                    "✅ Subscription renewed successfully (no payment required)",
-                );
-                localStorage.setItem("subscriptionStatus", "active");
-                // Show success message and redirect
-                alert(message || "Subscription renewed successfully!");
-                window.location.href = "/fleet/dashboard";
+                window.location.href = paymentData.paymentUrl;
             } else {
-                // Something went wrong - no payment URL but payment is required
-                console.error(
-                    "❌ Payment required but no payment URL provided",
-                );
-                setError("Unable to initialize payment. Please try again.");
+                throw new Error("No payment URL returned");
             }
         } catch (error: any) {
-            console.error("❌ Error renewing subscription:", error);
+            console.error("Error renewing subscription:", error);
             setError(
                 error.message ||
                     "Failed to renew subscription. Please try again.",
@@ -214,13 +246,6 @@ const SubscriptionRenew: React.FC = () => {
         } finally {
             setSubmitting(false);
         }
-    };
-
-    // Calculate total price based on selected plan and vehicle count
-    const getTotalPrice = () => {
-        const plan = plans.find((p) => p.id === selectedPlan);
-        if (!plan || !company) return 0;
-        return plan.pricePerVehicle * (company.numberOfVehicles || 1);
     };
 
     const renderContent = () => {
