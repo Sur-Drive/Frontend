@@ -13,7 +13,7 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ onNext }) => {
             id: "free_trial",
             name: "Free Trial",
             description:
-                "For small fleets just getting started with road intelligence.",
+                "For small fleets just getting started with road intelligence..",
             price: "Free/30 days",
             buttonText: "Select Plan",
             features: [
