@@ -1,6 +1,16 @@
+import { api } from "../lib/apiClient";
+
 const API_URL =
     import.meta.env.VITE_API_URL ||
     "https://backend-production-01de.up.railway.app";
+
+// GET /fleet/drivers/my-fleetinfo
+// Returns the fleet, sub-fleet, assigned managers, and assigned vehicle
+// for the currently signed-in driver. Shape isn't fully pinned down yet,
+// so callers should treat fields defensively (see useFleet.ts).
+export function getMyFleetInfo(): Promise<unknown> {
+    return api.get("/fleet/drivers/my-fleetinfo");
+}
 
 export const getSubFleets = async () => {
     const token = localStorage.getItem("token");

@@ -1148,7 +1148,16 @@ export default function PlanRoutePage() {
   };
 
   // ── Resume a trip in progress ──────────────────────────
+  // If the app is backgrounded/reloaded mid-trip (screen locked, tab
+  // suspended, browser killed the page to save memory, etc.) and the
+  // driver comes back, we shouldn't drop them back on the plan screen
+  // as if the trip ended — restore the same navigating view they left.
   const resumedActiveTripRef = useRef(false);
+  const pendingResumeDestRef = useRef<{ lat: number; lng: number } | null>(
+    null,
+  );
+  const resumeReplanFiredRef = useRef(false);
+
   useEffect(() => {
     if (resumedActiveTripRef.current) return;
     resumedActiveTripRef.current = true;
@@ -1166,14 +1175,35 @@ export default function PlanRoutePage() {
     setIsNavigating(true);
     setNavPanelExpanded(true);
 
-    const origin =
-      stored.startCoords ??
-      (userLocation ? { lat: userLocation[0], lng: userLocation[1] } : null);
-    if (!origin) return;
-
-    planRouteMutation.mutate({ origin, destination: stored.destinationCoords });
+    // Don't replan from the ORIGINAL start point — the driver has
+    // likely moved since the trip began. Wait for a fresh GPS fix
+    // (below) so the resumed route continues from where they
+    // actually are now, and only fall back to the original start
+    // point if a live fix never arrives.
+    pendingResumeDestRef.current = stored.destinationCoords;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const dest = pendingResumeDestRef.current;
+    if (!dest || resumeReplanFiredRef.current) return;
+
+    // Prefer the live GPS position so the route picks up from the
+    // driver's current location; fall back to the location they
+    // started from if we couldn't get a fresh fix (permission denied,
+    // GPS unavailable, etc.) so the trip doesn't get stuck.
+    const origin = userLocation
+      ? { lat: userLocation[0], lng: userLocation[1] }
+      : locationError
+        ? startCoords
+        : null;
+    if (!origin) return;
+
+    resumeReplanFiredRef.current = true;
+    pendingResumeDestRef.current = null;
+    planRouteMutation.mutate({ origin, destination: dest });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation, locationError]);
 
   // ── Live traffic: periodic re-plan while navigating ───────────
   const userLocationRef = useRef(userLocation);
