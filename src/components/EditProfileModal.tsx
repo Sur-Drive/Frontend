@@ -119,7 +119,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           value={form.firstName}
           onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
           placeholder="Enter your First Name"
-          className="w-full rounded-2xl border-2 border-purple-200 bg-white px-4 py-3 text-[15px] text-gray-800 focus:border-purple-500 focus:outline-none"
+          className="w-full rounded-2xl border-2 border-purple-200 bg-white px-4 py-3 text-base text-gray-800 focus:border-purple-500 focus:outline-none"
         />
       </Field>
 
@@ -128,11 +128,11 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           value={form.lastName}
           onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
           placeholder="Enter your Last Name"
-          className="w-full rounded-2xl bg-gray-100 px-4 py-3 text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+          className="w-full rounded-2xl bg-gray-100 px-4 py-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
         />
       </Field>
 
-      <p className="mb-2 text-[15px] font-medium text-gray-800">Gender</p>
+      <p className="mb-2 text-base font-medium text-gray-800">Gender</p>
       <div className="flex gap-2 mb-4">
         {GENDERS.map((g) => (
           <button
@@ -157,7 +157,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
             value={form.dateOfBirth}
             onChange={(e) => setForm((f) => ({ ...f, dateOfBirth: e.target.value }))}
             max={new Date().toISOString().split('T')[0]}
-            className="w-full rounded-2xl bg-gray-100 px-4 py-3 pr-10 text-[15px] text-gray-800 focus:outline-none [&::-webkit-calendar-picker-indicator]:opacity-0"
+            className="w-full rounded-2xl bg-gray-100 px-4 py-3 pr-10 text-base text-gray-800 focus:outline-none [&::-webkit-calendar-picker-indicator]:opacity-0"
           />
           <Calendar
             size={18}
@@ -171,7 +171,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           value={form.occupation}
           onChange={(e) => setForm((f) => ({ ...f, occupation: e.target.value }))}
           placeholder="Enter your Occupation"
-          className="w-full rounded-2xl bg-gray-100 px-4 py-3 text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+          className="w-full rounded-2xl bg-gray-100 px-4 py-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
         />
       </Field>
 
@@ -180,7 +180,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           value={form.address}
           onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
           placeholder="Enter your Address"
-          className="w-full rounded-2xl bg-gray-100 px-4 py-3 text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+          className="w-full rounded-2xl bg-gray-100 px-4 py-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
         />
       </Field>
 
@@ -193,7 +193,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="mb-4">
-      <p className="mb-1.5 text-[15px] font-medium text-gray-800">{label}</p>
+      <p className="mb-1.5 text-base font-medium text-gray-800">{label}</p>
       {children}
     </div>
   )

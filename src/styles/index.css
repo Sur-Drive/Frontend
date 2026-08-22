@@ -58,9 +58,25 @@
     }
 
     input,
-    textarea {
+    textarea,
+    select {
         user-select: text;
         -webkit-user-select: text;
+        /* iOS Safari auto-zooms the page on focus if a form control's
+           font-size is under 16px. Keep a 16px floor here so tapping any
+           field on a phone never triggers that zoom; component classes
+           can still go bigger, just never smaller. */
+        font-size: 16px;
+    }
+}
+
+/* Small-phone safety net (iPhone SE / 320-360px wide devices).
+   Nothing app-specific should ever need to scroll sideways to be read. */
+@media (max-width: 380px) {
+    html,
+    body,
+    #root {
+        overflow-x: hidden;
     }
 }
 
