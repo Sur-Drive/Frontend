@@ -30,10 +30,11 @@ const TYPE_TO_REPORT_TYPE: Record<BackendHazardType, ReportType> = {
   FLOOD: 'wave',
   ACCIDENT: 'hazard',
   DEBRIS: 'warning',
-  ROAD: 'tractor',
+  ROAD_WORKS: 'tractor',
   CHECKPOINT: 'sign',
   DANGER: 'hazard',
   SOS: 'sos',
+  OTHER: 'warning',
 }
 
 const TYPE_LABEL: Record<BackendHazardType, string> = {
@@ -41,10 +42,11 @@ const TYPE_LABEL: Record<BackendHazardType, string> = {
   FLOOD: 'Flood risk area',
   ACCIDENT: 'Accident',
   DEBRIS: 'Debris in road',
-  ROAD: 'Road works',
+  ROAD_WORKS: 'Road works',
   CHECKPOINT: 'Checkpoint',
   DANGER: 'Danger zone',
   SOS: 'Emergency reported',
+  OTHER: 'Reported hazard',
 }
 
 const SEVERITY_COLOR: Record<Hazard['severity'], string> = {

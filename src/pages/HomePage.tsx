@@ -788,7 +788,10 @@ export default function HomePage() {
 
       <AnimatePresence>
         {showCreateNewPassword && (
-          <CreateNewPassword onComplete={handleCreateNewPasswordComplete} />
+          <CreateNewPassword
+            sessionId={resetSessionId}
+            onComplete={handleCreateNewPasswordComplete}
+          />
         )}
       </AnimatePresence>
 
