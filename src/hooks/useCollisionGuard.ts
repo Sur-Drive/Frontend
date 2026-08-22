@@ -42,7 +42,7 @@ interface TrackState {
 }
 
 export interface UseCollisionGuardResult {
-  videoRef: RefObject<HTMLVideoElement | null>
+  videoRef: RefObject<HTMLVideoElement>
   isSupported: boolean
   isStarting: boolean
   isActive: boolean

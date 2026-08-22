@@ -68,6 +68,12 @@ import { formatManeuverDistance } from "../lib/maneuvers";
 import { useCollisionGuard } from "../hooks/useCollisionGuard";
 import CollisionGuardView from "../components/map/CollisionGuardView";
 import { describeWarning } from "../lib/collisionDetection";
+import { useEtaSystem } from "../hooks/useEtaSystem";
+import { formatEtaDistance, formatEtaDuration } from "../lib/etaSystem";
+import TrafficEtaBadge from "../components/map/TrafficEtaBadge";
+import RouteStopsEditor, {
+  type RouteStop,
+} from "../components/map/RouteStopsEditor";
 
 // ─── Types ─────────────────────────────────────────────
 type ReportType =
@@ -578,6 +584,15 @@ export default function PlanRoutePage() {
 
   const [startPoint, setStartPoint] = useState("");
   const [destination, setDestination] = useState("");
+  const [stops, setStops] = useState<RouteStop[]>([]);
+  const stopCoords = useMemo(
+    () => stops.filter((s) => s.coords).map((s) => s.coords!),
+    [stops],
+  );
+  // Kept fresh via ref so re-plans triggered from timers/effects set up
+  // before the latest stop edit still plan through the current stops.
+  const stopCoordsRef = useRef(stopCoords);
+  stopCoordsRef.current = stopCoords;
 
   const [startCoords, setStartCoords] = useState<{
     lat: number;
@@ -728,6 +743,9 @@ export default function PlanRoutePage() {
   const routeCum = useMemo(() => cumulativeDistances(routePath), [routePath]);
   const [liveProgress, setLiveProgress] = useState<number | null>(null);
   const [liveHeading, setLiveHeading] = useState(0);
+  const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<
+    number | null
+  >(null);
 
   const [routeDeviationMeters, setRouteDeviationMeters] = useState<
     number | null
@@ -741,6 +759,7 @@ export default function PlanRoutePage() {
   useEffect(() => {
     if (!isNavigating || routePath.length < 2) {
       setLiveProgress(null);
+      setLocationAccuracyMeters(null);
       return;
     }
 
@@ -768,6 +787,7 @@ export default function PlanRoutePage() {
       setLiveProgress(projection.fraction);
       setLiveHeading(sample.heading);
       setRouteDeviationMeters(projection.distanceMeters);
+      setLocationAccuracyMeters(position.coords.accuracy);
       setUserLocation([raw.lat, raw.lng]);
     };
 
@@ -1069,7 +1089,7 @@ export default function PlanRoutePage() {
     setShowScanResults(true);
 
     planRouteMutation.mutate(
-      { origin, destination: dest },
+      { origin, destination: dest, stops: stopCoords },
       {
         onSuccess: (data) => {
           console.log("[route] plan succeeded", data);
@@ -1133,6 +1153,7 @@ export default function PlanRoutePage() {
     setShowUpcomingAlert(false);
     setStartPoint("");
     setDestination("");
+    setStops([]);
     setShowScanResults(false);
     setRouteError(null);
     trip.pause();
@@ -1201,7 +1222,7 @@ export default function PlanRoutePage() {
 
     resumeReplanFiredRef.current = true;
     pendingResumeDestRef.current = null;
-    planRouteMutation.mutate({ origin, destination: dest });
+    planRouteMutation.mutate({ origin, destination: dest, stops: stopCoords });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation, locationError]);
 
@@ -1227,7 +1248,11 @@ export default function PlanRoutePage() {
       if (!loc) return;
 
       planRouteMutation.mutate(
-        { origin: { lat: loc[0], lng: loc[1] }, destination: dest },
+        {
+          origin: { lat: loc[0], lng: loc[1] },
+          destination: dest,
+          stops: stopCoordsRef.current,
+        },
         {
           onSuccess: (data) => {
             const updated = data.routes[selectedMode];
@@ -1293,7 +1318,16 @@ export default function PlanRoutePage() {
   }, [collisionGuard.activeWarning, collisionGuardEnabled, isNavigating]);
 
   // ── Arrival ──
+  // Google Maps doesn't declare arrival off a single GPS sample — a lone
+  // noisy/inaccurate fix that happens to land near the destination would
+  // otherwise trigger "You've arrived" while still blocks away. We guard
+  // against that the same way: ignore fixes whose reported accuracy is too
+  // poor to trust, and require the "arrived" condition to hold steadily
+  // for a few seconds (not just once) before actually confirming it.
   const ARRIVAL_RADIUS_METERS = 50;
+  const ARRIVAL_MAX_ACCURACY_METERS = 100;
+  const ARRIVAL_CONFIRM_MS = 3000;
+
   const distanceToDestinationMeters =
     userLocation && destinationCoords
       ? haversineMeters(
@@ -1302,12 +1336,45 @@ export default function PlanRoutePage() {
         )
       : null;
 
-  const hasArrived =
+  const isPositionAccurateEnough =
+    locationAccuracyMeters == null ||
+    locationAccuracyMeters <= ARRIVAL_MAX_ACCURACY_METERS;
+
+  const isArrivalCandidate =
     isNavigating &&
     liveProgress != null &&
     displayProgress >= 0.995 &&
     distanceToDestinationMeters != null &&
-    distanceToDestinationMeters <= ARRIVAL_RADIUS_METERS;
+    distanceToDestinationMeters <= ARRIVAL_RADIUS_METERS &&
+    isPositionAccurateEnough;
+
+  const [hasArrived, setHasArrived] = useState(false);
+  const arrivalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isArrivalCandidate) {
+      if (arrivalTimerRef.current) {
+        clearTimeout(arrivalTimerRef.current);
+        arrivalTimerRef.current = null;
+      }
+      setHasArrived(false);
+      return;
+    }
+
+    if (hasArrived) return;
+
+    arrivalTimerRef.current = setTimeout(() => {
+      setHasArrived(true);
+      arrivalTimerRef.current = null;
+    }, ARRIVAL_CONFIRM_MS);
+
+    return () => {
+      if (arrivalTimerRef.current) {
+        clearTimeout(arrivalTimerRef.current);
+        arrivalTimerRef.current = null;
+      }
+    };
+  }, [isArrivalCandidate, hasArrived]);
 
   const upcomingHazard = describeUpcomingHazard(effectiveRoute?.hazards);
 
@@ -1332,27 +1399,23 @@ export default function PlanRoutePage() {
               : null;
 
   const navHazardCount = activeRoute?.hazards?.length || scanHazards.length;
-  const remainingKm = effectiveRoute
-    ? Math.max(0, effectiveRoute.distance * (1 - displayProgress))
-    : 0;
-  const etaMinutes = effectiveRoute
-    ? Math.max(0, Math.round(effectiveRoute.duration * (1 - displayProgress)))
-    : 0;
 
-  // ── Arrival time (ETA as a clock time) ──
-  const formatClockTime = useCallback((minutesFromNow: number) => {
-    const arrival = new Date(Date.now() + Math.max(0, minutesFromNow) * 60000);
-    return arrival.toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  }, []);
-
-  const plannedArrivalLabel = effectiveRoute
-    ? formatClockTime(effectiveRoute.duration)
-    : null;
-
-  const liveArrivalLabel = effectiveRoute ? formatClockTime(etaMinutes) : null;
+  // ── ETA system ──────────────────────────────────────
+  // Centralizes current ETA, remaining time/distance, and the
+  // traffic-adjusted delta. It recomputes continuously (ticking every
+  // second, plus whenever `effectiveRoute`/progress change), and its
+  // traffic baseline resets automatically on a genuine reroute or a
+  // stop being added/removed, since those change the route's identity.
+  const eta = useEtaSystem({
+    route: effectiveRoute,
+    progress: displayProgress,
+    isNavigating,
+    hasArrived,
+  });
+  const remainingKm = eta.remainingKm;
+  const etaMinutes = eta.remainingMinutes;
+  const plannedArrivalLabel = eta.plannedEtaClock;
+  const liveArrivalLabel = eta.currentEtaClock;
 
   // ── Turn-by-turn voice guidance ──────────────────────
   const voiceGuidance = useVoiceGuidance();
@@ -1975,7 +2038,7 @@ export default function PlanRoutePage() {
                     ? "Collapse trip details"
                     : "Expand trip details"
                 }
-                className="flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 text-white transition rounded-xl bg-white/20 hover:bg-white/30"
+                className="flex items-center justify-center flex-shrink-0 text-white transition w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 hover:bg-white/30"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -2209,6 +2272,15 @@ export default function PlanRoutePage() {
                     </p>
                   </div>
                 </button>
+
+                {eta.traffic && (
+                  <TrafficEtaBadge
+                    traffic={eta.traffic}
+                    freshnessLabel={eta.freshnessLabel}
+                    className="mb-3"
+                  />
+                )}
+
                 <button
                   onClick={handleEndTrip}
                   className="w-full h-11 sm:h-12 bg-red-500 hover:bg-red-600 text-white text-sm sm:text-base font-semibold rounded-xl transition active:scale-[0.98]"
@@ -2489,10 +2561,13 @@ export default function PlanRoutePage() {
                 </div>
               </div>
 
+              <RouteStopsEditor stops={stops} onChange={setStops} />
+
               <div className="h-4" />
             </div>
 
-            <div className="flex-shrink-0 px-5 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-6">
+            {/* <div className="flex-shrink-0 px-5 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-6"> */}
+            <div className="flex-shrink-0 px-5 pt-4 pb-4 bg-white border-t border-gray-100 sm:pb-6">
               {routeError && (
                 <p className="mb-3 text-xs text-center text-red-500 sm:text-sm">
                   {routeError}
@@ -2501,6 +2576,9 @@ export default function PlanRoutePage() {
               <button
                 onClick={handleScanRoute}
                 disabled={!startPoint || !destination}
+                //   className="w-full h-12 sm:h-14 bg-purple-700 hover:bg-purple-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm sm:text-base rounded-2xl transition active:scale-[0.98]"
+                // >
+
                 className="w-full h-12 sm:h-14 bg-purple-700 hover:bg-purple-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm sm:text-base rounded-2xl transition active:scale-[0.98]"
               >
                 Scan route
@@ -2588,11 +2666,18 @@ export default function PlanRoutePage() {
                     </div>
                   )}
 
+                  {stopCoords.length > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-3 text-[11px] sm:text-xs font-medium text-purple-700 bg-purple-50 rounded-full">
+                      {stopCoords.length} stop
+                      {stopCoords.length === 1 ? "" : "s"} on this route
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     <div className="p-3 text-center bg-gray-50 rounded-2xl">
                       <p className="text-base font-bold text-gray-900 sm:text-lg">
                         {effectiveRoute
-                          ? `${effectiveRoute.distance.toFixed(1)} km`
+                          ? formatEtaDistance(effectiveRoute.distance)
                           : "9.5 km"}
                       </p>
                       <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">
@@ -2602,7 +2687,7 @@ export default function PlanRoutePage() {
                     <div className="p-3 text-center bg-gray-50 rounded-2xl">
                       <p className="text-base font-bold text-gray-900 sm:text-lg">
                         {effectiveRoute
-                          ? `${Math.round(effectiveRoute.duration)} min`
+                          ? formatEtaDuration(effectiveRoute.duration)
                           : "23 min"}
                       </p>
                       <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">

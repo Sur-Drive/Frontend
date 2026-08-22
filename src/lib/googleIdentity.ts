@@ -104,10 +104,37 @@
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 const SCRIPT_SRC = 'https://accounts.google.com/gsi/client'
 
-declare global {
-  interface Window {
-    google?: any
+// `googleMaps.ts` already augments `Window.google` with the strongly-typed
+// Maps JS API namespace (`typeof google`). Google Identity Services (GSI)
+// hangs its own `accounts.id` API off that same `window.google` object at
+// runtime, but that namespace isn't part of the Maps types — so rather than
+// re-declaring `Window.google` here (which TS rejects as a conflicting
+// merge with googleMaps.ts's declaration), we read it through a narrow
+// local type just for the pieces GSI actually uses.
+interface GoogleIdentityGlobal {
+  accounts: {
+    id: {
+      initialize: (config: {
+        client_id: string
+        callback: (response: { credential?: string }) => void
+        use_fedcm_for_prompt?: boolean
+      }) => void
+      cancel: () => void
+      prompt: (
+        callback: (notification: {
+          isNotDisplayed?: () => boolean
+          getNotDisplayedReason?: () => string
+          isSkippedMoment?: () => boolean
+          getSkippedReason?: () => string
+          isDismissedMoment?: () => boolean
+        }) => void,
+      ) => void
+    }
   }
+}
+
+function getGoogleIdentity(): GoogleIdentityGlobal | undefined {
+  return (window as unknown as { google?: GoogleIdentityGlobal }).google
 }
 
 let scriptLoadPromise: Promise<void> | null = null
@@ -121,7 +148,7 @@ function loadGsiScript(): Promise<void> {
       return
     }
 
-    if (window.google?.accounts?.id) {
+    if (getGoogleIdentity()?.accounts?.id) {
       resolve()
       return
     }
@@ -153,7 +180,7 @@ function ensureInitialized() {
     throw new Error('Missing VITE_GOOGLE_CLIENT_ID — add it to your .env file')
   }
 
-  window.google.accounts.id.initialize({
+  getGoogleIdentity()!.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: (response: { credential?: string }) => {
       if (response?.credential) {
@@ -196,13 +223,13 @@ export async function getGoogleIdToken(): Promise<string> {
     // Clear out any previous request that didn't fully settle before this
     // one starts — same conflict as above, but for the *first* call after
     // a prior attempt was dismissed/skipped/errored.
-    window.google.accounts.id.cancel()
+    getGoogleIdentity()!.accounts.id.cancel()
 
     return new Promise<string>((resolve, reject) => {
       pendingResolve = resolve
       pendingReject = reject
 
-      window.google.accounts.id.prompt((notification: any) => {
+      getGoogleIdentity()!.accounts.id.prompt((notification: any) => {
         // Only care about outcomes that mean "no credential is coming" —
         // a successful sign-in resolves via the initialize() callback above,
         // not through this notification.
