@@ -1222,7 +1222,7 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What's happening?"
                 rows={3}
-                className="w-full resize-none rounded-xl sm:rounded-2xl bg-gray-100 px-3.5 sm:px-4 py-3 text-sm sm:text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                className="w-full resize-none rounded-xl sm:rounded-2xl bg-gray-100 px-3.5 sm:px-4 py-3 text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
               />
 
               {/* Photo */}
@@ -1271,8 +1271,8 @@ export default function AddReportModal({ onClose, onSuccess }: AddReportModalPro
                   onChange={setLocationAddress}
                   onSelect={handleAddressSelect}
                   placeholder="Search location"
-                  className="flex-1"
-                  inputClassName="w-full bg-transparent text-sm sm:text-[15px] text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                  className="flex-1 min-w-0"
+                  inputClassName="w-full min-w-0 bg-transparent text-base text-gray-800 placeholder:text-gray-400 focus:outline-none"
                 />
                 <button
                   type="button"
