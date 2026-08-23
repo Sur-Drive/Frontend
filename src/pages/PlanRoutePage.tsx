@@ -2442,40 +2442,90 @@ export default function PlanRoutePage() {
       {/* ═══════════════════════════════════════════════════════
           PLAN ROUTE MODAL
           ═══════════════════════════════════════════════════════ */}
+      {/* ═══════════════════════════════════════════════════════
+    PLAN ROUTE MODAL
+    MOBILE RESPONSIVE VERSION
+    ═══════════════════════════════════════════════════════ */}
+
       {showPlanModal && (
-        // <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/0 sm:bg-black/40">
-        //   <div className="flex flex-col w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-md bg-white animate-in slide-in-from-bottom sm:rounded-3xl sm:shadow-2xl overflow-hidden">
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center bg-black/20 pointer-events-none">
+        <div
+          className="
+      fixed inset-0 z-[60]
+      flex items-end sm:items-center sm:justify-center
+      bg-black/30
+    "
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="plan-route-title"
+        >
+          {/* Modal Panel */}
           <div
             className="
-      pointer-events-auto
-      flex flex-col
-      w-full sm:max-w-md
-      h-[88dvh] sm:h-auto sm:max-h-[80vh]
-      bg-white
-      rounded-t-[24px] sm:rounded-3xl
-      shadow-2xl
-      overflow-hidden
-    "
+  relative
+  flex
+  flex-col
+  w-full
+  max-h-[100dvh]
+  h-[100dvh]
+  sm:w-[min(100%-2rem,28rem)]
+  sm:h-auto
+  sm:max-h-[75vh]
+  bg-white
+  rounded-t-[24px]
+  sm:rounded-3xl
+  shadow-2xl
+  overflow-hidden
+"
           >
-            <div className="flex-shrink-0 px-5 pt-6 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-extrabold text-gray-900 sm:text-2xl">
+            {/* ═══════════════════════════════════════════════
+          MOBILE DRAG HANDLE
+          ═══════════════════════════════════════════════ */}
+            <div className="flex-shrink-0 flex justify-center pt-3 pb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-300" />
+            </div>
+
+            {/* ═══════════════════════════════════════════════
+          HEADER
+          ═══════════════════════════════════════════════ */}
+            <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h2
+                    id="plan-route-title"
+                    className="text-xl font-extrabold text-gray-900 sm:text-2xl"
+                  >
                     Plan a route
                   </h2>
-                  <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                    We&apos;ll scan reported hazards along the way before you
-                    drive.
+
+                  <p className="mt-1 text-xs leading-5 text-gray-500 sm:text-sm">
+                    We'll scan reported hazards along the way before you drive.
                   </p>
                 </div>
+
+                {/* Close button */}
                 <button
+                  type="button"
                   onClick={() => setShowPlanModal(false)}
-                  className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-gray-500 transition bg-gray-100 rounded-full sm:w-9 sm:h-9 hover:bg-gray-200"
+                  aria-label="Close route planner"
+                  className="
+              flex
+              items-center
+              justify-center
+              flex-shrink-0
+              w-9
+              h-9
+              text-gray-500
+              transition
+              bg-gray-100
+              rounded-full
+              hover:bg-gray-200
+              active:bg-gray-300
+              touch-manipulation
+            "
                 >
                   <svg
                     viewBox="0 0 24 24"
-                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
+                    className="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"
@@ -2487,54 +2537,138 @@ export default function PlanRoutePage() {
               </div>
             </div>
 
-            <div className="flex-1 px-5 space-y-5 overflow-y-auto min-h-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* ═══════════════════════════════════════════════
+          SCROLLABLE FORM AREA
+          
+          IMPORTANT:
+          Only this section scrolls.
+          The Scan Route button NEVER scrolls away.
+          ═══════════════════════════════════════════════ */}
+            <div
+              className="
+          flex-1
+          min-h-0
+          overflow-y-auto
+          overscroll-contain
+          px-5
+          py-5
+          space-y-6
+          [-ms-overflow-style:none]
+          [scrollbar-width:none]
+          [&::-webkit-scrollbar]:hidden
+        "
+            >
+              {/* ═══════════════════════════════════════════════
+            POINT A — START
+            ═══════════════════════════════════════════════ */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="flex items-center justify-center w-5 h-5 border-2 rounded-full border-emerald-500">
+                  <div
+                    className="
+                flex
+                items-center
+                justify-center
+                w-5
+                h-5
+                border-2
+                rounded-full
+                border-emerald-500
+              "
+                  >
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
+
                   <span className="text-xs font-medium text-gray-900 sm:text-sm">
                     Point A — Start
                   </span>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl">
+
+                <div
+                  className="
+              flex
+              items-center
+              gap-2
+              px-4
+              py-3
+              bg-gray-50
+              rounded-xl
+              border
+              border-transparent
+              focus-within:border-purple-200
+              focus-within:bg-white
+              transition
+            "
+                >
                   <AddressAutocompleteInput
                     value={startPoint}
                     onChange={setStartPoint}
-                    onSelect={(result) =>
-                      setStartCoords({ lat: result.lat, lng: result.lng })
-                    }
+                    onSelect={(result) => {
+                      setStartCoords({
+                        lat: result.lat,
+                        lng: result.lng,
+                      });
+                    }}
                     placeholder="Search a place or Address"
                     className="flex-1 min-w-0"
-                    inputClassName="w-full min-w-0 text-base text-gray-900 placeholder-gray-400 bg-transparent outline-none"
+                    inputClassName="
+                w-full
+                min-w-0
+                text-base
+                text-gray-900
+                placeholder-gray-400
+                bg-transparent
+                outline-none
+              "
                   />
+
+                  {/* Use my location */}
                   <button
+                    type="button"
                     onClick={handleUseMyLocation}
                     disabled={isGettingLocation}
-                    className="shrink-0 text-xs sm:text-sm font-medium text-purple-600 whitespace-nowrap hover:text-purple-700 disabled:opacity-50 flex items-center gap-1.5"
+                    className="
+                flex
+                items-center
+                gap-1.5
+                flex-shrink-0
+                text-xs
+                sm:text-sm
+                font-medium
+                text-purple-600
+                whitespace-nowrap
+                hover:text-purple-700
+                active:text-purple-800
+                disabled:opacity-50
+                disabled:cursor-not-allowed
+                touch-manipulation
+              "
                   >
                     {isGettingLocation ? (
                       <>
                         <SpinnerIcon className="w-3.5 h-3.5" />
-                        Locating...
+                        <span>Locating...</span>
                       </>
                     ) : (
                       "Use my location"
                     )}
                   </button>
                 </div>
+
                 {locationError && (
-                  <p className="mt-1.5 ml-1 text-[11px] sm:text-xs text-red-500">
+                  <p className="mt-1.5 ml-1 text-[11px] leading-4 text-red-500 sm:text-xs">
                     {locationError}
                   </p>
                 )}
               </div>
 
+              {/* ═══════════════════════════════════════════════
+            POINT B — DESTINATION
+            ═══════════════════════════════════════════════ */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <svg
                     viewBox="0 0 24 24"
-                    className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-red-400"
+                    className="w-5 h-5 text-red-400"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -2544,42 +2678,116 @@ export default function PlanRoutePage() {
                     <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
                     <line x1="4" y1="22" x2="4" y2="15" />
                   </svg>
+
                   <span className="text-xs font-medium text-gray-900 sm:text-sm">
                     Point B — Destination
                   </span>
                 </div>
-                <div className="px-4 py-3 bg-gray-50 rounded-xl">
+
+                <div
+                  className="
+              px-4
+              py-3
+              bg-gray-50
+              rounded-xl
+              border
+              border-transparent
+              focus-within:border-purple-200
+              focus-within:bg-white
+              transition
+            "
+                >
                   <AddressAutocompleteInput
                     value={destination}
                     onChange={setDestination}
-                    onSelect={(result) =>
-                      setDestinationCoords({ lat: result.lat, lng: result.lng })
-                    }
+                    onSelect={(result) => {
+                      setDestinationCoords({
+                        lat: result.lat,
+                        lng: result.lng,
+                      });
+                    }}
                     placeholder="Where to?"
-                    inputClassName="w-full text-base text-gray-900 placeholder-gray-400 bg-transparent outline-none"
+                    inputClassName="
+                w-full
+                text-base
+                text-gray-900
+                placeholder-gray-400
+                bg-transparent
+                outline-none
+              "
                   />
                 </div>
               </div>
 
-              <RouteStopsEditor stops={stops} onChange={setStops} />
+              {/* ═══════════════════════════════════════════════
+            ADDITIONAL STOPS
+            ═══════════════════════════════════════════════ */}
+              <div>
+                <RouteStopsEditor stops={stops} onChange={setStops} />
+              </div>
 
+              {/* Extra bottom spacing inside scroll area */}
               <div className="h-4" />
             </div>
 
-            {/* <div className="flex-shrink-0 px-5 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-6"> */}
-            <div className="flex-shrink-0 px-5 pt-4 pb-4 bg-white border-t border-gray-100 sm:pb-6">
+            {/* ═══════════════════════════════════════════════
+          FIXED SCAN ROUTE FOOTER
+          
+          THIS IS THE IMPORTANT MOBILE FIX.
+          
+          This section is NOT inside the scrollable area.
+          ═══════════════════════════════════════════════ */}
+            <div
+              className="
+          relative
+          z-50
+          flex-shrink-0
+          w-full
+          px-5
+          pt-3
+          bg-white
+          border-t
+          border-gray-200
+          pb-[calc(90px+env(safe-area-inset-bottom))]  sm:pb-[calc(20px+env(safe-area-inset-bottom))]
+        "
+            >
+              {/* Error */}
               {routeError && (
-                <p className="mb-3 text-xs text-center text-red-500 sm:text-sm">
+                <p className="mb-3 text-xs leading-5 text-center text-red-500 sm:text-sm">
                   {routeError}
                 </p>
               )}
+
+              {/* Scan Route */}
               <button
+                type="button"
                 onClick={handleScanRoute}
                 disabled={!startPoint || !destination}
-                //   className="w-full h-12 sm:h-14 bg-purple-700 hover:bg-purple-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm sm:text-base rounded-2xl transition active:scale-[0.98]"
-                // >
-
-                className="w-full h-12 sm:h-14 bg-purple-700 hover:bg-purple-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm sm:text-base rounded-2xl transition active:scale-[0.98]"
+                className="
+      block
+      w-full
+      min-h-[56px]
+      h-14
+      px-4
+      bg-purple-700
+      hover:bg-purple-800
+      active:bg-purple-900
+      disabled:bg-gray-300
+      disabled:text-gray-500
+      disabled:cursor-not-allowed
+      text-white
+      font-semibold
+      text-base
+      rounded-2xl
+      transition
+      active:scale-[0.98]
+      flex
+      items-center
+      justify-center
+      touch-manipulation
+      select-none
+      flex-shrink-0
+    "
               >
                 Scan route
               </button>
