@@ -271,4 +271,37 @@ export function formatManeuverDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km`
 }
 
+// ── Navigation-warning tuning ────────────────────────────────────────
+// Sharp turns, roundabouts, and highway exits need more reaction time
+// than an ordinary turn, so they're called out earlier and with a more
+// pointed lead-in ("Sharp turn ahead" rather than just "In 300m, make a
+// sharp left") instead of reusing the plain turn-warning distance/phrasing
+// for every maneuver type.
+const ELEVATED_WARN_TYPES = new Set<ManeuverType>([
+  'sharp-left',
+  'sharp-right',
+  'roundabout',
+  'highway-exit',
+  'uturn',
+])
+
+/** Distance (meters) at which this maneuver type should first get an "In X, …" call-out. */
+export function maneuverWarnDistance(type: ManeuverType): number {
+  return ELEVATED_WARN_TYPES.has(type) ? 500 : 300
+}
+
+const WARNING_LEAD_IN: Partial<Record<ManeuverType, string>> = {
+  'sharp-left': 'Sharp turn ahead',
+  'sharp-right': 'Sharp turn ahead',
+  roundabout: 'Roundabout ahead',
+  'highway-exit': 'Highway exit ahead',
+  'highway-enter': 'Highway on-ramp ahead',
+  uturn: 'U-turn ahead',
+}
+
+/** A short heads-up phrase for maneuver types that warrant extra emphasis; null for ordinary turns (which just use the normal "In X, turn left" phrasing). */
+export function maneuverWarningLeadIn(type: ManeuverType): string | null {
+  return WARNING_LEAD_IN[type] ?? null
+}
+
 export { haversineMeters }

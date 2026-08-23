@@ -13,7 +13,7 @@ import { useRouteAnimation } from '../hooks/useRouteAnimation'
 import { useTurnByTurn } from '../hooks/useTurnByTurn'
 import { useVoiceGuidance } from '../hooks/useVoiceGuidance'
 import { describeManeuver } from '../components/map/TurnByTurnCard'
-import { formatManeuverDistance } from '../lib/maneuvers'
+import { formatManeuverDistance, maneuverWarnDistance, maneuverWarningLeadIn } from '../lib/maneuvers'
 
 const MODE_LABEL: Record<RouteModeKey, string> = {
   driving: 'Drive',
@@ -46,6 +46,7 @@ const HAZARD_ICON: Record<string, string> = {
   ACCIDENT: '⚠️',
   DEBRIS: '🪨',
   ROAD_WORKS: '🚜',
+  ROAD_CLOSURE: '⛔',
   CHECKPOINT: '🚧',
   DANGER: '⚠️',
   SOS: '🆘',
@@ -57,6 +58,7 @@ const HAZARD_LABEL: Record<string, string> = {
   ACCIDENT: 'Accident reported ahead',
   DEBRIS: 'Debris in the road ahead',
   ROAD_WORKS: 'Road works ahead',
+  ROAD_CLOSURE: 'Road closed ahead',
   CHECKPOINT: 'Checkpoint ahead',
   DANGER: 'Hazard ahead',
   SOS: 'Emergency reported ahead',
@@ -161,8 +163,10 @@ export default function RouteResultsPage() {
 
   // ── Turn-by-turn maneuver call-outs ──────────────────
   // This page loops its demo trip animation, so "arrival" isn't a real
-  // end state here — just announce each maneuver once per lap.
-  const MANEUVER_WARN_METERS = 300
+  // end state here — just announce each maneuver once per lap. Sharp
+  // turns/roundabouts/highway exits get an earlier, more pointed
+  // call-out than ordinary turns — see maneuverWarnDistance/
+  // maneuverWarningLeadIn.
   const MANEUVER_NOW_METERS = 30
   const announcedWarnRef = useRef<string | null>(null)
   const announcedNowRef = useRef<string | null>(null)
@@ -181,10 +185,13 @@ export default function RouteResultsPage() {
     if (!step || step.type === 'arrive') return
     const distance = turnByTurn.distanceToNextManeuverMeters
     const instruction = describeManeuver(step, turnByTurn.nextRoadName)
+    const warnDistance = maneuverWarnDistance(step.type)
+    const leadIn = maneuverWarningLeadIn(step.type)
 
-    if (distance <= MANEUVER_WARN_METERS && announcedWarnRef.current !== step.id) {
+    if (distance <= warnDistance && announcedWarnRef.current !== step.id) {
       announcedWarnRef.current = step.id
-      voiceGuidance.speak(`In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`)
+      const body = `In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`
+      voiceGuidance.speak(leadIn ? `${leadIn}. ${body}` : body)
     }
     if (distance <= MANEUVER_NOW_METERS && announcedNowRef.current !== step.id) {
       announcedNowRef.current = step.id
@@ -229,6 +236,12 @@ export default function RouteResultsPage() {
               toggleMuted={voiceGuidance.toggleMuted}
               volume={voiceGuidance.volume}
               setVolume={voiceGuidance.setVolume}
+              languages={voiceGuidance.languages}
+              language={voiceGuidance.language}
+              setLanguage={voiceGuidance.setLanguage}
+              gender={voiceGuidance.gender}
+              setGenderPreference={voiceGuidance.setGenderPreference}
+              hasAfricanVoice={voiceGuidance.hasAfricanVoice}
             />
           )}
         </div>

@@ -189,6 +189,7 @@ const HAZARD_DISPLAY: Record<BackendHazardType, { emoji: string; label: string }
   ACCIDENT: { emoji: '🚧', label: 'Accident' },
   FLOOD: { emoji: '🌊', label: 'Flood' },
   ROAD_WORKS: { emoji: '🚜', label: 'Road Works' },
+  ROAD_CLOSURE: { emoji: '⛔', label: 'Road Closed' },
   CHECKPOINT: { emoji: '🚓', label: 'Checkpoint' },
   DEBRIS: { emoji: '🪨', label: 'Debris' },
   SOS: { emoji: '🆘', label: 'SOS' },
