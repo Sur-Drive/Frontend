@@ -9,7 +9,7 @@ import { HazardAlerts } from "../components/sections/HazardAlerts";
 import { Community } from "../components/sections/Community";
 import { FAQ } from "../components/sections/FAQ";
 import { Contact } from "../components/sections/Contact";
-import { FinalCTA } from "../components/sections/FinalCTA";
+
 import { Modal } from "../components/ui/Modal";
 import { ScoutMode } from "../components/sections/ScoutMode";
 import { EmergencySOS } from "../components/sections/EmergencySOS";
