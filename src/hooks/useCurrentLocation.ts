@@ -1,43 +1,73 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from "react";
 
 interface Coords {
-  latitude: number
-  longitude: number
+  latitude: number;
+  longitude: number;
 }
 
 interface UseCurrentLocationResult {
-  coords: Coords | null
-  isLoading: boolean
-  error: string | null
+  coords: Coords | null;
+  isLoading: boolean;
+  error: string | null;
+  retry: () => void;
 }
 
-export function useCurrentLocation(): UseCurrentLocationResult {
-  const [coords, setCoords] = useState<Coords | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const DEFAULT_COORDS: Coords = { latitude: 6.5244, longitude: 3.3792 };
 
-  useEffect(() => {
+export function useCurrentLocation(): UseCurrentLocationResult {
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const locate = useCallback(() => {
     if (!navigator.geolocation) {
-      setError('Geolocation not supported')
-      setIsLoading(false)
-      return
+      setError("Geolocation not supported");
+      setCoords(DEFAULT_COORDS);
+      setIsLoading(false);
+      return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCoords({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        })
-        setIsLoading(false)
-      },
-      (err) => {
-        setError(err.message || 'Unable to get location')
-        setIsLoading(false)
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-    )
-  }, [])
+    setIsLoading(true);
+    setError(null);
 
-  return { coords, isLoading, error }
+    const onSuccess = (position: GeolocationPosition) => {
+      setCoords({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      setError(null);
+      setIsLoading(false);
+    };
+
+    const onFinalError = (err: GeolocationPositionError) => {
+      setError(
+        err.code === 1
+          ? "Location access denied. Please enable location permissions."
+          : err.code === 2
+            ? "Location unavailable."
+            : "Location request timed out.",
+      );
+
+      setCoords((prev) => prev ?? DEFAULT_COORDS);
+      setIsLoading(false);
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      () => {
+        navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+    );
+  }, []);
+
+  useEffect(() => {
+    locate();
+  }, [locate]);
+
+  return { coords, isLoading, error, retry: locate };
 }

@@ -177,27 +177,28 @@
 
 import { useEffect, useState } from 'react'
 import { AlertCircle } from 'lucide-react'
-import { useNearbyHazards, useVoteHazard } from '../hooks/useHazards'
-import type { HazardDto, HazardType } from '../api/hazards'
+import { useNearbyHazards, useConfirmHazard } from '../hooks/useHazards'
+import type { Hazard, BackendHazardType } from '../types/hazard'
 
 // ============================================================
 // Display mapping
 // ============================================================
 
-const HAZARD_DISPLAY: Record<HazardType, { emoji: string; label: string }> = {
+const HAZARD_DISPLAY: Record<BackendHazardType, { emoji: string; label: string }> = {
   POTHOLE: { emoji: '🕳️', label: 'Pothole' },
   ACCIDENT: { emoji: '🚧', label: 'Accident' },
   FLOOD: { emoji: '🌊', label: 'Flood' },
-  CONSTRUCTION: { emoji: '🚜', label: 'Road Works' },
-  ROADBLOCK: { emoji: '🚓', label: 'Checkpoint' },
+  ROAD_WORKS: { emoji: '🚜', label: 'Road Works' },
+  CHECKPOINT: { emoji: '🚓', label: 'Checkpoint' },
   DEBRIS: { emoji: '🪨', label: 'Debris' },
   SOS: { emoji: '🆘', label: 'SOS' },
-  DANGER_ZONE: { emoji: '⚠️', label: 'Danger Zone' },
+  DANGER: { emoji: '⚠️', label: 'Danger Zone' },
+  OTHER: { emoji: '❗', label: 'Other' },
 }
 
 interface DisplayReport {
   id: string
-  type: HazardType
+  type: BackendHazardType
   emoji: string
   label: string
   title: string
@@ -227,13 +228,12 @@ function formatTimeAgo(minutes: number): string {
   return `${Math.floor(minutes / 60)}h ago`
 }
 
-function mapHazard(h: HazardDto, userLat?: number, userLng?: number): DisplayReport {
+function mapHazard(h: Hazard, userLat?: number, userLng?: number): DisplayReport {
   const display = HAZARD_DISPLAY[h.type] ?? { emoji: '⚠️', label: h.type }
+  const lat = Number(h.location.latitude)
+  const lng = Number(h.location.longitude)
   const distanceKm =
-    h.distanceKm ??
-    (userLat != null && userLng != null
-      ? haversineKm(userLat, userLng, h.latitude, h.longitude)
-      : 0)
+    userLat != null && userLng != null ? haversineKm(userLat, userLng, lat, lng) : 0
 
   return {
     id: h.id,
@@ -241,11 +241,11 @@ function mapHazard(h: HazardDto, userLat?: number, userLng?: number): DisplayRep
     emoji: display.emoji,
     label: display.label,
     title: h.description,
-    location: h.locationAddress,
+    location: h.location.address,
     distanceKm: Math.round(distanceKm * 10) / 10,
     minutesAgo: minutesSince(h.createdAt),
-    author: h.isAnonymous ? 'Anonymous' : h.reporterName || 'Driver',
-    confirmCount: h.confirmCount ?? 0,
+    author: h.isAnonymous ? 'Anonymous' : h.driver?.name || 'Driver',
+    confirmCount: h.confirmations.confirms,
   }
 }
 
@@ -411,7 +411,7 @@ export default function RoadFeed() {
   const [votes, setVotes] = useState<Record<string, VoteState>>({})
   const [pending, setPending] = useState<PendingAction | null>(null)
 
-  const voteHazard = useVoteHazard()
+  const voteHazard = useConfirmHazard()
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -442,7 +442,7 @@ export default function RoadFeed() {
     const { reportId, action } = pending
 
     voteHazard.mutate(
-      { hazardId: reportId, type: action === 'confirm' ? 'CONFIRMED' : 'INCORRECT' },
+      { hazardId: reportId, type: action === 'confirm' ? 'CONFIRM' : 'INCORRECT' },
       {
         onSuccess: () => {
           setVotes((prev) => ({

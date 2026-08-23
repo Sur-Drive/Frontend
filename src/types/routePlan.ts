@@ -29,6 +29,21 @@ export interface RouteOption {
   caloriesBurned: number
 }
 
+// The backend's exact field names for each entry in `RouteOption.alternatives`
+// aren't pinned down yet, so this is deliberately loose — see
+// normalizeRouteAlternative() in api/route.ts, which fills this in
+// defensively from whatever shape actually comes back.
+export interface RouteAlternative {
+  path: RawLngLat[]
+  distance: number
+  duration: number
+  durationFormatted?: string
+  summary?: string
+  safetyScore?: number
+  safetyLevel?: SafetyLevel
+  raw: unknown
+}
+
 export interface RoutePlanSummary {
   bestRoute: RouteModeKey
   fastest: RouteModeKey
@@ -42,3 +57,4 @@ export interface RoutePlanResponse {
 }
 
 export const ROUTE_MODE_ORDER: RouteModeKey[] = ['driving', 'motorcycle', 'cycling', 'walking']
+

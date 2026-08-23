@@ -385,6 +385,32 @@ interface GoogleMapViewProps {
   heading?: number
   interactive?: boolean
   followMode?: boolean
+
+  /**
+   * Standard/Satellite/Terrain — passed straight through to
+   * map.setMapTypeId. Defaults to 'roadmap' (the standard view).
+   */
+  mapTypeId?: 'roadmap' | 'satellite' | 'terrain' | 'hybrid'
+
+  /**
+   * Simulated 3D/tilted navigation view. The Maps JS API's real building
+   * tilt only kicks in for vector maps with a Map ID (which this app
+   * doesn't configure), so instead we fake the "tilted, looking ahead"
+   * nav-app look with a CSS perspective/rotateX applied to the same
+   * wrapper that already handles heading rotation below — 0 = flat
+   * top-down (default), ~45 = tilted. Purely cosmetic, never affects
+   * real lat/lng math.
+   */
+  tilt?: number
+
+  /**
+   * Live traffic layer (Google's own congestion tiles — green/orange/
+   * red/dark-red road coloring, updated by Google in the background).
+   * Toggled on/off by mounting or unmounting a google.maps.TrafficLayer;
+   * no polling or extra requests on our side, Google's tiles refresh
+   * themselves. Defaults to false.
+   */
+  showTraffic?: boolean
 }
 
 export default function GoogleMapView({
@@ -398,6 +424,9 @@ export default function GoogleMapView({
   heading = 0,
   interactive = true,
   followMode = false,
+  mapTypeId = 'roadmap',
+  tilt = 0,
+  showTraffic = false,
 }: GoogleMapViewProps) {
   const { isLoaded, error } = useGoogleMaps()
 
@@ -417,8 +446,13 @@ export default function GoogleMapView({
     const map = new google.maps.Map(containerRef.current, {
       center,
       zoom,
+      mapTypeId,
       disableDefaultUI: true,
       zoomControl: false,
+      mapTypeControl: false,
+      fullscreenControl: false,
+      streetViewControl: false,
+      rotateControl: false,
       clickableIcons: false,
       gestureHandling: interactive ? 'greedy' : 'none',
       draggable: interactive,
@@ -483,6 +517,52 @@ export default function GoogleMapView({
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
+    map.setMapTypeId(mapTypeId)
+  }, [mapTypeId])
+
+  // Live traffic layer — a plain google.maps.TrafficLayer bound/unbound
+  // to the map. Google owns the tile refresh cadence entirely, so this
+  // is just an on/off mount, not a data fetch we manage ourselves.
+  const trafficLayerRef = useRef<google.maps.TrafficLayer | null>(null)
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (showTraffic) {
+      if (!trafficLayerRef.current) {
+        trafficLayerRef.current = new google.maps.TrafficLayer()
+      }
+      trafficLayerRef.current.setMap(map)
+    } else {
+      trafficLayerRef.current?.setMap(null)
+    }
+  }, [showTraffic, isLoaded])
+
+  useEffect(() => {
+    return () => {
+      trafficLayerRef.current?.setMap(null)
+      trafficLayerRef.current = null
+    }
+  }, [])
+
+  // Best-effort: ask the native API for real 45° tilt too, in case this
+  // location/zoom has imagery that supports it. Harmless no-op otherwise
+  // — the CSS tilt below is what actually guarantees the visual on every
+  // map/location.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    try {
+      map.setTilt(tilt)
+    } catch {
+      // setTilt can throw on some map configurations — ignore, CSS covers it
+    }
+  }, [tilt])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
 
     const existing = overlaysRef.current
     const nextIds = new Set(markers.map((m) => m.id))
@@ -527,18 +607,44 @@ export default function GoogleMapView({
   return (
     <div
       className={className}
-      style={{ position: 'relative', width: '100%', height: '100%' }}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        perspective: tilt ? '900px' : undefined,
+      }}
     >
+      {/*
+        Tilt wrapper: rotateX fakes the "looking ahead" nav-app tilt on
+        top of a plain raster map (real building tilt needs a vector
+        Map ID, which we don't configure). transform-origin at the
+        bottom keeps the near edge anchored so tilting reads as leaning
+        the horizon back, not sliding the whole view. The scale-up
+        compensates for the extra empty space rotateX exposes at the
+        top so the tilted view still fills the container.
+      */}
       <div
         style={{
           position: 'absolute',
-          inset: '-21%',
-          transform: `rotate(${-heading}deg)`,
-          transition: 'transform 0.25s linear',
-          willChange: 'transform',
+          inset: 0,
+          transformStyle: 'preserve-3d',
+          transform: tilt ? `rotateX(${tilt}deg) scale(1.35)` : undefined,
+          transformOrigin: 'center bottom',
+          transition: 'transform 0.3s ease',
         }}
       >
-        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+        <div
+          style={{
+            position: 'absolute',
+            inset: '-21%',
+            transform: `rotate(${-heading}deg)`,
+            transition: 'transform 0.25s linear',
+            willChange: 'transform',
+          }}
+        >
+          <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+        </div>
       </div>
 
       {followMode && (

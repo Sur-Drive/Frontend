@@ -148,9 +148,12 @@ async function fetchNotifications(
 }
 
 export function useNotificationsList(params: NotificationsListParams = {}) {
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+
   return useQuery({
     queryKey: notificationKeys.list(params),
     queryFn: () => fetchNotifications(params),
+    enabled: isLoggedIn,
   })
 }
 
@@ -163,10 +166,13 @@ async function fetchUnreadCount(): Promise<{ count: number }> {
 }
 
 export function useUnreadCount() {
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+
   return useQuery({
     queryKey: notificationKeys.unreadCount(),
     queryFn: fetchUnreadCount,
-    refetchInterval: 30_000,
+    enabled: isLoggedIn,
+    refetchInterval: isLoggedIn ? 30_000 : false,
   })
 }
 
@@ -181,9 +187,76 @@ async function fetchRecentNotifications(limit: number): Promise<NotificationItem
 }
 
 export function useRecentNotifications(limit = 5) {
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+
   return useQuery({
     queryKey: notificationKeys.recent(limit),
     queryFn: () => fetchRecentNotifications(limit),
+    enabled: isLoggedIn,
+  })
+}
+
+// ============================================================
+// Mark one as read: PATCH /notifications/{id}/read
+// ============================================================
+
+async function markNotificationRead(id: string): Promise<{ success: boolean }> {
+  return api.patch<{ success: boolean }>(`/notifications/${id}/read`)
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: markNotificationRead,
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: notificationKeys.all })
+
+      // Optimistically flip isRead on any cached list/recent queries that
+      // contain this notification, and nudge the unread badge down.
+      const previousQueries = queryClient.getQueriesData<
+        NotificationsListResponse | NotificationItem[]
+      >({ queryKey: notificationKeys.all })
+
+      previousQueries.forEach(([queryKey, data]) => {
+        if (!data) return
+        if (Array.isArray(data)) {
+          queryClient.setQueryData(
+            queryKey,
+            data.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+          )
+        } else if (Array.isArray(data.notifications)) {
+          queryClient.setQueryData(queryKey, {
+            ...data,
+            notifications: data.notifications.map((n) =>
+              n.id === id ? { ...n, isRead: true } : n
+            ),
+          })
+        }
+      })
+
+      const previousUnreadCount = queryClient.getQueryData<{ count: number }>(
+        notificationKeys.unreadCount()
+      )
+      if (previousUnreadCount && previousUnreadCount.count > 0) {
+        queryClient.setQueryData(notificationKeys.unreadCount(), {
+          count: previousUnreadCount.count - 1,
+        })
+      }
+
+      return { previousQueries, previousUnreadCount }
+    },
+    onError: (_err, _id, context) => {
+      context?.previousQueries?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data)
+      })
+      if (context?.previousUnreadCount) {
+        queryClient.setQueryData(notificationKeys.unreadCount(), context.previousUnreadCount)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all })
+    },
   })
 }
 
