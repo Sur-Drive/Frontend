@@ -1,5 +1,6 @@
 import type { ManeuverStep, ManeuverType } from '../../lib/maneuvers'
 import { formatManeuverDistance } from '../../lib/maneuvers'
+import { translateManeuverInstruction, type NavLanguage } from '../../lib/navPhrases'
 
 // Rotation (degrees) applied to the base "straight up" arrow for
 // directional maneuvers — everything that isn't one of the special-shaped
@@ -76,11 +77,14 @@ export interface TurnByTurnCardProps {
   distanceMeters: number
   currentRoadName?: string | null
   nextRoadName?: string | null
+  /** the maneuver after `step`, if any — rendered as a small "Then …" lookahead chip, same as Google/Waze show the next turn before you reach it. */
+  nextManeuver?: ManeuverStep | null
   className?: string
 }
 
-/** Instruction text with a road name folded in where we have one, e.g. "Turn left onto Whittier Street". */
-export function describeManeuver(step: ManeuverStep, roadName?: string | null): string {
+/** Instruction text with a road name folded in where we have one, e.g. "Turn left onto Whittier Street". Pass `lang` to get the Pidgin equivalent (see navPhrases.ts) — omit it (or pass 'en') to keep the on-screen English text this card has always shown. */
+export function describeManeuver(step: ManeuverStep, roadName?: string | null, lang: NavLanguage = 'en'): string {
+  if (lang !== 'en') return translateManeuverInstruction(step.type, roadName, lang)
   if (step.type === 'arrive') return step.instruction
   if (!roadName) return step.instruction
   if (step.type === 'roundabout') return `${step.instruction}, then take the exit onto ${roadName}`
@@ -88,25 +92,40 @@ export function describeManeuver(step: ManeuverStep, roadName?: string | null): 
   return `${step.instruction} onto ${roadName}`
 }
 
-export default function TurnByTurnCard({ step, distanceMeters, currentRoadName, nextRoadName, className = '' }: TurnByTurnCardProps) {
+export default function TurnByTurnCard({ step, distanceMeters, currentRoadName, nextRoadName, nextManeuver, className = '' }: TurnByTurnCardProps) {
   const isArrive = step.type === 'arrive'
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 bg-gray-900 shadow-lg rounded-2xl ${className}`}>
-      <div className="flex items-center justify-center flex-shrink-0 text-white bg-white/15 rounded-xl w-11 h-11 sm:w-12 sm:h-12">
-        <ManeuverIcon type={step.type} className="w-6 h-6 sm:w-7 sm:h-7" />
+    <div className={`overflow-hidden bg-gray-900 shadow-lg rounded-2xl ${className}`}>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center justify-center flex-shrink-0 text-white bg-white/15 rounded-xl w-11 h-11 sm:w-12 sm:h-12">
+          <ManeuverIcon type={step.type} className="w-6 h-6 sm:w-7 sm:h-7" />
+        </div>
+        <div className="flex-1 min-w-0">
+          {!isArrive && (
+            <p className="text-xs font-semibold tracking-wide text-white/70">{formatManeuverDistance(distanceMeters)}</p>
+          )}
+          <p className="text-[15px] sm:text-base font-bold leading-tight text-white truncate">
+            {describeManeuver(step, nextRoadName)}
+          </p>
+          {currentRoadName && !isArrive && (
+            <p className="text-[11px] sm:text-xs text-white/60 truncate">On {currentRoadName}</p>
+          )}
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        {!isArrive && (
-          <p className="text-xs font-semibold tracking-wide text-white/70">{formatManeuverDistance(distanceMeters)}</p>
-        )}
-        <p className="text-[15px] sm:text-base font-bold leading-tight text-white truncate">
-          {describeManeuver(step, nextRoadName)}
-        </p>
-        {currentRoadName && !isArrive && (
-          <p className="text-[11px] sm:text-xs text-white/60 truncate">On {currentRoadName}</p>
-        )}
-      </div>
+
+      {/* "Then …" lookahead — the next maneuver after this one, shown as a
+          dimmer strip under the main instruction (matches Google Maps'
+          small "Then ↰" chip that appears once you're close to a turn). */}
+      {!isArrive && nextManeuver && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-black/20 border-t border-white/10">
+          <span className="text-[10px] font-semibold tracking-wide text-white/50 flex-shrink-0">Then</span>
+          <div className="flex items-center justify-center flex-shrink-0 text-white/80 w-5 h-5">
+            <ManeuverIcon type={nextManeuver.type} className="w-4 h-4" />
+          </div>
+          <p className="text-xs text-white/70 truncate">{describeManeuver(nextManeuver)}</p>
+        </div>
+      )}
     </div>
   )
 }
