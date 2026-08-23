@@ -16,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
         setMounted(true);
 
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 25);
+            setIsScrolled(window.scrollY > 20);
         };
 
         handleScroll();
@@ -25,7 +25,6 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // Close mobile menu on escape key
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isMobileMenuOpen) {
@@ -36,7 +35,6 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
         return () => window.removeEventListener("keydown", handleEscape);
     }, [isMobileMenuOpen]);
 
-    // Prevent body scroll when mobile menu is open
     useEffect(() => {
         if (isMobileMenuOpen) {
             document.body.style.overflow = "hidden";
@@ -53,20 +51,20 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
     return (
         <>
             <motion.header
-                initial={{ y: -24, opacity: 0 }}
+                initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
                 className="fixed left-0 right-0 top-0 z-50"
             >
                 <motion.div
                     animate={{
-                        marginTop: isScrolled ? 12 : 0,
-                        marginLeft: isScrolled ? 10 : 0,
-                        marginRight: isScrolled ? 10 : 0,
-                        borderRadius: isScrolled ? 20 : 0,
-                        width: isScrolled ? "calc(100% - 20px)" : "100%",
+                        marginTop: isScrolled ? 8 : 0,
+                        marginLeft: isScrolled ? 8 : 0,
+                        marginRight: isScrolled ? 8 : 0,
+                        borderRadius: isScrolled ? 16 : 0,
+                        width: isScrolled ? "calc(100% - 16px)" : "100%",
                     }}
-                    transition={{ duration: 0.35, ease: "easeInOut" }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
                     className={`
                         mx-auto overflow-hidden transition-all duration-300
                         ${
@@ -76,31 +74,22 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                         }
                     `}
                 >
-                    <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 py-3 lg:py-4">
+                    <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 py-2 sm:py-2.5 lg:py-3.5">
                         {/* Logo */}
                         <a
                             href="#"
-                            className="flex shrink-0 items-center space-x-3 group"
+                            className="flex shrink-0 items-center space-x-2.5 group"
                         >
-                            <div className="relative flex items-center">
-                                <img
-                                    src="/images/logo.png"
-                                    alt="SUR-DRIVEHT"
-                                    className="h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                                    onError={(e) => {
-                                        const target =
-                                            e.target as HTMLImageElement;
-                                        target.style.display = "none";
-                                    }}
-                                />
-                                {/* Subtle glow behind logo on scroll */}
-                                {isScrolled && (
-                                    <div className="absolute inset-0 blur-xl opacity-30">
-                                        <div className="w-full h-full bg-gold-500/20 rounded-full scale-150"></div>
-                                    </div>
-                                )}
-                            </div>
-                            <span className="text-xl font-archivo text-white drop-shadow-lg">
+                            <img
+                                src="/images/logo.png"
+                                alt="SUR-DRIVEHT"
+                                className="h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105 sm:h-9 lg:h-10"
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = "none";
+                                }}
+                            />
+                            <span className="text-base font-archivo text-white drop-shadow-lg sm:text-lg lg:text-xl">
                                 SUR-DRIVE<span className="ht-white">HT</span>
                             </span>
                         </a>
@@ -111,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                                 <a
                                     key={item.label}
                                     href={item.href}
-                                    className="inline-flex h-10 min-w-[80px] items-center justify-center rounded-full px-4 text-sm font-medium text-purple-300 transition-all duration-300 hover:bg-white/10 hover:text-gold-500"
+                                    className="inline-flex h-9 min-w-[64px] items-center justify-center rounded-full px-4 text-sm font-medium text-purple-300 transition-all duration-300 hover:bg-white/10 hover:text-gold-500"
                                 >
                                     {item.label}
                                 </a>
@@ -119,21 +108,21 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                         </nav>
 
                         {/* Desktop Buttons */}
-                        <div className="hidden lg:flex items-center space-x-3">
-                            <AppButton type="android" onClick={onModalOpen} />
-                            <AppButton type="ios" onClick={onModalOpen} />
+                        <div className="hidden lg:flex items-center space-x-2.5">
+                            <AppButton type="android" />
+                            <AppButton type="ios" />
                         </div>
 
                         {/* Mobile Menu Button */}
                         <button
                             type="button"
                             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-                            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 lg:hidden"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 lg:hidden sm:h-10 sm:w-10"
                             aria-label="Toggle menu"
                         >
                             {isMobileMenuOpen ? (
                                 <svg
-                                    className="w-5 h-5"
+                                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -147,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                                 </svg>
                             ) : (
                                 <svg
-                                    className="w-5 h-5"
+                                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -165,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                 </motion.div>
             </motion.header>
 
-            {/* Mobile Menu Overlay */}
+            {/* Mobile Menu */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <>
@@ -180,15 +169,13 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                         />
 
                         <motion.div
-                            initial={{ opacity: 0, y: -18, scale: 0.96 }}
+                            initial={{ opacity: 0, y: -10, scale: 0.96 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -18, scale: 0.96 }}
-                            transition={{ duration: 0.25, ease: "easeOut" }}
-                            className="fixed left-4 right-4 top-[80px] z-50 overflow-hidden rounded-2xl border border-purple-700/30 bg-gradient-to-b from-[#1A0033] via-[#2D0057] to-[#1A0033] backdrop-blur-2xl shadow-2xl lg:hidden"
+                            exit={{ opacity: 0, y: -10, scale: 0.96 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="fixed left-4 right-4 top-[68px] z-50 overflow-hidden rounded-2xl border border-purple-700/30 bg-gradient-to-b from-[#1A0033] via-[#2D0057] to-[#1A0033] backdrop-blur-2xl shadow-2xl lg:hidden sm:left-6 sm:right-6 sm:top-[72px]"
                         >
-                            <div className="flex flex-col p-4 gap-2">
-                                {/* Logo removed from mobile menu */}
-
+                            <div className="flex flex-col p-4 gap-1.5 sm:p-5 sm:gap-2">
                                 {NAV_ITEMS.map((item) => (
                                     <a
                                         key={item.label}
@@ -196,32 +183,24 @@ export const Header: React.FC<HeaderProps> = ({ onModalOpen }) => {
                                         onClick={() =>
                                             setIsMobileMenuOpen(false)
                                         }
-                                        className="rounded-full px-5 py-4 text-center text-lg font-medium text-white transition hover:bg-white/10 hover:text-gold-500"
+                                        className="rounded-full px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-white/10 hover:text-gold-500 sm:py-3.5 sm:text-base"
                                     >
                                         {item.label}
                                     </a>
                                 ))}
 
-                                <div className="mt-2 flex flex-col gap-3 pt-4 border-t border-purple-700/30">
+                                <div className="mt-2 flex flex-col gap-2 pt-3 border-t border-purple-700/30 sm:gap-2.5 sm:pt-4">
                                     <AppButton
                                         type="android"
-                                        onClick={() => {
-                                            setIsMobileMenuOpen(false);
-                                            onModalOpen();
-                                        }}
                                         className="w-full justify-center"
                                     />
                                     <AppButton
                                         type="ios"
-                                        onClick={() => {
-                                            setIsMobileMenuOpen(false);
-                                            onModalOpen();
-                                        }}
                                         className="w-full justify-center"
                                     />
                                 </div>
 
-                                <p className="text-center text-xs text-purple-300 mt-4">
+                                <p className="text-center text-[11px] text-purple-300 mt-3 opacity-60 sm:text-xs sm:mt-4">
                                     SUR-DRIVEHT © 2026
                                 </p>
                             </div>

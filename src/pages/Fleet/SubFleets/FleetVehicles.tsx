@@ -223,7 +223,7 @@ const FleetVehicles: React.FC = () => {
                 assignedDriver: vehicle.assignedDriverId
                     ? {
                           id: vehicle.assignedDriverId,
-                          fullName: "Assigned", // You might want to fetch driver details too
+                          fullName: "Assigned",
                       }
                     : undefined,
             }));
@@ -352,7 +352,7 @@ const FleetVehicles: React.FC = () => {
     useEffect(() => {
         fetchVehicles();
         fetchVehicleUsage();
-
+        fetchSubFleets();
         fetchDrivers();
     }, []);
 

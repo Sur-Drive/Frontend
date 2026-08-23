@@ -41,9 +41,9 @@ function LandingPage() {
             <Community />
             <Fleets />
             <Partners />
-            <ComingSoon onModalOpen={() => setIsModalOpen(true)} />
+            {/* <ComingSoon onModalOpen={() => setIsModalOpen(true)} /> */}
             <FAQ />
-            <FinalCTA onModalOpen={() => setIsModalOpen(true)} />
+            {/* <FinalCTA onModalOpen={() => setIsModalOpen(true)} /> */}
             <FullWidthImage />
             <Contact />
             <Footer />
