@@ -2210,7 +2210,7 @@ export default function PlanRoutePage() {
       {/* Connectivity status — sits above the map, below any modal sheets;
           shows nothing while online so it never takes up permanent space. */}
       <div className="absolute z-[500] left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+12px)] w-[calc(100%-32px)] max-w-sm pointer-events-none">
-        <div className="pointer-events-auto flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-2 pointer-events-auto">
           <OfflineBanner />
           {/* Small, non-blocking location status. The map itself never
               waits on this — it's already showing a real center (GPS or
@@ -2227,7 +2227,7 @@ export default function PlanRoutePage() {
               <button
                 type="button"
                 onClick={() => setLocationNoticeDismissed(true)}
-                className="shrink-0 text-gray-400 hover:text-gray-600"
+                className="text-gray-400 shrink-0 hover:text-gray-600"
                 aria-label="Dismiss"
               >
                 ✕
@@ -2469,15 +2469,15 @@ export default function PlanRoutePage() {
 
       {/* Navigation Top Stack */}
       {isNavigating && (
-        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2 sm:flex sm:justify-center">
-          <div className="space-y-2 sm:w-full sm:max-w-md">
+        <div className="absolute top-0 left-0 right-0 z-20 px-2.5 sm:px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-1 sm:pb-2 sm:flex sm:justify-center">
+          <div className="space-y-1.5 sm:space-y-2 sm:w-full sm:max-w-md">
             <div
-              className={`flex items-center gap-3 px-4 py-3 shadow-sm rounded-2xl ${hasArrived ? "bg-purple-600" : "bg-emerald-500"}`}
+              className={`flex items-center gap-1.5 sm:gap-3 px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-sm rounded-xl sm:rounded-2xl ${hasArrived ? "bg-purple-600" : "bg-emerald-500"}`}
             >
-              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20">
+              <div className="flex items-center justify-center w-6 h-6 rounded-lg sm:w-10 sm:h-10 sm:rounded-xl bg-white/20">
                 <svg
                   viewBox="0 0 24 24"
-                  className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white"
+                  className="w-3 h-3 text-white sm:w-5 sm:h-5"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
@@ -2491,16 +2491,12 @@ export default function PlanRoutePage() {
                   )}
                 </svg>
               </div>
-              <div className="flex-1">
-                <p className="text-[10px] sm:text-xs font-medium tracking-wide uppercase text-white/80">
-                  {hasArrived
-                    ? "Trip complete"
-                    : `${remainingKm.toFixed(1)} KM left`}
+              <div className="flex-1 min-w-0">
+                <p className="text-[8px] sm:text-xs font-medium tracking-wide uppercase text-white/80 truncate leading-tight">
+                  {hasArrived ? "Done" : `${remainingKm.toFixed(1)} km left`}
                 </p>
-                <p className="text-xs font-semibold text-white sm:text-sm">
-                  {hasArrived
-                    ? "You've arrived"
-                    : "Head out and follow the route"}
+                <p className="text-[10px] sm:text-sm font-semibold text-white truncate leading-tight">
+                  {hasArrived ? "You've arrived" : "Follow the route"}
                 </p>
               </div>
               {voiceGuidance.isSupported && (
@@ -2526,7 +2522,7 @@ export default function PlanRoutePage() {
                       : "Turn on Collision Guard"
                   }
                   title="Collision Guard — forward-collision warning"
-                  className={`flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition ${
+                  className={`flex items-center justify-center flex-shrink-0 w-6 h-6 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl transition ${
                     collisionGuardEnabled
                       ? "bg-white text-emerald-600"
                       : "bg-white/20 text-white"
@@ -2534,7 +2530,7 @@ export default function PlanRoutePage() {
                 >
                   <svg
                     viewBox="0 0 24 24"
-                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
+                    className="w-3 h-3 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -2553,11 +2549,11 @@ export default function PlanRoutePage() {
                     ? "Collapse trip details"
                     : "Expand trip details"
                 }
-                className="flex items-center justify-center flex-shrink-0 text-white transition w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 hover:bg-white/30"
+                className="flex items-center justify-center flex-shrink-0 w-6 h-6 text-white transition rounded-lg sm:w-10 sm:h-10 sm:rounded-xl bg-white/20 hover:bg-white/30"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform ${topStackExpanded ? "rotate-180" : ""}`}
+                  className={`w-3 h-3 sm:w-5 sm:h-5 transition-transform ${topStackExpanded ? "rotate-180" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
@@ -3091,7 +3087,7 @@ export default function PlanRoutePage() {
                   type="button"
                   onClick={() => setShowPlanModal(false)}
                   aria-label="Close route planner"
-                  className="flex items-center justify-center flex-shrink-0 text-gray-500 transition bg-gray-100 rounded-full  w-9 h-9 hover:bg-gray-200 active:bg-gray-300 touch-manipulation"
+                  className="flex items-center justify-center flex-shrink-0 text-gray-500 transition bg-gray-100 rounded-full w-9 h-9 hover:bg-gray-200 active:bg-gray-300 touch-manipulation"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -3133,9 +3129,7 @@ export default function PlanRoutePage() {
             ═══════════════════════════════════════════════ */}
               <div ref={startFieldContainerRef}>
                 <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="flex items-center justify-center w-5 h-5 border-2 rounded-full  border-emerald-500"
-                  >
+                  <div className="flex items-center justify-center w-5 h-5 border-2 rounded-full border-emerald-500">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
 
@@ -3144,9 +3138,7 @@ export default function PlanRoutePage() {
                   </span>
                 </div>
 
-                <div
-                  className="flex items-center gap-2 px-4 py-3 transition border border-transparent  bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white"
-                >
+                <div className="flex items-center gap-2 px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
                   <AddressAutocompleteInput
                     value={startPoint}
                     onChange={setStartPoint}
@@ -3253,9 +3245,7 @@ export default function PlanRoutePage() {
                   </span>
                 </div>
 
-                <div
-                  className="px-4 py-3 transition border border-transparent  bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white"
-                >
+                <div className="px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
                   <AddressAutocompleteInput
                     value={destination}
                     onChange={setDestination}
