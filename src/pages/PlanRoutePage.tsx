@@ -68,7 +68,7 @@ import {
   type LatLng,
 } from "../lib/geoPath";
 import { useVoiceGuidance } from "../hooks/useVoiceGuidance";
-import { useTurnByTurn } from "../hooks/useTurnByTurn";
+import { useTurnByTurn, areaNameFromAddress } from "../hooks/useTurnByTurn";
 import { useWakeWord, useVoiceSearch } from "../hooks/useVoiceSearch";
 import { forwardGeocode } from "../api/geocoding";
 import { Mic } from "lucide-react";
@@ -1644,7 +1644,13 @@ export default function PlanRoutePage() {
   // route* to be small — matching how turn-by-turn nav apps do it.
   const ARRIVAL_RADIUS_METERS = 50;
   const ARRIVAL_ROUTE_REMAINING_METERS = 60;
-  const ARRIVAL_MAX_ACCURACY_METERS = 100;
+  // Must be meaningfully smaller than the two radii above — a GPS fix's
+  // reported accuracy is its error *budget*, so allowing anything close
+  // to (or larger than) the arrival radius means a mediocre fix can read
+  // as "within 50m of the destination" purely from its own error margin,
+  // triggering "You've arrived" while the driver is still genuinely
+  // driving. 100m previously allowed exactly that.
+  const ARRIVAL_MAX_ACCURACY_METERS = 30;
   const ARRIVAL_CONFIRM_MS = 3000;
 
   const distanceToDestinationMeters =
@@ -1743,6 +1749,20 @@ export default function PlanRoutePage() {
   const etaMinutes = eta.remainingMinutes;
   const plannedArrivalLabel = eta.plannedEtaClock;
   const liveArrivalLabel = eta.currentEtaClock;
+
+  // Tint the road-ahead portion of the route line itself to match the
+  // same 4-tier traffic legend already used for the live-traffic layer
+  // (see TRAFFIC_LEGEND in MapControls.tsx) — green/amber/red/dark-red —
+  // so a hold-up is visible right on the route being driven, not just as
+  // a background road tile color or a text badge.
+  const routeAheadColor = useMemo(() => {
+    if (!isNavigating || !eta.traffic) return undefined;
+    const { tone, deltaMinutes } = eta.traffic;
+    if (tone !== "slower") return "#34a853"; // Normal traffic
+    if (deltaMinutes >= 20) return "#a50e0e"; // Severe congestion / major hold-up
+    if (deltaMinutes >= 10) return "#ea4335"; // Heavy congestion
+    return "#fbbc04"; // Moderate congestion / small hold-up
+  }, [isNavigating, eta.traffic]);
 
   // ── Turn-by-turn voice guidance ──────────────────────
   const voiceGuidance = useVoiceGuidance();
@@ -1891,6 +1911,65 @@ export default function PlanRoutePage() {
       announcedNowRef.current = null;
     }
   }, [isNavigating]);
+
+  // ── "You are now in <area>" callouts ──────────────────
+  // Separate from the road-level maneuver call-outs above: this speaks up
+  // whenever the driver crosses into a new neighborhood/area (reverse
+  // geocoded from the live GPS fix), the same way a passenger giving
+  // directions would say "you're in Baruwa now" as landmarks change,
+  // rather than only ever naming the street you're turning onto.
+  // Geocoded on a distance gate (not every GPS tick) so a real drive
+  // doesn't fire one lookup per position update.
+  const AREA_ANNOUNCE_MIN_DISTANCE_METERS = 150;
+  const lastAreaLookupPosRef = useRef<{ lat: number; lng: number } | null>(
+    null,
+  );
+  const lastAnnouncedAreaRef = useRef<string | null>(null);
+  const areaLookupInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (!isNavigating) {
+      lastAreaLookupPosRef.current = null;
+      lastAnnouncedAreaRef.current = null;
+      return;
+    }
+    if (!userLocation || hasArrived) return;
+
+    const current = { lat: userLocation[0], lng: userLocation[1] };
+    const last = lastAreaLookupPosRef.current;
+    if (
+      last &&
+      haversineMeters(last, current) < AREA_ANNOUNCE_MIN_DISTANCE_METERS
+    ) {
+      return;
+    }
+    if (areaLookupInFlightRef.current) return;
+
+    lastAreaLookupPosRef.current = current;
+    areaLookupInFlightRef.current = true;
+    let cancelled = false;
+
+    reverseGeocode(current.lat, current.lng)
+      .then(({ address }) => {
+        if (cancelled) return;
+        const area = areaNameFromAddress(address);
+        if (area && area !== lastAnnouncedAreaRef.current) {
+          lastAnnouncedAreaRef.current = area;
+          voiceGuidance.speak(navPhrases.enteringArea(area));
+        }
+      })
+      .catch(() => {
+        // Best-effort — a failed lookup just means we try again once the
+        // driver has moved another AREA_ANNOUNCE_MIN_DISTANCE_METERS.
+      })
+      .finally(() => {
+        areaLookupInFlightRef.current = false;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isNavigating, hasArrived, userLocation]);
 
   // ── Destination approaching ──────────────────────────
   // A distinct heads-up shortly before arrival ("Approaching your
@@ -2204,6 +2283,7 @@ export default function PlanRoutePage() {
             tilt={mapTilt}
             showTraffic={showTraffic}
             theme={mapTheme}
+            remainingColor={routeAheadColor}
             onReady={setMapInstance}
             className="w-full h-full"
           />
