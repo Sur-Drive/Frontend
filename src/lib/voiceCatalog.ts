@@ -105,12 +105,29 @@ const REGION_DISPLAY = (() => {
   }
 })()
 
+function safeDisplayName(
+  display: Intl.DisplayNames | null,
+  code: string | undefined,
+): string | undefined {
+  if (!display || !code) return undefined
+  try {
+    return display.of(code) ?? undefined
+  } catch {
+    // Intl.DisplayNames#of throws RangeError for any code that isn't a
+    // well-formed BCP-47 subtag. Real-world TTS engines (especially on
+    // Android/Chrome) report plenty of these — vendor-specific tags,
+    // 3-letter codes, malformed casing, etc. This can't be pre-validated
+    // reliably, so just fall back instead of letting it crash the render.
+    return undefined
+  }
+}
+
 export function describeLanguage(lang: string): string {
   if (!lang) return 'Unknown language'
   const [langCode, regionCode] = lang.split('-')
-  const langName = LANGUAGE_DISPLAY?.of(langCode?.toLowerCase() ?? '') ?? langCode
+  const langName = safeDisplayName(LANGUAGE_DISPLAY, langCode?.toLowerCase()) ?? langCode ?? lang
   if (!regionCode) return langName ?? lang
-  const regionName = REGION_DISPLAY?.of(regionCode.toUpperCase()) ?? regionCode
+  const regionName = safeDisplayName(REGION_DISPLAY, regionCode.toUpperCase()) ?? regionCode
   return `${langName} (${regionName})`
 }
 
