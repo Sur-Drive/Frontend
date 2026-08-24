@@ -1629,29 +1629,33 @@ export default function PlanRoutePage() {
   }, [collisionGuard.activeWarning, collisionGuardEnabled, isNavigating]);
 
   // ── Arrival ──
-  // Google Maps doesn't declare arrival off a single GPS sample — a lone
-  // noisy/inaccurate fix that happens to land near the destination would
-  // otherwise trigger "You've arrived" while still blocks away. We guard
-  // against that the same way: ignore fixes whose reported accuracy is too
-  // poor to trust, and require the "arrived" condition to hold steadily
-  // for a few seconds (not just once) before actually confirming it.
+  // Modeled on how real turn-by-turn apps (Google Maps/Waze) do this —
+  // Google's own navigation patents describe the same two-part shape:
+  // a distance gate around the destination, then a confirmation step
+  // before actually declaring arrival, rather than trusting one sample.
   //
-  // Straight-line distance alone isn't enough either: it can look small
-  // while the destination is still a real drive away (across a highway
-  // median, a canal, a walled estate, etc — the classic "3 km left" but
-  // as-the-crow-flies is only 40 m" case). So arrival requires BOTH the
-  // straight-line distance AND the distance remaining *along the actual
-  // route* to be small — matching how turn-by-turn nav apps do it.
-  const ARRIVAL_RADIUS_METERS = 50;
-  const ARRIVAL_ROUTE_REMAINING_METERS = 60;
-  // Must be meaningfully smaller than the two radii above — a GPS fix's
-  // reported accuracy is its error *budget*, so allowing anything close
-  // to (or larger than) the arrival radius means a mediocre fix can read
-  // as "within 50m of the destination" purely from its own error margin,
-  // triggering "You've arrived" while the driver is still genuinely
-  // driving. 100m previously allowed exactly that.
-  const ARRIVAL_MAX_ACCURACY_METERS = 30;
+  // Straight-line distance alone isn't enough: it can look small while
+  // the destination is still a real drive away (across a highway median,
+  // a canal, a walled estate — "3 km left" but only 40m as the crow
+  // flies). So the gate requires BOTH the straight-line distance AND the
+  // distance remaining *along the actual route* to be small.
+  //
+  // A GPS fix's reported accuracy is its own error budget, so instead of
+  // a fixed accuracy cutoff (which real fixes routinely miss — outdoor
+  // GPS commonly reports 20-50m and spikes higher near buildings, so a
+  // rigid "must be under 30m" gate can simply never pass), the gate
+  // WIDENS with the fix's own accuracy, capped so a wildly noisy fix
+  // can't just claim arrival from anywhere. Tighter GPS -> tighter,
+  // more confident gate; looser GPS -> a wider but still bounded one.
+  const ARRIVAL_RADIUS_METERS = 30;
+  const ARRIVAL_ROUTE_REMAINING_METERS = 40;
+  const ARRIVAL_ACCURACY_ALLOWANCE_CAP_METERS = 60;
+  const ARRIVAL_DEFAULT_ACCURACY_METERS = 50; // assumed if the browser reports none
   const ARRIVAL_CONFIRM_MS = 3000;
+  // A single noisy reading shouldn't discard seconds of already-accrued
+  // confirmation (or an already-confirmed arrival) — only give up once
+  // we've been outside the gate continuously for this long.
+  const ARRIVAL_GRACE_MS = 1500;
 
   const distanceToDestinationMeters =
     userLocation && destinationCoords
@@ -1664,47 +1668,83 @@ export default function PlanRoutePage() {
   const routeRemainingMeters =
     liveProgress != null ? (1 - liveProgress) * totalLength(routeCum) : null;
 
-  const isPositionAccurateEnough =
-    locationAccuracyMeters != null &&
-    locationAccuracyMeters <= ARRIVAL_MAX_ACCURACY_METERS;
+  const arrivalAccuracyAllowanceMeters = Math.min(
+    locationAccuracyMeters ?? ARRIVAL_DEFAULT_ACCURACY_METERS,
+    ARRIVAL_ACCURACY_ALLOWANCE_CAP_METERS,
+  );
 
   const isArrivalCandidate =
     isNavigating &&
     liveProgress != null &&
-    displayProgress >= 0.995 &&
+    displayProgress >= 0.97 &&
     distanceToDestinationMeters != null &&
-    distanceToDestinationMeters <= ARRIVAL_RADIUS_METERS &&
+    distanceToDestinationMeters <=
+      ARRIVAL_RADIUS_METERS + arrivalAccuracyAllowanceMeters &&
     routeRemainingMeters != null &&
-    routeRemainingMeters <= ARRIVAL_ROUTE_REMAINING_METERS &&
-    isPositionAccurateEnough;
+    routeRemainingMeters <=
+      ARRIVAL_ROUTE_REMAINING_METERS + arrivalAccuracyAllowanceMeters;
 
   const [hasArrived, setHasArrived] = useState(false);
   const arrivalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const arrivalGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (!isArrivalCandidate) {
-      if (arrivalTimerRef.current) {
-        clearTimeout(arrivalTimerRef.current);
-        arrivalTimerRef.current = null;
-      }
-      setHasArrived(false);
-      return;
-    }
-
-    if (hasArrived) return;
-
-    arrivalTimerRef.current = setTimeout(() => {
-      setHasArrived(true);
-      arrivalTimerRef.current = null;
-    }, ARRIVAL_CONFIRM_MS);
-
-    return () => {
+    const clearArrivalTimer = () => {
       if (arrivalTimerRef.current) {
         clearTimeout(arrivalTimerRef.current);
         arrivalTimerRef.current = null;
       }
     };
-  }, [isArrivalCandidate, hasArrived]);
+    const clearGraceTimer = () => {
+      if (arrivalGraceTimerRef.current) {
+        clearTimeout(arrivalGraceTimerRef.current);
+        arrivalGraceTimerRef.current = null;
+      }
+    };
+
+    if (!isNavigating) {
+      clearArrivalTimer();
+      clearGraceTimer();
+      setHasArrived(false);
+      return;
+    }
+
+    if (isArrivalCandidate) {
+      // Inside the gate on this reading — cancel any pending "give up"
+      // grace timer, and start the confirm timer if one isn't already
+      // running (don't restart it on every render/GPS tick, or it'd
+      // never finish counting down).
+      clearGraceTimer();
+      if (!hasArrived && !arrivalTimerRef.current) {
+        arrivalTimerRef.current = setTimeout(() => {
+          setHasArrived(true);
+          arrivalTimerRef.current = null;
+        }, ARRIVAL_CONFIRM_MS);
+      }
+      return;
+    }
+
+    // Outside the gate on this reading. Only actually reset once we've
+    // stayed outside it for the whole grace window — a lone bad fix
+    // shouldn't undo an in-progress (or already-confirmed) arrival.
+    if (!arrivalGraceTimerRef.current && (arrivalTimerRef.current || hasArrived)) {
+      arrivalGraceTimerRef.current = setTimeout(() => {
+        clearArrivalTimer();
+        setHasArrived(false);
+        arrivalGraceTimerRef.current = null;
+      }, ARRIVAL_GRACE_MS);
+    }
+  }, [isArrivalCandidate, isNavigating, hasArrived]);
+
+  useEffect(() => {
+    return () => {
+      if (arrivalTimerRef.current) clearTimeout(arrivalTimerRef.current);
+      if (arrivalGraceTimerRef.current)
+        clearTimeout(arrivalGraceTimerRef.current);
+    };
+  }, []);
 
   const upcomingHazard = describeUpcomingHazard(effectiveRoute?.hazards);
 

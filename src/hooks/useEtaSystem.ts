@@ -114,7 +114,7 @@ export function useEtaSystem({
     ? 0
     : Math.max(0, route.distance * (1 - clampedProgress));
 
-  const currentEtaClock = formatClockTime(remainingMinutes);
+  const currentEtaClock = hasArrived ? null : formatClockTime(remainingMinutes);
   const plannedEtaClock = formatClockTime(route.duration);
 
   const baselineDuration = baselineRef.current.durationMin;
