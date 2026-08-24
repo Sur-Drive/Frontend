@@ -112,6 +112,9 @@ const ManagerVehicles: React.FC = () => {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
+    const [errorTitle, setErrorTitle] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -488,9 +491,6 @@ const ManagerVehicles: React.FC = () => {
         try {
             setIsRemoving(true);
             const token = localStorage.getItem("token");
-
-            // Get managerId from token or state
-
             const managerId = localStorage.getItem("managerId");
 
             const payload = {
@@ -513,7 +513,14 @@ const ManagerVehicles: React.FC = () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || "Failed to remove vehicle");
+                setErrorTitle("Cannot Remove Vehicle");
+                setErrorMessage(data.message || "Failed to remove vehicle");
+                setErrorDetails(data);
+                setShowErrorModal(true);
+                setShowRemoveModal(false);
+                setSelectedVehicle(null);
+                setIsRemoving(false);
+                return;
             }
 
             setShowRemoveModal(false);
@@ -525,9 +532,17 @@ const ManagerVehicles: React.FC = () => {
             setShowSuccessModal(true);
             setShowSuccessAction(false);
             fetchVehicles();
-            // fetchVehicleUsage();
         } catch (error: any) {
             console.error("Error removing vehicle:", error);
+            setErrorTitle("Error Removing Vehicle");
+            setErrorMessage(
+                error.message ||
+                    "An unexpected error occurred while removing the vehicle.",
+            );
+            setErrorDetails(null);
+            setShowErrorModal(true);
+            setShowRemoveModal(false);
+            setSelectedVehicle(null);
         } finally {
             setIsRemoving(false);
         }
@@ -1560,79 +1575,123 @@ const ManagerVehicles: React.FC = () => {
                 </div>
             )}
 
-            {/* ERROR / WARNING MODAL (Plan Limit) */}
+            {/* DEDICATED ERROR MODAL */}
             {showErrorModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-                        <div className="w-16 h-16 rounded-full bg-[#FFEED4] flex items-center justify-center mx-auto mb-4">
-                            <AlertCircle size={32} className="text-[#F09205]" />
-                        </div>
-                        <h3
-                            className="text-2xl font-bold text-[#1F083B] text-center mb-2"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            Vehicle Limit Reached
-                        </h3>
-                        <p
-                            className="text-[#5B646F] text-center mb-4"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            {errorDetails?.message ||
-                                "You've reached your vehicle limit. Upgrade your plan to add more vehicles."}
-                        </p>
-                        <p
-                            className="text-[#5B646F] text-sm text-center mb-6"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            Upgrade your plan to unlock additional vehicles and
-                            more advanced fleet management capabilities.
-                        </p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+                        <div className="flex flex-col items-center text-center">
+                            {/* Error Icon */}
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#FEE2E2]">
+                                <AlertCircle
+                                    size={32}
+                                    className="text-[#B71C1C]"
+                                />
+                            </div>
 
-                        <div className="flex items-center justify-between bg-[#4C577D05] rounded-xl px-4 py-3 mb-3 border border-[#E0E5EB]">
-                            <span className="text-[#5B646F] text-sm">
-                                Current Plan:
-                            </span>
-                            <span className="text-[#6E43A3] font-semibold text-sm">
-                                {errorDetails?.details?.plan
-                                    ? errorDetails.details.plan
-                                          .charAt(0)
-                                          .toUpperCase() +
-                                      errorDetails.details.plan.slice(1)
-                                    : "Starter"}{" "}
-                                Fleet
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between bg-[#4C577D05] rounded-xl px-4 py-3 mb-6 border border-[#E0E5EB]">
-                            <span className="text-[#5B646F] text-sm">
-                                Vehicles:
-                            </span>
-                            <span className="text-[#1F083B] font-semibold text-sm">
-                                {errorDetails?.details?.current || 0} /{" "}
-                                {errorDetails?.details?.limit || 0}
-                            </span>
-                        </div>
+                            <h3 className="text-xl font-bold text-[#1F083B] sm:text-2xl">
+                                {errorTitle || "Error"}
+                            </h3>
 
-                        <div className="flex flex-col-reverse gap-3">
-                            <button
-                                onClick={() => {
-                                    setShowErrorModal(false);
-                                    setErrorDetails(null);
-                                }}
-                                className="w-full px-6 py-3 rounded-xl text-[#8E98A8] border border-[#E0E5EB] hover:bg-gray-50 transition"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowErrorModal(false);
-                                    setErrorDetails(null);
-                                }}
-                                className="w-full bg-[#6E43A3] text-white px-6 py-3 rounded-xl hover:opacity-90 transition"
-                                style={{ fontFamily: "Outfit" }}
-                            >
-                                Upgrade Plan
-                            </button>
+                            <p className="mt-2 text-sm text-[#5B646F] sm:text-base">
+                                {errorMessage ||
+                                    "An unexpected error occurred."}
+                            </p>
+
+                            {/* Show specific error details if available */}
+                            {errorDetails?.details && (
+                                <div className="mt-4 w-full rounded-xl bg-[#F8F8F8] p-4 text-left">
+                                    <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-2">
+                                        <span className="text-sm font-medium text-[#5B646F]">
+                                            Details:
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 space-y-1">
+                                        {errorDetails.details.current !==
+                                            undefined && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-[#8E98A8]">
+                                                    Current:
+                                                </span>
+                                                <span className="font-medium text-[#1F083B]">
+                                                    {
+                                                        errorDetails.details
+                                                            .current
+                                                    }
+                                                </span>
+                                            </div>
+                                        )}
+                                        {errorDetails.details.limit !==
+                                            undefined && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-[#8E98A8]">
+                                                    Limit:
+                                                </span>
+                                                <span className="font-medium text-[#1F083B]">
+                                                    {errorDetails.details.limit}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {errorDetails.details.plan && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-[#8E98A8]">
+                                                    Plan:
+                                                </span>
+                                                <span className="font-medium text-[#1F083B]">
+                                                    {errorDetails.details.plan
+                                                        .charAt(0)
+                                                        .toUpperCase() +
+                                                        errorDetails.details.plan.slice(
+                                                            1,
+                                                        )}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {errorDetails.details
+                                            .upgradeMessage && (
+                                            <div className="mt-2 rounded-lg bg-[#EDE8F4] p-2 text-sm text-[#6E43A3]">
+                                                💡{" "}
+                                                {
+                                                    errorDetails.details
+                                                        .upgradeMessage
+                                                }
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="mt-6 flex w-full flex-col gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowErrorModal(false);
+                                        setErrorTitle("");
+                                        setErrorMessage("");
+                                        setErrorDetails(null);
+                                    }}
+                                    className="w-full rounded-xl bg-[#6E43A3] px-6 py-3 font-medium text-white transition hover:opacity-90"
+                                >
+                                    Got it
+                                </button>
+
+                                {/* Show "Try Again" button for specific errors */}
+                                {errorDetails?.code ===
+                                    "VEHICLE_LIMIT_REACHED" && (
+                                    <button
+                                        onClick={() => {
+                                            setShowErrorModal(false);
+                                            setErrorTitle("");
+                                            setErrorMessage("");
+                                            setErrorDetails(null);
+                                            // Reopen the add modal
+                                            setShowAddModal(true);
+                                        }}
+                                        className="w-full rounded-xl border border-[#6E43A3] px-6 py-3 font-medium text-[#6E43A3] transition hover:bg-[#EDE8F4]"
+                                    >
+                                        Try Again
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
