@@ -14,6 +14,7 @@ const HAZARD_EMOJI: Record<BackendHazardType, string> = {
   ACCIDENT: '🚧',
   DEBRIS: '🪨',
   ROAD_WORKS: '🚜',
+  ROAD_CLOSURE: '⛔',
   CHECKPOINT: '🛂',
   DANGER: '⚠️',
   SOS: '🆘',

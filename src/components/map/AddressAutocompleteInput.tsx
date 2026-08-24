@@ -22,6 +22,13 @@ interface AddressAutocompleteInputProps {
   countryRestriction?: string
   /** Show the tap-to-speak mic button (auto-hidden if the browser doesn't support voice input). Defaults to true. */
   enableVoice?: boolean
+  /** When set, biases predictions toward this point — used for "search around current location". */
+  locationBias?: { lat: number; lng: number } | null
+  /** Bias radius in meters, only used when `locationBias` is set. Defaults to 50km. */
+  locationBiasRadiusMeters?: number
+  /** Fires whenever the predictions dropdown changes, so a wrapper can show its own empty-state suggestions when there's nothing to show here. */
+  onPredictionsChange?: (count: number) => void
+  onFocus?: () => void
 }
 
 interface Prediction {
@@ -42,6 +49,10 @@ export default function AddressAutocompleteInput({
   inputClassName = '',
   countryRestriction = 'ng',
   enableVoice = true,
+  locationBias = null,
+  locationBiasRadiusMeters = 50000,
+  onPredictionsChange,
+  onFocus,
 }: AddressAutocompleteInputProps) {
   const { isLoaded, error: loadError } = useGoogleMaps()
   const [predictions, setPredictions] = useState<Prediction[]>([])
@@ -81,16 +92,27 @@ export default function AddressAutocompleteInput({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const applyPredictions = useCallback(
+    (next: Prediction[]) => {
+      setPredictions(next)
+      onPredictionsChange?.(next.length)
+    },
+    [onPredictionsChange]
+  )
+
   const search = useCallback(
     (query: string) => {
       if (!autocompleteServiceRef.current || query.trim().length < MIN_QUERY_LENGTH) {
-        setPredictions([])
+        applyPredictions([])
         return
       }
 
-      const cached = getCachedPredictions<Prediction[]>(query, countryRestriction)
+      const cacheBucket = locationBias
+        ? `${countryRestriction}:near:${locationBias.lat.toFixed(2)},${locationBias.lng.toFixed(2)}`
+        : countryRestriction
+      const cached = getCachedPredictions<Prediction[]>(query, cacheBucket)
       if (cached) {
-        setPredictions(cached)
+        applyPredictions(cached)
         setIsOpen(cached.length > 0)
         return
       }
@@ -105,12 +127,18 @@ export default function AddressAutocompleteInput({
           input: query,
           componentRestrictions: { country: countryRestriction },
           sessionToken: sessionTokenRef.current,
+          ...(locationBias
+            ? {
+                location: new google.maps.LatLng(locationBias.lat, locationBias.lng),
+                radius: locationBiasRadiusMeters,
+              }
+            : {}),
         },
         (results, status) => {
           setIsSearching(false)
 
           if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
-            setPredictions([])
+            applyPredictions([])
             setIsOpen(false)
             return
           }
@@ -121,13 +149,13 @@ export default function AddressAutocompleteInput({
             secondaryText: r.structured_formatting?.secondary_text ?? '',
           }))
 
-          setPredictions(mapped)
+          applyPredictions(mapped)
           setIsOpen(mapped.length > 0)
-          setCachedPredictions(query, countryRestriction, mapped)
+          setCachedPredictions(query, cacheBucket, mapped)
         }
       )
     },
-    [countryRestriction]
+    [countryRestriction, applyPredictions, locationBias, locationBiasRadiusMeters]
   )
 
   const handleInputChange = (text: string) => {
@@ -137,7 +165,7 @@ export default function AddressAutocompleteInput({
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
     if (!text.trim()) {
-      setPredictions([])
+      applyPredictions([])
       setIsOpen(false)
       return
     }
@@ -174,7 +202,7 @@ export default function AddressAutocompleteInput({
           placeId: prediction.placeId,
         })
         setIsOpen(false)
-        setPredictions([])
+        applyPredictions([])
       }
     )
   }
@@ -226,7 +254,10 @@ export default function AddressAutocompleteInput({
         value={value}
         placeholder={loadError ? 'Address search unavailable' : voiceSearch.isListening ? 'Listening…' : placeholder}
         onChange={(e) => handleInputChange(e.target.value)}
-        onFocus={() => predictions.length > 0 && setIsOpen(true)}
+        onFocus={() => {
+          onFocus?.()
+          if (predictions.length > 0) setIsOpen(true)
+        }}
         onKeyDown={handleKeyDown}
         disabled={!!loadError}
         autoComplete="off"

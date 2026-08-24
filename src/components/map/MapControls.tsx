@@ -25,6 +25,9 @@ interface MapControlsProps {
   /** Whether the live traffic (congestion) layer is currently shown on the map. */
   trafficEnabled: boolean
   onToggleTraffic: () => void
+  /** Light or dark map styling. */
+  mapTheme: 'light' | 'dark'
+  onToggleTheme: () => void
 }
 
 export default function MapControls({
@@ -42,12 +45,16 @@ export default function MapControls({
   className = '',
   trafficEnabled,
   onToggleTraffic,
+  mapTheme,
+  onToggleTheme,
 }: MapControlsProps) {
   return (
     <div
       className={`absolute z-[400] right-4 sm:right-8 flex flex-col items-center gap-2.5 ${className}`}
     >
       <FullscreenButton targetRef={fullscreenTargetRef} />
+
+      <ThemeToggleButton theme={mapTheme} onToggle={onToggleTheme} />
 
       <CompassButton
         heading={heading}
@@ -65,47 +72,41 @@ export default function MapControls({
         onToggleTraffic={onToggleTraffic}
       />
 
-      <ZoomButtons map={map} />
-
       <MyLocationButton onClick={onRecenter} isLocating={isLocating} />
     </div>
   )
 }
 
-// ─── Zoom in/out ────────────────────────────────────────
-function ZoomButtons({ map }: { map: google.maps.Map | null }) {
-  const zoomBy = (delta: number) => {
-    if (!map) return
-    const current = map.getZoom() ?? 15
-    map.setZoom(Math.max(3, Math.min(20, current + delta)))
-  }
+// ─── Dark / light map theme ───────────────────────────────
+function ThemeToggleButton({
+  theme,
+  onToggle,
+}: {
+  theme: 'light' | 'dark'
+  onToggle: () => void
+}) {
+  const isDark = theme === 'dark'
 
   return (
-    <div className="flex flex-col overflow-hidden bg-white shadow-lg rounded-2xl">
-      <button
-        onClick={() => zoomBy(1)}
-        disabled={!map}
-        aria-label="Zoom in"
-        title="Zoom in"
-        className="flex items-center justify-center w-11 h-11 text-gray-700 active:bg-gray-100 disabled:opacity-40"
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-          <path d="M12 5v14M5 12h14" />
+    <button
+      onClick={onToggle}
+      aria-label={isDark ? 'Switch to light map' : 'Switch to dark map'}
+      title={isDark ? 'Light map' : 'Dark map'}
+      className={`flex items-center justify-center w-11 h-11 rounded-2xl shadow-lg transition ${
+        isDark ? 'bg-purple-900 text-gold-400' : 'bg-white text-gray-700'
+      }`}
+    >
+      {isDark ? (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+          <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.4 5.4 0 0 1-7.54-7.54c-.44-.06-.9-.1-1.36-.1z" />
         </svg>
-      </button>
-      <div className="h-px mx-2 bg-gray-200" />
-      <button
-        onClick={() => zoomBy(-1)}
-        disabled={!map}
-        aria-label="Zoom out"
-        title="Zoom out"
-        className="flex items-center justify-center w-11 h-11 text-gray-700 active:bg-gray-100 disabled:opacity-40"
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-          <path d="M5 12h14" />
+      ) : (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="4.5" />
+          <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" />
         </svg>
-      </button>
-    </div>
+      )}
+    </button>
   )
 }
 

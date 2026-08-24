@@ -24,6 +24,37 @@ export function reportPinHtml(color: string, isSelected: boolean): string {
 export const REPORT_PIN_ANCHOR: [number, number] = [18, 18]
 export const REPORT_PIN_SELECTED_ANCHOR: [number, number] = [28, 28]
 
+// Road-closure pin — a striped barrier badge instead of the generic "!"
+// circle, so a fully-blocked road reads as visually distinct (and more
+// severe) from a graded hazard like a pothole or flood risk at a glance.
+export function closurePinHtml(color: string, isSelected: boolean): string {
+  const size = isSelected ? 58 : 38
+  return `
+    <div style="
+      background:${color};
+      width:${size}px;
+      height:${size}px;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:${isSelected ? '0 4px 16px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.25)'};
+      border:3px solid white;
+      transition:all 0.2s;
+      cursor:pointer;
+      background-image:repeating-linear-gradient(135deg, rgba(255,255,255,0.18) 0 6px, transparent 6px 12px);
+    ">
+      <svg viewBox="0 0 24 24" width="${isSelected ? 26 : 18}" height="${isSelected ? 26 : 18}" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9.5" />
+        <path d="M6 6l12 12" />
+      </svg>
+    </div>
+  `
+}
+
+export const CLOSURE_PIN_ANCHOR: [number, number] = [19, 19]
+export const CLOSURE_PIN_SELECTED_ANCHOR: [number, number] = [29, 29]
+
 export const userLocationPinHtml = `
   <div style="position:relative;width:24px;height:24px;">
     <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.3;animation:sd-pulse 1.5s infinite;"></div>
@@ -105,3 +136,71 @@ export function navHeadingArrowHtml(headingDeg: number, color = '#0ea5e9'): stri
     </div>
   `
 }
+
+// The live "you are driving" puck used during real turn-by-turn — a
+// top-down car silhouette (body, windshield, side mirrors) rather than a
+// plain arrow/chevron, closer to what Google/Waze render for the
+// driver's own position. Rotates in place to `headingDeg`; "up" on the
+// icon is the front of the car.
+export function navCarPuckHtml(headingDeg: number, bodyColor = '#4285F4'): string {
+  return `
+    <div style="position:relative;width:44px;height:44px;">
+      <div style="
+        position:absolute;left:50%;top:80%;width:22px;height:9px;
+        transform:translate(-50%,-50%);border-radius:50%;
+        background:rgba(0,0,0,0.3);filter:blur(2px);
+      "></div>
+      <div style="
+        position:absolute;inset:0;width:44px;height:44px;
+        transform:rotate(${headingDeg}deg);transition:transform 0.15s linear;
+        display:flex;align-items:center;justify-content:center;
+      ">
+        <svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));">
+          <!-- car body -->
+          <rect x="8" y="4" width="14" height="23" rx="5" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.4"/>
+          <!-- windshield -->
+          <path d="M10.5 10.5 Q15 7.5 19.5 10.5 L18.3 14 L11.7 14 Z" fill="${bodyColor}" opacity="0.85"/>
+          <!-- rear window -->
+          <rect x="11.5" y="20" width="7" height="4" rx="1.2" fill="${bodyColor}" opacity="0.55"/>
+          <!-- side mirrors -->
+          <rect x="5.5" y="11" width="2.4" height="2" rx="0.8" fill="#1f2937"/>
+          <rect x="22.1" y="11" width="2.4" height="2" rx="0.8" fill="#1f2937"/>
+          <!-- headlights -->
+          <circle cx="11" cy="6" r="1" fill="#fde68a"/>
+          <circle cx="19" cy="6" r="1" fill="#fde68a"/>
+          <!-- taillights -->
+          <circle cx="11" cy="25.5" r="1" fill="#ef4444"/>
+          <circle cx="19" cy="25.5" r="1" fill="#ef4444"/>
+        </svg>
+      </div>
+    </div>
+  `
+}
+
+export const NAV_CAR_PUCK_ANCHOR: [number, number] = [22, 22]
+
+// Google/Waze-style floating "delay" bubble that sits directly on the
+// route line at a hazard/incident location — an icon + a rough extra-time
+// estimate (e.g. a roadworks cone with "19 min", a traffic icon with
+// "5 min"). Color follows severity: red = high, orange = medium/default,
+// so a glance at the route tells you which incidents actually matter.
+export function trafficDelayBubbleHtml(icon: string, label: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' = 'MEDIUM'): string {
+  const bg =
+    severity === 'HIGH' ? '#ea4335' : severity === 'LOW' ? '#f9ab00' : '#fb8c00'
+  return `
+    <div style="
+      display:flex;align-items:center;gap:5px;
+      background:${bg};color:white;
+      padding:5px 10px 5px 7px;border-radius:999px;
+      box-shadow:0 3px 10px rgba(0,0,0,0.3);
+      border:2px solid white;
+      font-family:inherit;white-space:nowrap;
+      cursor:pointer;
+    ">
+      <span style="font-size:13px;line-height:1;">${icon}</span>
+      <span style="font-size:12px;font-weight:700;line-height:1;">${label}</span>
+    </div>
+  `
+}
+
+export const TRAFFIC_DELAY_BUBBLE_ANCHOR: [number, number] = [20, 14]

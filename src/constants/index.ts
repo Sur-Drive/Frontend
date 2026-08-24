@@ -13,6 +13,7 @@ export const HAZARD_TYPES = [
     { label: "Accident", color: "bg-danger-red" },
     { label: "Debris", color: "bg-amber-800" },
     { label: "Road Works", color: "bg-amber-600" },
+    { label: "Road Closure", color: "bg-gray-900" },
     { label: "Checkpoint", color: "bg-purple-700" },
     { label: "Danger Zone", color: "bg-red-700" },
     { label: "SOS", color: "bg-sos-red" },
