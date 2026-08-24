@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { RefObject } from 'react'
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import {
   classifyLabel,
   boxAreaFraction,
@@ -10,11 +10,13 @@ import {
   type TrackedObject,
   type BoundingBox,
   type WarningSeverity,
-} from '../lib/collisionDetection'
+} from "../lib/collisionDetection";
 
 // ─── Collision Guard ───────────────────────────────────────────────
-// Forward-collision-warning driver-assist: reads the phone's rear
-// (road-facing) camera, runs an on-device object-detection model
+// Forward-collision-warning driver-assist: reads a road-facing camera
+// when available (the phone's rear camera), falling back to the
+// front-facing camera on devices that don't have one — e.g. a laptop
+// with only a front webcam — runs an on-device object-detection model
 // (COCO-SSD, via @tensorflow/tfjs + @tensorflow-models/coco-ssd —
 // loaded lazily so nobody pays for it unless they turn this on), and
 // turns the raw detections into tracked objects with a proximity/
@@ -30,180 +32,304 @@ import {
 
 type DetectFn = (
   video: HTMLVideoElement,
-) => Promise<{ class: string; score: number; bbox: [number, number, number, number] }[]>
+) => Promise<
+  { class: string; score: number; bbox: [number, number, number, number] }[]
+>;
 
 interface TrackState {
-  category: TrackedObject['category']
-  box: BoundingBox
-  areaFraction: number
-  lastSeenAt: number
-  lastChangedAt: number
-  history: { t: number; areaFraction: number }[]
+  category: TrackedObject["category"];
+  box: BoundingBox;
+  areaFraction: number;
+  lastSeenAt: number;
+  lastChangedAt: number;
+  history: { t: number; areaFraction: number }[];
 }
 
 export interface UseCollisionGuardResult {
-  videoRef: RefObject<HTMLVideoElement>
-  isSupported: boolean
-  isStarting: boolean
-  isActive: boolean
-  error: string | null
-  frameSize: { width: number; height: number } | null
-  trackedObjects: TrackedObject[]
+  videoRef: RefObject<HTMLVideoElement>;
+  isSupported: boolean;
+  isStarting: boolean;
+  isActive: boolean;
+  error: string | null;
+  frameSize: { width: number; height: number } | null;
+  trackedObjects: TrackedObject[];
   /** The single highest-severity object currently in frame, if any — drives the visual/voice warning. */
-  activeWarning: TrackedObject | null
-  start: () => Promise<void>
-  stop: () => void
+  activeWarning: TrackedObject | null;
+  /** Which physical camera ended up being used — 'environment' (rear/road-facing, the preferred one) or 'user' (front-facing fallback, e.g. laptops with no rear camera). Lets the preview mirror itself only for the front camera, the way any front-facing camera UI normally does. */
+  facingMode: "environment" | "user" | null;
+  /** True if the device actually offers both a front and a rear camera to switch between (checked via enumerateDevices) — hide/disable a "switch camera" control when this is false instead of showing a button that can't do anything. */
+  canSwitchCamera: boolean;
+  start: () => Promise<void>;
+  stop: () => void;
+  /** Manually swap to the other camera (front↔back) while Collision Guard is running. Does nothing if only one camera is available. */
+  switchCamera: () => Promise<void>;
 }
 
-const DETECT_INTERVAL_MS = 220
-const MIN_SCORE = 0.55
-const STALE_TRACK_MS = 1000
-const GROWTH_WINDOW_MS = 900
+const DETECT_INTERVAL_MS = 220;
+const MIN_SCORE = 0.55;
+const STALE_TRACK_MS = 1000;
+const GROWTH_WINDOW_MS = 900;
 
 export function useCollisionGuard(enabled: boolean): UseCollisionGuardResult {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const detectFnRef = useRef<DetectFn | null>(null)
-  const tracksRef = useRef<Map<string, TrackState>>(new Map())
-  const rafRef = useRef<number | null>(null)
-  const lastRunRef = useRef(0)
-  const nextIdRef = useRef(0)
-  const stoppedRef = useRef(false)
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const detectFnRef = useRef<DetectFn | null>(null);
+  const tracksRef = useRef<Map<string, TrackState>>(new Map());
+  const rafRef = useRef<number | null>(null);
+  const lastRunRef = useRef(0);
+  const nextIdRef = useRef(0);
+  const stoppedRef = useRef(false);
 
   const [isSupported] = useState(
-    () => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia,
-  )
-  const [isStarting, setIsStarting] = useState(false)
-  const [isActive, setIsActive] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [frameSize, setFrameSize] = useState<{ width: number; height: number } | null>(null)
-  const [trackedObjects, setTrackedObjects] = useState<TrackedObject[]>([])
+    () =>
+      typeof navigator !== "undefined" &&
+      !!navigator.mediaDevices?.getUserMedia,
+  );
+  const [isStarting, setIsStarting] = useState(false);
+  const [isActive, setIsActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [frameSize, setFrameSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [trackedObjects, setTrackedObjects] = useState<TrackedObject[]>([]);
+  const [facingMode, setFacingMode] = useState<"environment" | "user" | null>(
+    null,
+  );
+  const [canSwitchCamera, setCanSwitchCamera] = useState(false);
+  // The camera the user last explicitly asked for via switchCamera(), so a
+  // later start()/restart doesn't silently forget their choice within the
+  // same session. Separate from `facingMode`, which reflects what's
+  // actually live right now (including auto-fallback outcomes).
+  const desiredFacingRef = useRef<"environment" | "user">("environment");
+
+  // Best-effort check for whether the device has more than one camera at
+  // all, so a "switch camera" button can just not render instead of
+  // sitting there doing nothing on a single-camera device. Some browsers
+  // only return usable device labels/kinds after permission has been
+  // granted once, so this is refreshed after the first successful start.
+  const refreshCameraCount = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter((d) => d.kind === "videoinput");
+      setCanSwitchCamera(cameras.length > 1);
+    } catch {
+      // Can't enumerate — leave canSwitchCamera as-is rather than guessing.
+    }
+  }, []);
+
+  // Acquires a camera stream, preferring `preferred` but falling back to
+  // the other facing mode if that one isn't available (wrong hardware,
+  // rejected permission, already in use, etc) rather than failing
+  // outright. Used both for the initial start and for manual switching.
+  const acquireStream = useCallback(
+    async (
+      preferred: "environment" | "user",
+    ): Promise<{ stream: MediaStream; facingMode: "environment" | "user" }> => {
+      const fallback: "environment" | "user" =
+        preferred === "environment" ? "user" : "environment";
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: preferred } },
+          audio: false,
+        });
+        return { stream, facingMode: preferred };
+      } catch {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: fallback } },
+          audio: false,
+        });
+        return { stream, facingMode: fallback };
+      }
+    },
+    [],
+  );
 
   const stop = useCallback(() => {
-    stoppedRef.current = true
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
-    rafRef.current = null
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
-    tracksRef.current.clear()
-    setIsActive(false)
-    setIsStarting(false)
-    setTrackedObjects([])
-    setFrameSize(null)
-  }, [])
+    stoppedRef.current = true;
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    tracksRef.current.clear();
+    setIsActive(false);
+    setIsStarting(false);
+    setTrackedObjects([]);
+    setFrameSize(null);
+    setFacingMode(null);
+  }, []);
 
   const start = useCallback(async () => {
-    if (!isSupported || isActive || isStarting) return
-    stoppedRef.current = false
-    setIsStarting(true)
-    setError(null)
+    if (!isSupported || isActive || isStarting) return;
+    stoppedRef.current = false;
+    setIsStarting(true);
+    setError(null);
 
     try {
       // Lazy-load TF + the model only when the driver actually turns
       // this on — see the note at the top of the file re: package.json.
       if (!detectFnRef.current) {
         const [tf, cocoSsd] = await Promise.all([
-          import('@tensorflow/tfjs'),
-          import('@tensorflow-models/coco-ssd'),
-        ])
-        await tf.ready()
-        const model = await cocoSsd.load({ base: 'lite_mobilenet_v2' })
-        detectFnRef.current = (video) => model.detect(video)
+          import("@tensorflow/tfjs"),
+          import("@tensorflow-models/coco-ssd"),
+        ]);
+        await tf.ready();
+        const model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
+        detectFnRef.current = (video) => model.detect(video);
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false,
-      })
-      streamRef.current = stream
+      // Road-facing (rear) camera is the default and best choice for
+      // watching the road ahead, but the driver can switch to the front
+      // camera at any time via switchCamera() — desiredFacingRef
+      // remembers that choice. If the desired camera isn't available at
+      // all (no rear camera on a laptop, hardware only has one camera,
+      // etc), acquireStream falls back to whichever camera the device
+      // does have rather than refusing to start.
+      const { stream, facingMode: actualFacing } = await acquireStream(
+        desiredFacingRef.current,
+      );
+      setFacingMode(actualFacing);
+      streamRef.current = stream;
 
-      const video = videoRef.current
-      if (!video) throw new Error('Camera view not ready')
-      video.srcObject = stream
-      await video.play()
+      const video = videoRef.current;
+      if (!video) throw new Error("Camera view not ready");
+      video.srcObject = stream;
+      await video.play();
 
-      setFrameSize({ width: video.videoWidth || 640, height: video.videoHeight || 480 })
-      setIsActive(true)
-      setIsStarting(false)
+      void refreshCameraCount();
+
+      setFrameSize({
+        width: video.videoWidth || 640,
+        height: video.videoHeight || 480,
+      });
+      setIsActive(true);
+      setIsStarting(false);
 
       const loop = (t: number) => {
-        if (stoppedRef.current) return
-        rafRef.current = requestAnimationFrame(loop)
-        if (t - lastRunRef.current < DETECT_INTERVAL_MS) return
-        lastRunRef.current = t
-        void runDetection(t)
-      }
-      rafRef.current = requestAnimationFrame(loop)
+        if (stoppedRef.current) return;
+        rafRef.current = requestAnimationFrame(loop);
+        if (t - lastRunRef.current < DETECT_INTERVAL_MS) return;
+        lastRunRef.current = t;
+        void runDetection(t);
+      };
+      rafRef.current = requestAnimationFrame(loop);
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : 'Could not start Collision Guard (camera or model failed to load)'
-      setError(message)
-      setIsStarting(false)
-      stop()
+          : "Could not start Collision Guard (camera or model failed to load)";
+      setError(message);
+      setIsStarting(false);
+      stop();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSupported, isActive, isStarting, stop])
+  }, [
+    isSupported,
+    isActive,
+    isStarting,
+    stop,
+    acquireStream,
+    refreshCameraCount,
+  ]);
+
+  // Swap between front and rear camera while Collision Guard is running,
+  // without tearing down the loaded detection model or the RAF loop —
+  // only the video stream itself is replaced. If the requested camera
+  // turns out not to exist, acquireStream already falls back to the one
+  // that does, so this never leaves the view with no camera at all.
+  const switchCamera = useCallback(async () => {
+    if (!isActive || !streamRef.current) return;
+    const target: "environment" | "user" =
+      facingMode === "environment" ? "user" : "environment";
+    desiredFacingRef.current = target;
+
+    try {
+      const { stream, facingMode: actualFacing } = await acquireStream(target);
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = stream;
+      setFacingMode(actualFacing);
+
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+        setFrameSize({
+          width: video.videoWidth || 640,
+          height: video.videoHeight || 480,
+        });
+      }
+      // Old tracked objects were positioned relative to the previous
+      // camera's framing — carrying them over would show stale boxes in
+      // the wrong place for a frame or two.
+      tracksRef.current.clear();
+      setTrackedObjects([]);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not switch camera";
+      setError(message);
+    }
+  }, [isActive, facingMode, acquireStream]);
 
   const runDetection = useCallback(async (now: number) => {
-    const video = videoRef.current
-    const detect = detectFnRef.current
-    if (!video || !detect || video.readyState < 2) return
+    const video = videoRef.current;
+    const detect = detectFnRef.current;
+    if (!video || !detect || video.readyState < 2) return;
 
-    let raw: Awaited<ReturnType<DetectFn>>
+    let raw: Awaited<ReturnType<DetectFn>>;
     try {
-      raw = await detect(video)
+      raw = await detect(video);
     } catch {
-      return // a dropped frame isn't fatal — just skip it
+      return; // a dropped frame isn't fatal — just skip it
     }
-    if (stoppedRef.current) return
+    if (stoppedRef.current) return;
 
-    const frameW = video.videoWidth || 640
-    const frameH = video.videoHeight || 480
-    const tracks = tracksRef.current
-    const seenIds = new Set<string>()
+    const frameW = video.videoWidth || 640;
+    const frameH = video.videoHeight || 480;
+    const tracks = tracksRef.current;
+    const seenIds = new Set<string>();
 
     for (const det of raw) {
-      if (det.score < MIN_SCORE) continue
-      const category = classifyLabel(det.class)
-      if (!category) continue
+      if (det.score < MIN_SCORE) continue;
+      const category = classifyLabel(det.class);
+      if (!category) continue;
 
-      const [x, y, width, height] = det.bbox
-      const box: BoundingBox = { x, y, width, height }
-      const areaFraction = boxAreaFraction(box, frameW, frameH)
-      const cx = x + width / 2
-      const cy = y + height / 2
+      const [x, y, width, height] = det.bbox;
+      const box: BoundingBox = { x, y, width, height };
+      const areaFraction = boxAreaFraction(box, frameW, frameH);
+      const cx = x + width / 2;
+      const cy = y + height / 2;
 
       // Nearest-centroid match against existing tracks of the same
       // category — good enough for a single-lane forward-facing view
       // where objects don't usually cross paths within one detection
       // tick (~220ms).
-      let bestId: string | null = null
-      let bestDist = Infinity
+      let bestId: string | null = null;
+      let bestDist = Infinity;
       tracks.forEach((track, id) => {
-        if (track.category !== category) return
-        const tcx = track.box.x + track.box.width / 2
-        const tcy = track.box.y + track.box.height / 2
-        const dist = Math.hypot((cx - tcx) / frameW, (cy - tcy) / frameH)
+        if (track.category !== category) return;
+        const tcx = track.box.x + track.box.width / 2;
+        const tcy = track.box.y + track.box.height / 2;
+        const dist = Math.hypot((cx - tcx) / frameW, (cy - tcy) / frameH);
         if (dist < bestDist) {
-          bestDist = dist
-          bestId = id
+          bestDist = dist;
+          bestId = id;
         }
-      })
+      });
 
-      const id = bestDist < 0.25 && bestId ? bestId : `t${nextIdRef.current++}`
-      seenIds.add(id)
+      const id = bestDist < 0.25 && bestId ? bestId : `t${nextIdRef.current++}`;
+      seenIds.add(id);
 
-      const prev = tracks.get(id)
+      const prev = tracks.get(id);
       const moved =
         !prev ||
         Math.abs(prev.box.x - x) / frameW > STOPPED_POSITION_EPSILON ||
         Math.abs(prev.box.y - y) / frameH > STOPPED_POSITION_EPSILON ||
-        Math.abs(prev.areaFraction - areaFraction) > STOPPED_POSITION_EPSILON
+        Math.abs(prev.areaFraction - areaFraction) > STOPPED_POSITION_EPSILON;
 
-      const history = prev ? [...prev.history, { t: now, areaFraction }] : [{ t: now, areaFraction }]
-      const trimmed = history.filter((h) => now - h.t <= GROWTH_WINDOW_MS)
+      const history = prev
+        ? [...prev.history, { t: now, areaFraction }]
+        : [{ t: now, areaFraction }];
+      const trimmed = history.filter((h) => now - h.t <= GROWTH_WINDOW_MS);
 
       tracks.set(id, {
         category,
@@ -212,25 +338,29 @@ export function useCollisionGuard(enabled: boolean): UseCollisionGuardResult {
         lastSeenAt: now,
         lastChangedAt: moved || !prev ? now : prev.lastChangedAt,
         history: trimmed,
-      })
+      });
     }
 
     // Drop tracks we haven't seen in a while (object left frame).
     tracks.forEach((track, id) => {
-      if (now - track.lastSeenAt > STALE_TRACK_MS) tracks.delete(id)
-    })
+      if (now - track.lastSeenAt > STALE_TRACK_MS) tracks.delete(id);
+    });
 
-    const result: TrackedObject[] = []
+    const result: TrackedObject[] = [];
     tracks.forEach((track, id) => {
-      if (!seenIds.has(id)) return // stale this tick, still within grace window — skip rendering
+      if (!seenIds.has(id)) return; // stale this tick, still within grace window — skip rendering
 
-      const oldest = track.history[0]
-      const elapsedS = Math.max(0.05, (now - oldest.t) / 1000)
-      const growthRate = (track.areaFraction - oldest.areaFraction) / elapsedS
+      const oldest = track.history[0];
+      const elapsedS = Math.max(0.05, (now - oldest.t) / 1000);
+      const growthRate = (track.areaFraction - oldest.areaFraction) / elapsedS;
 
-      const isStopped = now - track.lastChangedAt >= STOPPED_MIN_MS
-      const severity: WarningSeverity = computeSeverity(track.areaFraction, growthRate)
-      const isCollisionHazard = severity !== 'low' && growthRate > 0.05 && !isStopped
+      const isStopped = now - track.lastChangedAt >= STOPPED_MIN_MS;
+      const severity: WarningSeverity = computeSeverity(
+        track.areaFraction,
+        growthRate,
+      );
+      const isCollisionHazard =
+        severity !== "low" && growthRate > 0.05 && !isStopped;
 
       result.push({
         id,
@@ -241,29 +371,29 @@ export function useCollisionGuard(enabled: boolean): UseCollisionGuardResult {
         growthRate,
         isStopped,
         isCollisionHazard,
-        severity: isStopped && !isCollisionHazard ? 'medium' : severity,
-      })
-    })
+        severity: isStopped && !isCollisionHazard ? "medium" : severity,
+      });
+    });
 
-    result.sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
-    setTrackedObjects(result)
-  }, [])
+    result.sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
+    setTrackedObjects(result);
+  }, []);
 
   useEffect(() => {
     if (enabled) {
-      void start()
+      void start();
     } else {
-      stop()
+      stop();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled])
+  }, [enabled]);
 
-  useEffect(() => stop, [stop])
+  useEffect(() => stop, [stop]);
 
   const activeWarning =
     trackedObjects.find((o) => o.isCollisionHazard) ??
-    trackedObjects.find((o) => o.severity !== 'low') ??
-    null
+    trackedObjects.find((o) => o.severity !== "low") ??
+    null;
 
   return {
     videoRef,
@@ -274,7 +404,10 @@ export function useCollisionGuard(enabled: boolean): UseCollisionGuardResult {
     frameSize,
     trackedObjects,
     activeWarning,
+    facingMode,
+    canSwitchCamera,
     start,
     stop,
-  }
+    switchCamera,
+  };
 }
