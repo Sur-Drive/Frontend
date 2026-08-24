@@ -870,6 +870,7 @@ export default function PlanRoutePage() {
     null,
   );
   const [mapReady, setMapReady] = useState(false);
+  const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
 
   // ── Map display controls ─────
   const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -2157,21 +2158,15 @@ export default function PlanRoutePage() {
     setShowNotifications(true);
   };
 
-  if (!mapReady) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[100dvh] w-full bg-gray-100">
-        <div className="w-10 h-10 mb-4 border-4 border-red-500 rounded-full sm:w-12 sm:h-12 border-t-transparent animate-spin" />
-        <p className="text-sm font-medium text-gray-600 sm:text-base">
-          Getting your location...
-        </p>
-        {locationError && (
-          <p className="px-8 mt-2 text-xs text-center text-red-500 sm:text-sm">
-            {locationError}
-          </p>
-        )}
-      </div>
-    );
-  }
+  // NOTE: this page intentionally never gates its main return on
+  // `mapReady`/geolocation. The map always has a usable center — either
+  // the user's real location once GPS resolves, or the `reports[0]`
+  // fallback baked into `mapCenter` — so the page can render right away.
+  // GPS failing, hanging, or being denied should degrade to "map shows a
+  // default area" plus a small dismissible notice, never a blank screen.
+  // See `mapReady`'s effect above for the 8s hard-fallback timeout that
+  // guarantees `locationError`/`mapReady` settle even if the browser
+  // never calls back at all.
 
   return (
     <div
@@ -2215,8 +2210,30 @@ export default function PlanRoutePage() {
       {/* Connectivity status — sits above the map, below any modal sheets;
           shows nothing while online so it never takes up permanent space. */}
       <div className="absolute z-[500] left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+12px)] w-[calc(100%-32px)] max-w-sm pointer-events-none">
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex flex-col items-center gap-2">
           <OfflineBanner />
+          {/* Small, non-blocking location status. The map itself never
+              waits on this — it's already showing a real center (GPS or
+              the default fallback) — this is just a courtesy heads-up. */}
+          {!mapReady && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 shadow text-xs font-medium text-gray-600">
+              <div className="w-3 h-3 border-2 border-red-500 rounded-full border-t-transparent animate-spin" />
+              Finding your location…
+            </div>
+          )}
+          {mapReady && locationError && !locationNoticeDismissed && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 shadow text-xs font-medium text-amber-700 max-w-full">
+              <span className="truncate">{locationError}</span>
+              <button
+                type="button"
+                onClick={() => setLocationNoticeDismissed(true)}
+                className="shrink-0 text-gray-400 hover:text-gray-600"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
