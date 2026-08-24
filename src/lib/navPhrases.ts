@@ -112,6 +112,7 @@ type Phrases = {
   roundaboutAhead: string
   uturnAhead: string
   highwayAhead: string
+  enteringArea: (area: string) => string
 }
 
 const en: Phrases = {
@@ -134,6 +135,7 @@ const en: Phrases = {
   roundaboutAhead: 'Roundabout ahead',
   uturnAhead: 'U-turn ahead',
   highwayAhead: 'Highway ahead',
+  enteringArea: (area) => `You are now in ${area}.`,
 }
 
 const pcm: Phrases = {
@@ -155,6 +157,7 @@ const pcm: Phrases = {
   roundaboutAhead: 'Roundabout dey ahead',
   uturnAhead: 'U-turn dey ahead',
   highwayAhead: 'Expressway dey ahead',
+  enteringArea: (area) => `You don enter ${area} now.`,
 }
 
 const PHRASES: Record<NavLanguage, Phrases> = { en, pcm }

@@ -103,6 +103,14 @@ export interface RouteMapViewProps {
   showTraffic?: boolean
   /** Light or dark map styling — forwarded to GoogleMapView. */
   theme?: 'light' | 'dark'
+  /**
+   * Color of the not-yet-driven part of the route line. Defaults to the
+   * usual blue. Pass a red/amber color (e.g. from a live traffic-delay
+   * reading) to make the road ahead visibly reflect a hold-up, the way
+   * Google/Waze tint a congested stretch of your own route rather than
+   * only the general road network.
+   */
+  remainingColor?: string
   /** Exposes the underlying google.maps.Map once it's created, so a parent can drive zoom/recenter/etc. directly. */
   onReady?: (map: google.maps.Map) => void
 }
@@ -135,6 +143,7 @@ export default function RouteMapView({
   tilt = 0,
   showTraffic = false,
   theme = 'light',
+  remainingColor,
   onReady,
 }: RouteMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null)
@@ -143,6 +152,23 @@ export default function RouteMapView({
     setMap(m)
     onReady?.(m)
   }
+
+  // Real pixel height of the map's own div, kept in sync via
+  // ResizeObserver. The look-ahead math below needs this to convert a
+  // *screen* offset (where the fixed puck sits) into an actual on-the-
+  // ground meters offset — without it there's no way to know how many
+  // meters one screen-pixel represents on this particular device.
+  const [mapDivHeight, setMapDivHeight] = useState<number | null>(null)
+  useEffect(() => {
+    if (!map) return
+    const div = map.getDiv()
+    const measure = () => setMapDivHeight(div.clientHeight || null)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(div)
+    return () => ro.disconnect()
+  }, [map])
 
   const path = useMemo(() => getRoutePath(route), [route])
 
@@ -154,30 +180,33 @@ export default function RouteMapView({
   // static "here's the whole route" preview.
   const previewCenter = useMemo(() => path[Math.floor(path.length / 2)] ?? path[0] ?? { lat: 0, lng: 0 }, [path])
 
-  // The on-screen car puck (see GoogleMapView) sits in the lower third of
-  // the screen rather than dead-center, so more of the road ahead is
-  // visible — the same "look-ahead" framing Google/Waze use. To make that
-  // actually line up (rather than just visually nudging the icon while
-  // the real GPS point stays at true screen-center), the map is centered
-  // slightly *ahead* of the driver along the route: once heading-up
-  // rotation puts "ahead" at the top of the screen, centering on a point
-  // further down the route pushes the driver's real position down and
-  // behind that center — down into the lower third where the puck is
-  // drawn. This is an approximation (the offset distance isn't derived
-  // from the live meters-per-pixel at the current zoom), tuned to roughly
-  // match the puck's screen position at the zoom level used while
-  // navigating.
-  // Tuned for zoom 17 (tight city-street framing); each zoom level out
-  // roughly doubles meters-per-pixel, so this scales the same way to
-  // keep the puck sitting in the same on-screen spot (lower third) as
-  // `zoom` pulls back for speed-adaptive look-ahead — see PlanRoutePage's
-  // navZoom. Without this, zooming out for highway speed would leave the
-  // puck drifting toward screen-center instead of staying anchored low
-  // with more road visible above it.
-  const BASE_LOOK_AHEAD_METERS = 45
-  const BASE_LOOK_AHEAD_ZOOM = 17
-  const lookAheadMeters = BASE_LOOK_AHEAD_METERS * Math.pow(2, BASE_LOOK_AHEAD_ZOOM - zoom)
+  // The on-screen car puck (see GoogleMapView) sits fixed at 68% down the
+  // screen rather than dead-center (50%), so more of the road ahead is
+  // visible — the same "look-ahead" framing Google/Waze use. To make the
+  // puck actually sit on top of the route line (rather than drifting off
+  // it), the map is centered slightly *ahead* of the driver's real
+  // position along the route, by exactly the number of meters that
+  // corresponds to that 18%-of-screen-height gap at the current zoom —
+  // computed from the real, measured pixel height of the map div and the
+  // standard Web Mercator meters-per-pixel formula, not a fixed per-zoom
+  // guess. A hardcoded meters constant can only ever be tuned for one
+  // specific screen size/aspect ratio; on any other device the puck
+  // ends up geometrically offset from where the road line actually is on
+  // screen, which reads as "the icon keeps leaving the line."
+  const PUCK_SCREEN_FRACTION_FROM_CENTER = 0.18 // 68% - 50%, matches GoogleMapView's fixed puck position
+  const METERS_PER_PIXEL_AT_ZOOM0_EQUATOR = 156543.03392
   const total = useMemo(() => totalLength(cum), [cum])
+  const rawLiveSample = useMemo(() => {
+    if (!followMode || progress == null) return null
+    return pointAtFraction(path, cum, progress)
+  }, [followMode, progress, path, cum])
+  const lookAheadMeters = useMemo(() => {
+    if (!mapDivHeight || !rawLiveSample) return 0
+    const metersPerPixel =
+      (METERS_PER_PIXEL_AT_ZOOM0_EQUATOR * Math.cos((rawLiveSample.position.lat * Math.PI) / 180)) /
+      Math.pow(2, zoom)
+    return PUCK_SCREEN_FRACTION_FROM_CENTER * mapDivHeight * metersPerPixel
+  }, [mapDivHeight, zoom, rawLiveSample])
   const liveSample = useMemo(() => {
     if (!followMode || progress == null) return null
     const lookAheadFraction = total > 0 ? lookAheadMeters / total : 0
@@ -299,6 +328,7 @@ export default function RouteMapView({
         progress={progress}
         flowing={flowing}
         showPositionMarker={!followMode}
+        {...(remainingColor ? { remainingColor } : {})}
       />
     </div>
   )
