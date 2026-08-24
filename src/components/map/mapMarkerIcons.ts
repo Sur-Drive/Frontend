@@ -117,33 +117,6 @@ export const startPinHtml = `
 
 export const START_PIN_ANCHOR: [number, number] = [9, 9]
 
-// Round emoji pin for a "place along the route" result (petrol station,
-// restaurant, hospital, ...) — same circular-badge language as
-// reportPinHtml, just keyed by category color/icon instead of hazard color.
-export function placePinHtml(icon: string, color: string, isSelected: boolean): string {
-  const size = isSelected ? 40 : 30
-  return `
-    <div style="
-      background:${color};
-      width:${size}px;
-      height:${size}px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:${isSelected ? '0 4px 16px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.2)'};
-      border:2.5px solid white;
-      transition:all 0.2s;
-      cursor:pointer;
-    ">
-      <span style="font-size:${isSelected ? 18 : 14}px;line-height:1;">${icon}</span>
-    </div>
-  `
-}
-
-export const PLACE_PIN_ANCHOR: [number, number] = [15, 15]
-export const PLACE_PIN_SELECTED_ANCHOR: [number, number] = [20, 20]
-
 // Same nav puck as navArrowPinHtml, but rotatable — used for the moving
 // position marker on an animated route (heading updates every frame as
 // the marker travels along the path).
