@@ -26,9 +26,18 @@ import {
   DESTINATION_PIN_ANCHOR,
   startPinHtml,
   START_PIN_ANCHOR,
+  placePinHtml,
+  PLACE_PIN_ANCHOR,
+  PLACE_PIN_SELECTED_ANCHOR,
   trafficDelayBubbleHtml,
   TRAFFIC_DELAY_BUBBLE_ANCHOR,
 } from "../components/map/mapMarkerIcons";
+import PlacesAlongRoutePanel, {
+  PlacesAlongRouteButton,
+} from "../components/map/PlacesAlongRoutePanel";
+import { usePlacesAlongRoute } from "../hooks/usePlacesAlongRoute";
+import { PLACE_CATEGORIES, getPlaceCategory } from "../constants/placeCategories";
+import type { PlaceCategoryId, NearbyPlace } from "../types/places";
 import BottomNav from "../components/BottomNav";
 import AuthFlow from "../components/AuthFlow";
 import NotificationsPanel from "../components/NotificationsPanel";
@@ -671,6 +680,10 @@ export default function PlanRoutePage() {
   const [sosProgress, setSosProgress] = useState(0);
   const [showUpcomingAlert, setShowUpcomingAlert] = useState(false);
   const [streetViewOpen, setStreetViewOpen] = useState(false);
+  const [showPlacesPanel, setShowPlacesPanel] = useState(false);
+  const [activePlaceCategory, setActivePlaceCategory] =
+    useState<PlaceCategoryId | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
   const [selectedMode, setSelectedMode] = useState<RouteModeKey>("driving");
 
@@ -867,6 +880,45 @@ export default function PlanRoutePage() {
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
 
+  // ── Places along the route ───────────────────────────
+  const activePlaceCategoryObj = useMemo(
+    () => (activePlaceCategory ? getPlaceCategory(activePlaceCategory) ?? null : null),
+    [activePlaceCategory],
+  );
+  const {
+    places: nearbyPlaces,
+    isLoading: nearbyPlacesLoading,
+    error: nearbyPlacesError,
+  } = usePlacesAlongRoute(
+    routePath,
+    showPlacesPanel ? activePlaceCategoryObj : null,
+  );
+
+  const handleTogglePlacesPanel = useCallback(() => {
+    setShowPlacesPanel((open) => {
+      const next = !open;
+      if (!next) {
+        setActivePlaceCategory(null);
+        setSelectedPlaceId(null);
+      } else if (!activePlaceCategory) {
+        setActivePlaceCategory(PLACE_CATEGORIES[0].id);
+      }
+      return next;
+    });
+  }, [activePlaceCategory]);
+
+  const handlePlaceCategoryChange = useCallback((id: PlaceCategoryId) => {
+    setActivePlaceCategory(id);
+    setSelectedPlaceId(null);
+  }, []);
+
+  const handleSelectNearbyPlace = useCallback(
+    (place: NearbyPlace) => {
+      setSelectedPlaceId((current) => (current === place.id ? null : place.id));
+      mapInstance?.panTo({ lat: place.lat, lng: place.lng });
+    },
+    [mapInstance],
+  );
   const [mapTypeId, setMapTypeId] = useState<MapTypeId>("roadmap");
   const [mapTilt, setMapTilt] = useState(0);
 
@@ -2056,6 +2108,20 @@ export default function PlanRoutePage() {
       }
     }
 
+    if (showPlacesPanel && activePlaceCategoryObj) {
+      for (const place of nearbyPlaces) {
+        const isSelected = place.id === selectedPlaceId;
+        markers.push({
+          id: `__place_${place.id}__`,
+          lat: place.lat,
+          lng: place.lng,
+          html: placePinHtml(activePlaceCategoryObj.icon, activePlaceCategoryObj.color, isSelected),
+          anchor: isSelected ? PLACE_PIN_SELECTED_ANCHOR : PLACE_PIN_ANCHOR,
+          onClick: () => handleSelectNearbyPlace(place),
+        });
+      }
+    }
+
     return markers;
   }, [
     selectedPin,
@@ -2067,6 +2133,11 @@ export default function PlanRoutePage() {
     displayProgress,
     destinationCoords,
     startCoords,
+    showPlacesPanel,
+    activePlaceCategoryObj,
+    nearbyPlaces,
+    selectedPlaceId,
+    handleSelectNearbyPlace,
   ]);
 
   // ── Profile Helpers ──────────────────────────────────
@@ -2837,11 +2908,11 @@ export default function PlanRoutePage() {
         </div>
       )}
 
-      {/* StreetViewPegman anchors to the bottom-left corner — the same
-          corner the collision-guard camera PiP occupies while it's on.
-          Push it clear of the PiP (and hide it outright while the guard
-          is expanded full-screen) instead of letting it sit on top of /
-          block the camera feed. */}
+      {/* StreetViewPegman and the "Places" search button both normally
+          anchor to the bottom-left corner — the same corner the collision-
+          guard camera PiP occupies while it's on. Push them clear of it
+          (and hide them outright while the guard is expanded full-screen)
+          instead of letting them sit on top of / block the camera feed. */}
       {!showSOS && !showPlanModal && !showScanResults && !(collisionGuardEnabled && isNavigating && collisionGuardExpanded) && (
         <StreetViewPegman
           onClick={() => setStreetViewOpen(true)}
@@ -2853,6 +2924,44 @@ export default function PlanRoutePage() {
                 ? "bottom-56"
                 : "bottom-24"
               : "bottom-32"
+          }`}
+        />
+      )}
+
+      {/* Places along the route — floating toggle + results sheet */}
+      {!showSOS && !showPlanModal && !showScanResults && effectiveRoute && !(collisionGuardEnabled && isNavigating && collisionGuardExpanded) && (
+        <PlacesAlongRouteButton
+          active={showPlacesPanel}
+          onClick={handleTogglePlacesPanel}
+          className={`transition-[left,bottom] ${
+            collisionGuardEnabled && isNavigating ? "left-[172px] sm:left-[220px]" : "left-4 sm:left-8"
+          } ${
+            isNavigating
+              ? navPanelExpanded
+                ? "bottom-[17.5rem]"
+                : "bottom-40"
+              : "bottom-48"
+          }`}
+        />
+      )}
+
+      {!showSOS && !showPlanModal && !showScanResults && effectiveRoute && (
+        <PlacesAlongRoutePanel
+          open={showPlacesPanel}
+          onClose={handleTogglePlacesPanel}
+          activeCategory={activePlaceCategory}
+          onCategoryChange={handlePlaceCategoryChange}
+          places={nearbyPlaces}
+          isLoading={nearbyPlacesLoading}
+          error={nearbyPlacesError}
+          selectedPlaceId={selectedPlaceId}
+          onSelectPlace={handleSelectNearbyPlace}
+          className={`transition-[bottom] ${
+            isNavigating
+              ? navPanelExpanded
+                ? "bottom-[21rem]"
+                : "bottom-[9.5rem]"
+              : "bottom-[17.5rem]"
           }`}
         />
       )}
