@@ -167,13 +167,22 @@ export default function RouteMapView({
   // from the live meters-per-pixel at the current zoom), tuned to roughly
   // match the puck's screen position at the zoom level used while
   // navigating.
-  const LOOK_AHEAD_METERS = 45
+  // Tuned for zoom 17 (tight city-street framing); each zoom level out
+  // roughly doubles meters-per-pixel, so this scales the same way to
+  // keep the puck sitting in the same on-screen spot (lower third) as
+  // `zoom` pulls back for speed-adaptive look-ahead — see PlanRoutePage's
+  // navZoom. Without this, zooming out for highway speed would leave the
+  // puck drifting toward screen-center instead of staying anchored low
+  // with more road visible above it.
+  const BASE_LOOK_AHEAD_METERS = 45
+  const BASE_LOOK_AHEAD_ZOOM = 17
+  const lookAheadMeters = BASE_LOOK_AHEAD_METERS * Math.pow(2, BASE_LOOK_AHEAD_ZOOM - zoom)
   const total = useMemo(() => totalLength(cum), [cum])
   const liveSample = useMemo(() => {
     if (!followMode || progress == null) return null
-    const lookAheadFraction = total > 0 ? LOOK_AHEAD_METERS / total : 0
+    const lookAheadFraction = total > 0 ? lookAheadMeters / total : 0
     return pointAtFraction(path, cum, progress + lookAheadFraction)
-  }, [followMode, progress, path, cum, total])
+  }, [followMode, progress, path, cum, total, lookAheadMeters])
   const center = liveSample?.position ?? previewCenter
 
   // Draw each alternative as a thin muted line beneath the highlighted

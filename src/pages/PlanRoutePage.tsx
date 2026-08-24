@@ -906,6 +906,21 @@ export default function PlanRoutePage() {
   const [gpsStatus, setGpsStatus] = useState<"waiting" | "active" | "error">(
     "waiting",
   );
+
+  // Speed-adaptive navigation zoom — the same trick Google Maps/Waze use
+  // so you can actually see traffic conditions on the streets ahead
+  // instead of just the next few meters. At walking/stopped speed we
+  // stay tight (zoom 17) for turn precision; as speed climbs we pull
+  // the camera back so more of the upcoming road (and its live traffic
+  // coloring) is on screen before you get there. Each step down in zoom
+  // roughly doubles the visible ground distance.
+  const navZoom = useMemo(() => {
+    const kph = deviceSpeedKph ?? 0;
+    if (kph < 20) return 17; // city streets / stopped
+    if (kph < 45) return 16; // arterial roads
+    if (kph < 75) return 15; // fast roads — several streets ahead
+    return 14; // highway speed — furthest look-ahead
+  }, [deviceSpeedKph]);
   const [gpsErrorMessage, setGpsErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -2178,7 +2193,7 @@ export default function PlanRoutePage() {
           <RouteMapView
             route={effectiveRoute}
             markers={mapMarkers}
-            zoom={isNavigating ? 17 : 15}
+            zoom={isNavigating ? navZoom : 15}
             progress={isNavigating ? displayProgress : undefined}
             flowing={!isNavigating}
             heading={isNavigating ? displayHeading : manualHeading}
