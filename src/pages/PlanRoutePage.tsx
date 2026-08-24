@@ -5,7 +5,11 @@ import LazyGoogleMap from "../components/map/LazyGoogleMap";
 import RouteMapView from "../components/map/RouteMapView";
 import type { MapMarkerSpec } from "../components/map/GoogleMapView";
 import MapControls, { type MapTypeId } from "../components/map/MapControls";
-import { getInitialMapTheme, persistMapTheme, type MapThemeId } from "../lib/mapThemes";
+import {
+  getInitialMapTheme,
+  persistMapTheme,
+  type MapThemeId,
+} from "../lib/mapThemes";
 import OfflineBanner from "../components/ui/OfflineBanner";
 import StreetViewModal, {
   StreetViewPegman,
@@ -26,18 +30,9 @@ import {
   DESTINATION_PIN_ANCHOR,
   startPinHtml,
   START_PIN_ANCHOR,
-  placePinHtml,
-  PLACE_PIN_ANCHOR,
-  PLACE_PIN_SELECTED_ANCHOR,
   trafficDelayBubbleHtml,
   TRAFFIC_DELAY_BUBBLE_ANCHOR,
 } from "../components/map/mapMarkerIcons";
-import PlacesAlongRoutePanel, {
-  PlacesAlongRouteButton,
-} from "../components/map/PlacesAlongRoutePanel";
-import { usePlacesAlongRoute } from "../hooks/usePlacesAlongRoute";
-import { PLACE_CATEGORIES, getPlaceCategory } from "../constants/placeCategories";
-import type { PlaceCategoryId, NearbyPlace } from "../types/places";
 import BottomNav from "../components/BottomNav";
 import AuthFlow from "../components/AuthFlow";
 import NotificationsPanel from "../components/NotificationsPanel";
@@ -232,7 +227,12 @@ function extractHazardLatLng(h: unknown): { lat: number; lng: number } | null {
   const tryPair = (latRaw: unknown, lngRaw: unknown) => {
     const lat = typeof latRaw === "string" ? parseFloat(latRaw) : latRaw;
     const lng = typeof lngRaw === "string" ? parseFloat(lngRaw) : lngRaw;
-    if (typeof lat === "number" && typeof lng === "number" && !Number.isNaN(lat) && !Number.isNaN(lng)) {
+    if (
+      typeof lat === "number" &&
+      typeof lng === "number" &&
+      !Number.isNaN(lat) &&
+      !Number.isNaN(lng)
+    ) {
       return { lat, lng };
     }
     return null;
@@ -680,10 +680,6 @@ export default function PlanRoutePage() {
   const [sosProgress, setSosProgress] = useState(0);
   const [showUpcomingAlert, setShowUpcomingAlert] = useState(false);
   const [streetViewOpen, setStreetViewOpen] = useState(false);
-  const [showPlacesPanel, setShowPlacesPanel] = useState(false);
-  const [activePlaceCategory, setActivePlaceCategory] =
-    useState<PlaceCategoryId | null>(null);
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
   const [selectedMode, setSelectedMode] = useState<RouteModeKey>("driving");
 
@@ -841,7 +837,6 @@ export default function PlanRoutePage() {
     [routeChoices, selectedChoice, activeRoute],
   );
 
-
   const availableModes = useMemo<RouteModeKey[]>(
     () => (routePlan ? (Object.keys(routePlan.routes) as RouteModeKey[]) : []),
     [routePlan],
@@ -880,45 +875,6 @@ export default function PlanRoutePage() {
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
 
-  // ── Places along the route ───────────────────────────
-  const activePlaceCategoryObj = useMemo(
-    () => (activePlaceCategory ? getPlaceCategory(activePlaceCategory) ?? null : null),
-    [activePlaceCategory],
-  );
-  const {
-    places: nearbyPlaces,
-    isLoading: nearbyPlacesLoading,
-    error: nearbyPlacesError,
-  } = usePlacesAlongRoute(
-    routePath,
-    showPlacesPanel ? activePlaceCategoryObj : null,
-  );
-
-  const handleTogglePlacesPanel = useCallback(() => {
-    setShowPlacesPanel((open) => {
-      const next = !open;
-      if (!next) {
-        setActivePlaceCategory(null);
-        setSelectedPlaceId(null);
-      } else if (!activePlaceCategory) {
-        setActivePlaceCategory(PLACE_CATEGORIES[0].id);
-      }
-      return next;
-    });
-  }, [activePlaceCategory]);
-
-  const handlePlaceCategoryChange = useCallback((id: PlaceCategoryId) => {
-    setActivePlaceCategory(id);
-    setSelectedPlaceId(null);
-  }, []);
-
-  const handleSelectNearbyPlace = useCallback(
-    (place: NearbyPlace) => {
-      setSelectedPlaceId((current) => (current === place.id ? null : place.id));
-      mapInstance?.panTo({ lat: place.lat, lng: place.lng });
-    },
-    [mapInstance],
-  );
   const [mapTypeId, setMapTypeId] = useState<MapTypeId>("roadmap");
   const [mapTilt, setMapTilt] = useState(0);
 
@@ -1169,7 +1125,22 @@ export default function PlanRoutePage() {
       return;
     }
 
+    // Belt-and-suspenders: getCurrentPosition is supposed to always call
+    // one of its two callbacks, but real devices (permission dialogs that
+    // never get answered, OS-level location toggles, flaky GPS hardware)
+    // have been known to just never call either one. This guarantees the
+    // page renders — with a default center — no matter what the device
+    // does, instead of sitting on the "Getting your location..." screen
+    // forever.
+    const hardFallback = window.setTimeout(() => {
+      setLocationError(
+        (prev) => prev ?? "Location is taking too long — showing default area.",
+      );
+      setMapReady(true);
+    }, 8000);
+
     const onSuccess = (position: GeolocationPosition) => {
+      window.clearTimeout(hardFallback);
       const loc: [number, number] = [
         position.coords.latitude,
         position.coords.longitude,
@@ -1179,6 +1150,7 @@ export default function PlanRoutePage() {
     };
 
     const onFinalError = (error: GeolocationPositionError) => {
+      window.clearTimeout(hardFallback);
       let message = "Unable to retrieve your location";
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -1214,6 +1186,8 @@ export default function PlanRoutePage() {
       requestAccuratePosition,
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
     );
+
+    return () => window.clearTimeout(hardFallback);
   }, []);
 
   useEffect(() => {
@@ -1332,7 +1306,8 @@ export default function PlanRoutePage() {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => resolve(position.coords.latitude, position.coords.longitude),
+      (position) =>
+        resolve(position.coords.latitude, position.coords.longitude),
       onError,
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
     );
@@ -1342,7 +1317,12 @@ export default function PlanRoutePage() {
   // suggestions panel — fills whichever field (start/destination) is
   // currently active.
   const handleSelectSuggestion = useCallback(
-    (place: { address: string; lat: number; lng: number; placeId?: string }) => {
+    (place: {
+      address: string;
+      lat: number;
+      lng: number;
+      placeId?: string;
+    }) => {
       if (activeSearchField === "start") {
         setStartPoint(place.address);
         setStartCoords({ lat: place.lat, lng: place.lng });
@@ -1660,9 +1640,7 @@ export default function PlanRoutePage() {
       : null;
 
   const routeRemainingMeters =
-    liveProgress != null
-      ? (1 - liveProgress) * totalLength(routeCum)
-      : null;
+    liveProgress != null ? (1 - liveProgress) * totalLength(routeCum) : null;
 
   const isPositionAccurateEnough =
     locationAccuracyMeters != null &&
@@ -1752,7 +1730,10 @@ export default function PlanRoutePage() {
 
   // ── Turn-by-turn voice guidance ──────────────────────
   const voiceGuidance = useVoiceGuidance();
-  const navPhrases = useMemo(() => phrasesFor(voiceGuidance.navLanguage), [voiceGuidance.navLanguage]);
+  const navPhrases = useMemo(
+    () => phrasesFor(voiceGuidance.navLanguage),
+    [voiceGuidance.navLanguage],
+  );
   const announcedArrivalRef = useRef(false);
   const announcedOffRouteRef = useRef(false);
   const lastMilestoneKmRef = useRef<number | null>(null);
@@ -1812,7 +1793,9 @@ export default function PlanRoutePage() {
   // again if it later clears back to typical — mirrors the visual
   // TrafficBadge but only speaks up when the traffic picture actually
   // changes, not on every tick.
-  const announcedTrafficToneRef = useRef<"typical" | "slower" | "faster" | null>(null);
+  const announcedTrafficToneRef = useRef<
+    "typical" | "slower" | "faster" | null
+  >(null);
   useEffect(() => {
     if (!isNavigating || hasArrived || !eta.traffic) return;
     const tone = eta.traffic.tone;
@@ -1851,14 +1834,20 @@ export default function PlanRoutePage() {
     const lang = voiceGuidance.navLanguage;
     const instruction = describeManeuver(step, turnByTurn.nextRoadName, lang);
     const warnDistance = maneuverWarnDistance(step.type);
-    const leadIn = lang === "en" ? maneuverWarningLeadIn(step.type) : translateManeuverLeadIn(step.type, lang);
+    const leadIn =
+      lang === "en"
+        ? maneuverWarningLeadIn(step.type)
+        : translateManeuverLeadIn(step.type, lang);
 
     if (distance <= warnDistance && announcedWarnRef.current !== step.id) {
       announcedWarnRef.current = step.id;
       const body =
         lang === "en"
           ? `In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`
-          : navPhrases.maneuverIn(formatManeuverDistance(distance), instruction);
+          : navPhrases.maneuverIn(
+              formatManeuverDistance(distance),
+              instruction,
+            );
       voiceGuidance.speak(leadIn ? `${leadIn}. ${body}` : body);
     }
 
@@ -1867,7 +1856,9 @@ export default function PlanRoutePage() {
       announcedNowRef.current !== step.id
     ) {
       announcedNowRef.current = step.id;
-      voiceGuidance.speak(navPhrases.maneuverNow(instruction), { interrupt: true });
+      voiceGuidance.speak(navPhrases.maneuverNow(instruction), {
+        interrupt: true,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1917,10 +1908,7 @@ export default function PlanRoutePage() {
     }
     if (isWrongWay && !announcedWrongWayRef.current) {
       announcedWrongWayRef.current = true;
-      voiceGuidance.speak(
-        navPhrases.wrongWay,
-        { interrupt: true },
-      );
+      voiceGuidance.speak(navPhrases.wrongWay, { interrupt: true });
     } else if (!isWrongWay) {
       announcedWrongWayRef.current = false;
     }
@@ -1987,7 +1975,9 @@ export default function PlanRoutePage() {
           ) {
             setDestination(result.address || transcript);
             setDestinationCoords({ lat: result.lat, lng: result.lng });
-            voiceGuidance.speak(navPhrases.destinationSet(result.address || transcript));
+            voiceGuidance.speak(
+              navPhrases.destinationSet(result.address || transcript),
+            );
           } else {
             voiceGuidance.speak(navPhrases.destinationNotFound);
           }
@@ -2072,7 +2062,11 @@ export default function PlanRoutePage() {
           .map((h) => {
             const latLng = extractHazardLatLng(h);
             if (!latLng) return null;
-            const projection = projectPointOntoPath(routePath, routeCum, latLng);
+            const projection = projectPointOntoPath(
+              routePath,
+              routeCum,
+              latLng,
+            );
             return { hazard: h as any, projection };
           })
           .filter(
@@ -2088,10 +2082,14 @@ export default function PlanRoutePage() {
 
         for (const { hazard, projection } of upcoming) {
           const type =
-            typeof hazard.type === "string" ? hazard.type.toUpperCase() : undefined;
+            typeof hazard.type === "string"
+              ? hazard.type.toUpperCase()
+              : undefined;
           const icon = (type && HAZARD_ICON[type]) || "⚠️";
           const minutes = estimateDelayMinutes(type, hazard.severity);
-          const label = minutes ? `${minutes} min` : (type && HAZARD_LABEL[type]) || "Ahead";
+          const label = minutes
+            ? `${minutes} min`
+            : (type && HAZARD_LABEL[type]) || "Ahead";
           const severity =
             hazard.severity === "HIGH" || hazard.severity === "LOW"
               ? hazard.severity
@@ -2108,20 +2106,6 @@ export default function PlanRoutePage() {
       }
     }
 
-    if (showPlacesPanel && activePlaceCategoryObj) {
-      for (const place of nearbyPlaces) {
-        const isSelected = place.id === selectedPlaceId;
-        markers.push({
-          id: `__place_${place.id}__`,
-          lat: place.lat,
-          lng: place.lng,
-          html: placePinHtml(activePlaceCategoryObj.icon, activePlaceCategoryObj.color, isSelected),
-          anchor: isSelected ? PLACE_PIN_SELECTED_ANCHOR : PLACE_PIN_ANCHOR,
-          onClick: () => handleSelectNearbyPlace(place),
-        });
-      }
-    }
-
     return markers;
   }, [
     selectedPin,
@@ -2133,11 +2117,6 @@ export default function PlanRoutePage() {
     displayProgress,
     destinationCoords,
     startCoords,
-    showPlacesPanel,
-    activePlaceCategoryObj,
-    nearbyPlaces,
-    selectedPlaceId,
-    handleSelectNearbyPlace,
   ]);
 
   // ── Profile Helpers ──────────────────────────────────
@@ -2637,7 +2616,10 @@ export default function PlanRoutePage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d="M12 19V5M5 12l7-7 7 7" transform="rotate(180 12 12)" />
+                    <path
+                      d="M12 19V5M5 12l7-7 7 7"
+                      transform="rotate(180 12 12)"
+                    />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -2835,22 +2817,24 @@ export default function PlanRoutePage() {
                 {/* Speed-limit warning — only renders where the route
                     actually carries a posted limit (speedLimitKph);
                     the backend doesn't send one today. */}
-                {typeof speedLimitKph === "number" && deviceSpeedKph != null && (
-                  <div
-                    className={`flex items-center justify-between px-3 py-2 mb-3 rounded-xl text-xs font-semibold ${
-                      isOverSpeedLimit
-                        ? "bg-red-50 text-red-700 border border-red-200"
-                        : "bg-gray-50 text-gray-600 border border-gray-200"
-                    }`}
-                  >
-                    <span>
-                      {isOverSpeedLimit ? "Over the speed limit" : "Speed"}
-                    </span>
-                    <span>
-                      {Math.round(deviceSpeedKph)} / {Math.round(speedLimitKph)} km/h
-                    </span>
-                  </div>
-                )}
+                {typeof speedLimitKph === "number" &&
+                  deviceSpeedKph != null && (
+                    <div
+                      className={`flex items-center justify-between px-3 py-2 mb-3 rounded-xl text-xs font-semibold ${
+                        isOverSpeedLimit
+                          ? "bg-red-50 text-red-700 border border-red-200"
+                          : "bg-gray-50 text-gray-600 border border-gray-200"
+                      }`}
+                    >
+                      <span>
+                        {isOverSpeedLimit ? "Over the speed limit" : "Speed"}
+                      </span>
+                      <span>
+                        {Math.round(deviceSpeedKph)} /{" "}
+                        {Math.round(speedLimitKph)} km/h
+                      </span>
+                    </div>
+                  )}
 
                 <button
                   onClick={handleEndTrip}
@@ -2908,63 +2892,30 @@ export default function PlanRoutePage() {
         </div>
       )}
 
-      {/* StreetViewPegman and the "Places" search button both normally
-          anchor to the bottom-left corner — the same corner the collision-
-          guard camera PiP occupies while it's on. Push them clear of it
-          (and hide them outright while the guard is expanded full-screen)
-          instead of letting them sit on top of / block the camera feed. */}
-      {!showSOS && !showPlanModal && !showScanResults && !(collisionGuardEnabled && isNavigating && collisionGuardExpanded) && (
-        <StreetViewPegman
-          onClick={() => setStreetViewOpen(true)}
-          className={`absolute z-[999] transition-[left,bottom] ${
-            collisionGuardEnabled && isNavigating ? "left-[172px] sm:left-[220px]" : "left-4 sm:left-8"
-          } ${
-            isNavigating
-              ? navPanelExpanded
-                ? "bottom-56"
-                : "bottom-24"
-              : "bottom-32"
-          }`}
-        />
-      )}
-
-      {/* Places along the route — floating toggle + results sheet */}
-      {!showSOS && !showPlanModal && !showScanResults && effectiveRoute && !(collisionGuardEnabled && isNavigating && collisionGuardExpanded) && (
-        <PlacesAlongRouteButton
-          active={showPlacesPanel}
-          onClick={handleTogglePlacesPanel}
-          className={`transition-[left,bottom] ${
-            collisionGuardEnabled && isNavigating ? "left-[172px] sm:left-[220px]" : "left-4 sm:left-8"
-          } ${
-            isNavigating
-              ? navPanelExpanded
-                ? "bottom-[17.5rem]"
-                : "bottom-40"
-              : "bottom-48"
-          }`}
-        />
-      )}
-
-      {!showSOS && !showPlanModal && !showScanResults && effectiveRoute && (
-        <PlacesAlongRoutePanel
-          open={showPlacesPanel}
-          onClose={handleTogglePlacesPanel}
-          activeCategory={activePlaceCategory}
-          onCategoryChange={handlePlaceCategoryChange}
-          places={nearbyPlaces}
-          isLoading={nearbyPlacesLoading}
-          error={nearbyPlacesError}
-          selectedPlaceId={selectedPlaceId}
-          onSelectPlace={handleSelectNearbyPlace}
-          className={`transition-[bottom] ${
-            isNavigating
-              ? navPanelExpanded
-                ? "bottom-[21rem]"
-                : "bottom-[9.5rem]"
-              : "bottom-[17.5rem]"
-          }`}
-        />
-      )}
+      {/* StreetViewPegman anchors to the bottom-left corner — the same
+          corner the collision-guard camera PiP occupies while it's on.
+          Push it clear of the PiP (and hide it outright while the guard
+          is expanded full-screen) instead of letting it sit on top of /
+          block the camera feed. */}
+      {!showSOS &&
+        !showPlanModal &&
+        !showScanResults &&
+        !(collisionGuardEnabled && isNavigating && collisionGuardExpanded) && (
+          <StreetViewPegman
+            onClick={() => setStreetViewOpen(true)}
+            className={`absolute z-[999] transition-[left,bottom] ${
+              collisionGuardEnabled && isNavigating
+                ? "left-[172px] sm:left-[220px]"
+                : "left-4 sm:left-8"
+            } ${
+              isNavigating
+                ? navPanelExpanded
+                  ? "bottom-56"
+                  : "bottom-24"
+                : "bottom-32"
+            }`}
+          />
+        )}
 
       <StreetViewModal
         isOpen={streetViewOpen}
@@ -3096,8 +3047,8 @@ export default function PlanRoutePage() {
             {/* ═══════════════════════════════════════════════
           MOBILE DRAG HANDLE
           ═══════════════════════════════════════════════ */}
-            <div className="flex-shrink-0 flex justify-center pt-3 pb-3 sm:hidden">
-              <div className="w-10 h-1 rounded-full bg-gray-300" />
+            <div className="flex justify-center flex-shrink-0 pt-3 pb-3 sm:hidden">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
 
             {/* ═══════════════════════════════════════════════
@@ -3123,21 +3074,7 @@ export default function PlanRoutePage() {
                   type="button"
                   onClick={() => setShowPlanModal(false)}
                   aria-label="Close route planner"
-                  className="
-              flex
-              items-center
-              justify-center
-              flex-shrink-0
-              w-9
-              h-9
-              text-gray-500
-              transition
-              bg-gray-100
-              rounded-full
-              hover:bg-gray-200
-              active:bg-gray-300
-              touch-manipulation
-            "
+                  className="flex items-center justify-center flex-shrink-0 text-gray-500 transition bg-gray-100 rounded-full w-9 h-9 hover:bg-gray-200 active:bg-gray-300 touch-manipulation"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -3179,18 +3116,7 @@ export default function PlanRoutePage() {
             ═══════════════════════════════════════════════ */}
               <div ref={startFieldContainerRef}>
                 <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="
-                flex
-                items-center
-                justify-center
-                w-5
-                h-5
-                border-2
-                rounded-full
-                border-emerald-500
-              "
-                  >
+                  <div className="flex items-center justify-center w-5 h-5 border-2 rounded-full border-emerald-500">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
 
@@ -3199,22 +3125,7 @@ export default function PlanRoutePage() {
                   </span>
                 </div>
 
-                <div
-                  className="
-              flex
-              items-center
-              gap-2
-              px-4
-              py-3
-              bg-gray-50
-              rounded-xl
-              border
-              border-transparent
-              focus-within:border-purple-200
-              focus-within:bg-white
-              transition
-            "
-                >
+                <div className="flex items-center gap-2 px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
                   <AddressAutocompleteInput
                     value={startPoint}
                     onChange={setStartPoint}
@@ -3321,19 +3232,7 @@ export default function PlanRoutePage() {
                   </span>
                 </div>
 
-                <div
-                  className="
-              px-4
-              py-3
-              bg-gray-50
-              rounded-xl
-              border
-              border-transparent
-              focus-within:border-purple-200
-              focus-within:bg-white
-              transition
-            "
-                >
+                <div className="px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
                   <AddressAutocompleteInput
                     value={destination}
                     onChange={setDestination}
@@ -3377,7 +3276,9 @@ export default function PlanRoutePage() {
                     <SearchSuggestionsPanel
                       savedPlaces={savedPlaces}
                       onSelect={handleSelectSuggestion}
-                      onUseCurrentLocation={handleUseCurrentLocationForDestination}
+                      onUseCurrentLocation={
+                        handleUseCurrentLocationForDestination
+                      }
                       isLocatingCurrentPosition={isLocatingDestination}
                       currentLocationErrorText={destinationLocationError}
                     />
