@@ -3074,7 +3074,7 @@ export default function PlanRoutePage() {
                   type="button"
                   onClick={() => setShowPlanModal(false)}
                   aria-label="Close route planner"
-                  className="flex items-center justify-center flex-shrink-0 text-gray-500 transition bg-gray-100 rounded-full w-9 h-9 hover:bg-gray-200 active:bg-gray-300 touch-manipulation"
+                  className="flex items-center justify-center flex-shrink-0 text-gray-500 transition bg-gray-100 rounded-full  w-9 h-9 hover:bg-gray-200 active:bg-gray-300 touch-manipulation"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -3116,7 +3116,9 @@ export default function PlanRoutePage() {
             ═══════════════════════════════════════════════ */}
               <div ref={startFieldContainerRef}>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="flex items-center justify-center w-5 h-5 border-2 rounded-full border-emerald-500">
+                  <div
+                    className="flex items-center justify-center w-5 h-5 border-2 rounded-full  border-emerald-500"
+                  >
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
 
@@ -3125,7 +3127,9 @@ export default function PlanRoutePage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
+                <div
+                  className="flex items-center gap-2 px-4 py-3 transition border border-transparent  bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white"
+                >
                   <AddressAutocompleteInput
                     value={startPoint}
                     onChange={setStartPoint}
@@ -3232,7 +3236,9 @@ export default function PlanRoutePage() {
                   </span>
                 </div>
 
-                <div className="px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
+                <div
+                  className="px-4 py-3 transition border border-transparent  bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white"
+                >
                   <AddressAutocompleteInput
                     value={destination}
                     onChange={setDestination}
