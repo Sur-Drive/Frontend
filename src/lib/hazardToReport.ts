@@ -9,7 +9,6 @@ export type ReportType =
   | 'sign'
   | 'warning'
   | 'tractor'
-  | 'closure'
 
 export interface Report {
   id: string
@@ -31,12 +30,10 @@ const TYPE_TO_REPORT_TYPE: Record<BackendHazardType, ReportType> = {
   FLOOD: 'wave',
   ACCIDENT: 'hazard',
   DEBRIS: 'warning',
-  ROAD_WORKS: 'tractor',
-  ROAD_CLOSURE: 'closure',
+  ROAD: 'tractor',
   CHECKPOINT: 'sign',
   DANGER: 'hazard',
   SOS: 'sos',
-  OTHER: 'warning',
 }
 
 const TYPE_LABEL: Record<BackendHazardType, string> = {
@@ -44,12 +41,10 @@ const TYPE_LABEL: Record<BackendHazardType, string> = {
   FLOOD: 'Flood risk area',
   ACCIDENT: 'Accident',
   DEBRIS: 'Debris in road',
-  ROAD_WORKS: 'Road works',
-  ROAD_CLOSURE: 'Road closed',
+  ROAD: 'Road works',
   CHECKPOINT: 'Checkpoint',
   DANGER: 'Danger zone',
   SOS: 'Emergency reported',
-  OTHER: 'Reported hazard',
 }
 
 const SEVERITY_COLOR: Record<Hazard['severity'], string> = {
@@ -78,12 +73,7 @@ export function hazardToReport(hazard: Hazard, userLocation: [number, number] | 
     id: hazard.id,
     lat,
     lng,
-    color:
-      hazard.type === 'SOS'
-        ? '#ef4444'
-        : hazard.type === 'ROAD_CLOSURE'
-          ? '#1f2937' // road is impassable — always shown as a fixed dark "blocked" color, not severity-graded
-          : SEVERITY_COLOR[hazard.severity],
+    color: hazard.type === 'SOS' ? '#ef4444' : SEVERITY_COLOR[hazard.severity],
     type: TYPE_TO_REPORT_TYPE[hazard.type],
     title: TYPE_LABEL[hazard.type],
     streetLabel: hazard.location.address,

@@ -926,7 +926,6 @@ export type HazardType =
   | 'Accident'
   | 'Debris'
   | 'Road'
-  | 'Closure'
   | 'Checkpoint'
   | 'Danger'
   | 'SOS'
@@ -937,7 +936,6 @@ const HAZARD_TYPE_MAP: Record<HazardType, BackendHazardType> = {
   Accident: 'ACCIDENT',
   Debris: 'DEBRIS',
   Road: 'ROAD_WORKS',
-  Closure: 'ROAD_CLOSURE',
   Checkpoint: 'CHECKPOINT',
   Danger: 'DANGER',
   SOS: 'SOS',
@@ -954,7 +952,6 @@ const HAZARD_TYPES: { type: HazardType; emoji: string }[] = [
   { type: 'Accident', emoji: '🚧' },
   { type: 'Debris', emoji: '🪨' },
   { type: 'Road', emoji: '🚜' },
-  { type: 'Closure', emoji: '⛔' },
   { type: 'Checkpoint', emoji: '🛂' },
   { type: 'Danger', emoji: '⚠️' },
   { type: 'SOS', emoji: '🆘' },

@@ -5,12 +5,6 @@ import LazyGoogleMap from "../components/map/LazyGoogleMap";
 import RouteMapView from "../components/map/RouteMapView";
 import type { MapMarkerSpec } from "../components/map/GoogleMapView";
 import MapControls, { type MapTypeId } from "../components/map/MapControls";
-import {
-  getInitialMapTheme,
-  persistMapTheme,
-  type MapThemeId,
-} from "../lib/mapThemes";
-import OfflineBanner from "../components/ui/OfflineBanner";
 import StreetViewModal, {
   StreetViewPegman,
 } from "../components/map/StreetView";
@@ -21,17 +15,12 @@ import {
   reportPinHtml,
   REPORT_PIN_ANCHOR,
   REPORT_PIN_SELECTED_ANCHOR,
-  closurePinHtml,
-  CLOSURE_PIN_ANCHOR,
-  CLOSURE_PIN_SELECTED_ANCHOR,
   userLocationPinHtml,
   USER_LOCATION_ANCHOR,
   destinationPinHtml,
   DESTINATION_PIN_ANCHOR,
   startPinHtml,
   START_PIN_ANCHOR,
-  trafficDelayBubbleHtml,
-  TRAFFIC_DELAY_BUBBLE_ANCHOR,
 } from "../components/map/mapMarkerIcons";
 import BottomNav from "../components/BottomNav";
 import AuthFlow from "../components/AuthFlow";
@@ -64,11 +53,10 @@ import {
   pointAtFraction,
   projectPointOntoPath,
   haversineMeters,
-  totalLength,
   type LatLng,
 } from "../lib/geoPath";
 import { useVoiceGuidance } from "../hooks/useVoiceGuidance";
-import { useTurnByTurn, areaNameFromAddress } from "../hooks/useTurnByTurn";
+import { useTurnByTurn } from "../hooks/useTurnByTurn";
 import { useWakeWord, useVoiceSearch } from "../hooks/useVoiceSearch";
 import { forwardGeocode } from "../api/geocoding";
 import { Mic } from "lucide-react";
@@ -76,24 +64,10 @@ import TurnByTurnCard, {
   describeManeuver,
 } from "../components/map/TurnByTurnCard";
 import VoiceGuidanceControl from "../components/map/VoiceGuidanceControl";
-import {
-  formatManeuverDistance,
-  maneuverWarnDistance,
-  maneuverWarningLeadIn,
-} from "../lib/maneuvers";
-import { angleDifference } from "../lib/geoPath";
+import { formatManeuverDistance } from "../lib/maneuvers";
 import { useCollisionGuard } from "../hooks/useCollisionGuard";
 import CollisionGuardView from "../components/map/CollisionGuardView";
 import { describeWarning } from "../lib/collisionDetection";
-import { useEtaSystem } from "../hooks/useEtaSystem";
-import { phrasesFor, translateManeuverLeadIn } from "../lib/navPhrases";
-import { formatEtaDistance, formatEtaDuration } from "../lib/etaSystem";
-import TrafficEtaBadge from "../components/map/TrafficEtaBadge";
-import RouteStopsEditor, {
-  type RouteStop,
-} from "../components/map/RouteStopsEditor";
-import SearchSuggestionsPanel from "../components/map/SearchSuggestionsPanel";
-import { useSavedPlaces } from "../hooks/useSavedPlaces";
 
 // ─── Types ─────────────────────────────────────────────
 type ReportType =
@@ -127,125 +101,30 @@ interface HazardLike {
   type?: string;
   description?: string;
   distanceLabel?: string;
-  severity?: string;
   location?: { address?: string };
 }
 
-// ─── Traffic & Incident Alerts ─────────────────────────
-// Icon/label/typical-delay lookups for hazard alerts shown on the plan
-// screen, the upcoming-hazard banner during navigation, and the scan
-// results list. Keyed by the backend's hazard `type` (uppercased) with a
-// few extra forward-compatible keys (TRAFFIC, ROAD_CLOSURE, BREAKDOWN,
-// POLICE) so the UI already has copy ready if the backend adds them.
 const HAZARD_ICON: Record<string, string> = {
-  TRAFFIC: "🚦",
-  ACCIDENT: "⚠️",
-  ROAD_WORKS: "🚧",
-  ROAD_CLOSURE: "⛔",
-  BREAKDOWN: "🚗",
-  OBSTRUCTION: "🪨",
-  DEBRIS: "🪨",
-  CHECKPOINT: "👮",
-  POLICE: "👮",
-  FLOOD: "🌊",
   POTHOLE: "🕳️",
+  FLOOD: "🌊",
+  ACCIDENT: "⚠️",
+  DEBRIS: "🪨",
+  ROAD_WORKS: "🚜",
+  CHECKPOINT: "🚧",
   DANGER: "⚠️",
   SOS: "🆘",
-  OTHER: "⚠️",
 };
 
 const HAZARD_LABEL: Record<string, string> = {
-  TRAFFIC: "Traffic ahead",
-  ACCIDENT: "Accident ahead",
-  ROAD_WORKS: "Road works ahead",
-  ROAD_CLOSURE: "Road closed ahead",
-  BREAKDOWN: "Vehicle breakdown ahead",
-  OBSTRUCTION: "Obstruction on the road ahead",
-  DEBRIS: "Obstruction on the road ahead",
-  CHECKPOINT: "Police checkpoint ahead",
-  POLICE: "Police incident reported ahead",
-  FLOOD: "Flooding reported ahead",
   POTHOLE: "Pothole ahead",
-  DANGER: "Hazard warning ahead",
+  FLOOD: "Flood risk ahead",
+  ACCIDENT: "Accident reported ahead",
+  DEBRIS: "Debris in the road ahead",
+  ROAD_WORKS: "Road works ahead",
+  CHECKPOINT: "Checkpoint ahead",
+  DANGER: "Hazard ahead",
   SOS: "Emergency reported ahead",
-  OTHER: "Hazard warning ahead",
 };
-
-// Rough "how much this typically slows you down" estimate — real backend
-// hazards don't carry a delay figure today, so this is a presentational
-// heuristic (type baseline, nudged by severity) rather than a measured
-// value. Good enough to give drivers a sense of scale at a glance.
-const HAZARD_BASE_DELAY_MINUTES: Record<string, number> = {
-  TRAFFIC: 6,
-  ACCIDENT: 12,
-  ROAD_WORKS: 8,
-  ROAD_CLOSURE: 15,
-  BREAKDOWN: 5,
-  OBSTRUCTION: 3,
-  DEBRIS: 3,
-  CHECKPOINT: 4,
-  POLICE: 4,
-  FLOOD: 10,
-  POTHOLE: 1,
-  DANGER: 5,
-  SOS: 5,
-  OTHER: 3,
-};
-
-const SEVERITY_DELAY_MULTIPLIER: Record<string, number> = {
-  LOW: 0.6,
-  MEDIUM: 1,
-  HIGH: 1.8,
-};
-
-function estimateDelayMinutes(type?: string, severity?: string): number | null {
-  if (!type) return null;
-  const base = HAZARD_BASE_DELAY_MINUTES[type.toUpperCase()];
-  if (!base) return null;
-  const multiplier =
-    (severity && SEVERITY_DELAY_MULTIPLIER[severity.toUpperCase()]) || 1;
-  return Math.max(1, Math.round(base * multiplier));
-}
-
-function formatDelayDuration(minutes: number | null): string | null {
-  if (!minutes) return null;
-  if (minutes < 60) return `~${minutes} min delay`;
-  const hrs = Math.floor(minutes / 60);
-  const rem = minutes % 60;
-  return `~${hrs}h${rem ? ` ${rem}m` : ""} delay`;
-}
-
-// Defensively pulls {lat, lng} out of a hazard object of unknown shape —
-// backend hazards carry it as `location.latitude`/`location.longitude`
-// (strings, per types/hazard.ts) but we also accept a plain lat/lng or
-// location.lat/lng in case the shape varies, same defensive style as
-// formatHazardLocation() in api/route.ts.
-function extractHazardLatLng(h: unknown): { lat: number; lng: number } | null {
-  const obj = h as any;
-  if (!obj) return null;
-
-  const tryPair = (latRaw: unknown, lngRaw: unknown) => {
-    const lat = typeof latRaw === "string" ? parseFloat(latRaw) : latRaw;
-    const lng = typeof lngRaw === "string" ? parseFloat(lngRaw) : lngRaw;
-    if (
-      typeof lat === "number" &&
-      typeof lng === "number" &&
-      !Number.isNaN(lat) &&
-      !Number.isNaN(lng)
-    ) {
-      return { lat, lng };
-    }
-    return null;
-  };
-
-  return (
-    tryPair(obj.latitude, obj.longitude) ??
-    tryPair(obj.lat, obj.lng) ??
-    tryPair(obj.location?.latitude, obj.location?.longitude) ??
-    tryPair(obj.location?.lat, obj.location?.lng) ??
-    null
-  );
-}
 
 function describeUpcomingHazard(hazards: unknown[] | undefined) {
   const first = hazards?.[0] as HazardLike | undefined;
@@ -260,7 +139,6 @@ function describeUpcomingHazard(hazards: unknown[] | undefined) {
       first.description ||
       first.location?.address ||
       "Hazard ahead",
-    delayLabel: formatDelayDuration(estimateDelayMinutes(type, first.severity)),
   };
 }
 
@@ -518,52 +396,63 @@ function ReportIcon({
 }
 
 // ─── Hazard List Icon ──────────────────────────────────
-// Backing colors grouped by rough severity/category so the scan-results
-// and hazard-alert lists stay visually distinct at a glance.
-const HAZARD_ICON_BG: Record<string, string> = {
-  TRAFFIC: "bg-amber-100",
-  ACCIDENT: "bg-red-100",
-  ROAD_WORKS: "bg-orange-100",
-  ROAD_CLOSURE: "bg-red-100",
-  BREAKDOWN: "bg-orange-100",
-  OBSTRUCTION: "bg-gray-100",
-  DEBRIS: "bg-gray-100",
-  CHECKPOINT: "bg-blue-100",
-  POLICE: "bg-blue-100",
-  FLOOD: "bg-sky-100",
-  POTHOLE: "bg-gray-100",
-  DANGER: "bg-amber-100",
-  SOS: "bg-red-100",
-  OTHER: "bg-gray-100",
-};
-
-// Maps the app's own report-pin types (lowercase, used by mock/sample
-// data) onto the same backend-style keys used by HAZARD_ICON/LABEL above,
-// so both real hazards and sample pins render consistently here.
-const REPORT_TYPE_TO_HAZARD_KEY: Record<string, string> = {
-  pothole: "POTHOLE",
-  hazard: "CHECKPOINT",
-  sos: "SOS",
-  sign: "OTHER",
-  warning: "DANGER",
-  tractor: "ROAD_WORKS",
-  wave: "OTHER",
-  hill: "OTHER",
-};
-
-function HazardListIcon({ type }: { type: string }) {
-  const key =
-    REPORT_TYPE_TO_HAZARD_KEY[type] ?? (type ? type.toUpperCase() : "OTHER");
-  const icon = HAZARD_ICON[key] ?? "⚠️";
-  const bg = HAZARD_ICON_BG[key] ?? "bg-gray-100";
-
-  return (
-    <div
-      className={`flex items-center justify-center ${bg} w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex-shrink-0`}
-    >
-      <span className="text-base leading-none sm:text-lg">{icon}</span>
-    </div>
-  );
+function HazardListIcon({ type }: { type: ReportType }) {
+  switch (type) {
+    case "pothole":
+      return (
+        <div className="flex items-center justify-center bg-gray-100 w-9 h-9 sm:w-10 sm:h-10 rounded-xl">
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4.5 h-4.5 sm:w-5 sm:h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <ellipse cx="12" cy="12" rx="8" ry="4" fill="#1a1a1a" />
+          </svg>
+        </div>
+      );
+    case "hazard":
+      return (
+        <div className="flex items-center justify-center bg-blue-100 w-9 h-9 sm:w-10 sm:h-10 rounded-xl">
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-blue-600"
+            fill="currentColor"
+          >
+            <rect x="4" y="4" width="16" height="16" rx="3" />
+            <text
+              x="12"
+              y="16"
+              textAnchor="middle"
+              fill="white"
+              fontSize="10"
+              fontWeight="bold"
+            >
+              P
+            </text>
+          </svg>
+        </div>
+      );
+    default:
+      return (
+        <div className="flex items-center justify-center bg-gray-100 w-9 h-9 sm:w-10 sm:h-10 rounded-xl">
+          <svg
+            viewBox="0 0 24 24"
+            className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-600"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+        </div>
+      );
+  }
 }
 
 // ─── Spinner Icon for loading state ──────────────────────
@@ -689,49 +578,6 @@ export default function PlanRoutePage() {
 
   const [startPoint, setStartPoint] = useState("");
   const [destination, setDestination] = useState("");
-  const [stops, setStops] = useState<RouteStop[]>([]);
-
-  // ── Search: saved places, recent searches, current-location search ──
-  const savedPlaces = useSavedPlaces();
-  const savedPlacesRef = useRef(savedPlaces);
-  savedPlacesRef.current = savedPlaces;
-  const [activeSearchField, setActiveSearchField] = useState<
-    "start" | "destination" | null
-  >(null);
-  const [startPredictionsOpen, setStartPredictionsOpen] = useState(false);
-  const [destinationPredictionsOpen, setDestinationPredictionsOpen] =
-    useState(false);
-  const [isLocatingDestination, setIsLocatingDestination] = useState(false);
-  const [destinationLocationError, setDestinationLocationError] = useState<
-    string | null
-  >(null);
-  const startFieldContainerRef = useRef<HTMLDivElement>(null);
-  const destinationFieldContainerRef = useRef<HTMLDivElement>(null);
-
-  // Close the suggestions panel on outside tap/click, same pattern
-  // AddressAutocompleteInput uses for its own predictions dropdown.
-  useEffect(() => {
-    if (!activeSearchField) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const container =
-        activeSearchField === "start"
-          ? startFieldContainerRef.current
-          : destinationFieldContainerRef.current;
-      if (container && !container.contains(e.target as Node)) {
-        setActiveSearchField(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [activeSearchField]);
-  const stopCoords = useMemo(
-    () => stops.filter((s) => s.coords).map((s) => s.coords!),
-    [stops],
-  );
-  // Kept fresh via ref so re-plans triggered from timers/effects set up
-  // before the latest stop edit still plan through the current stops.
-  const stopCoordsRef = useRef(stopCoords);
-  stopCoordsRef.current = stopCoords;
 
   const [startCoords, setStartCoords] = useState<{
     lat: number;
@@ -870,63 +716,31 @@ export default function PlanRoutePage() {
     null,
   );
   const [mapReady, setMapReady] = useState(false);
-  const [locationNoticeDismissed, setLocationNoticeDismissed] = useState(false);
 
   // ── Map display controls ─────
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
-
   const [mapTypeId, setMapTypeId] = useState<MapTypeId>("roadmap");
   const [mapTilt, setMapTilt] = useState(0);
-
   const [showTraffic, setShowTraffic] = useState(true);
-  const [mapTheme, setMapTheme] = useState<MapThemeId>(getInitialMapTheme);
   const [manualHeading, setManualHeading] = useState(0);
 
   const routeCum = useMemo(() => cumulativeDistances(routePath), [routePath]);
   const [liveProgress, setLiveProgress] = useState<number | null>(null);
   const [liveHeading, setLiveHeading] = useState(0);
-  const [locationAccuracyMeters, setLocationAccuracyMeters] = useState<
-    number | null
-  >(null);
 
   const [routeDeviationMeters, setRouteDeviationMeters] = useState<
     number | null
   >(null);
 
-  // Device's actual compass heading + ground speed, straight from the
-  // GPS fix — distinct from `liveHeading` above, which is the *route's*
-  // expected heading at the driver's projected position. Comparing the
-  // two is what lets us tell "off-route" (drifted off the path) apart
-  // from "wrong way" (on the path, but pointed backwards along it), and
-  // ground speed is what a speed-limit warning needs.
-  const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
-  const [deviceSpeedKph, setDeviceSpeedKph] = useState<number | null>(null);
-
   const [gpsStatus, setGpsStatus] = useState<"waiting" | "active" | "error">(
     "waiting",
   );
-
-  // Speed-adaptive navigation zoom — the same trick Google Maps/Waze use
-  // so you can actually see traffic conditions on the streets ahead
-  // instead of just the next few meters. At walking/stopped speed we
-  // stay tight (zoom 17) for turn precision; as speed climbs we pull
-  // the camera back so more of the upcoming road (and its live traffic
-  // coloring) is on screen before you get there. Each step down in zoom
-  // roughly doubles the visible ground distance.
-  const navZoom = useMemo(() => {
-    const kph = deviceSpeedKph ?? 0;
-    if (kph < 20) return 17; // city streets / stopped
-    if (kph < 45) return 16; // arterial roads
-    if (kph < 75) return 15; // fast roads — several streets ahead
-    return 14; // highway speed — furthest look-ahead
-  }, [deviceSpeedKph]);
   const [gpsErrorMessage, setGpsErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isNavigating || routePath.length < 2) {
       setLiveProgress(null);
-      setLocationAccuracyMeters(null);
       return;
     }
 
@@ -954,21 +768,7 @@ export default function PlanRoutePage() {
       setLiveProgress(projection.fraction);
       setLiveHeading(sample.heading);
       setRouteDeviationMeters(projection.distanceMeters);
-      setLocationAccuracyMeters(position.coords.accuracy);
       setUserLocation([raw.lat, raw.lng]);
-      setDeviceHeading(
-        typeof position.coords.heading === "number" &&
-          !Number.isNaN(position.coords.heading)
-          ? position.coords.heading
-          : null,
-      );
-      setDeviceSpeedKph(
-        typeof position.coords.speed === "number" &&
-          !Number.isNaN(position.coords.speed) &&
-          position.coords.speed >= 0
-          ? position.coords.speed * 3.6
-          : null,
-      );
     };
 
     const startWatch = (options: PositionOptions) => {
@@ -1008,37 +808,6 @@ export default function PlanRoutePage() {
     isNavigating &&
     liveProgress != null &&
     (routeDeviationMeters ?? 0) > OFF_ROUTE_THRESHOLD_METERS;
-
-  // "Wrong way": still on the route line (not off-route), but pointed
-  // roughly opposite the direction of travel — e.g. driving backwards
-  // down a one-way stretch. Distinct from off-route, which only means
-  // "not on the path" and says nothing about which way the driver is
-  // facing. Requires actual GPS heading (`coords.heading`, which most
-  // browsers only populate above a walking pace) and a genuine minimum
-  // speed, since heading is unreliable near-stationary.
-  const WRONG_WAY_ANGLE_THRESHOLD = 120;
-  const WRONG_WAY_MIN_SPEED_KPH = 8;
-  const isWrongWay =
-    isNavigating &&
-    !isOffRoute &&
-    liveProgress != null &&
-    deviceHeading != null &&
-    liveHeading != null &&
-    (deviceSpeedKph ?? 0) >= WRONG_WAY_MIN_SPEED_KPH &&
-    Math.abs(angleDifference(liveHeading, deviceHeading)) >
-      WRONG_WAY_ANGLE_THRESHOLD;
-
-  // Speed-limit warning — only ever activates when the route actually
-  // carries a `speedLimitKph` (the backend doesn't send one today; see
-  // the field's doc comment in types/routePlan.ts). A small buffer above
-  // the posted limit avoids nagging over normal speedometer/GPS noise.
-  const SPEED_WARNING_BUFFER_KPH = 8;
-  const speedLimitKph = effectiveRoute?.speedLimitKph;
-  const isOverSpeedLimit =
-    isNavigating &&
-    typeof speedLimitKph === "number" &&
-    deviceSpeedKph != null &&
-    deviceSpeedKph > speedLimitKph + SPEED_WARNING_BUFFER_KPH;
 
   const turnByTurn = useTurnByTurn(routePath, displayProgress, isNavigating);
 
@@ -1122,13 +891,11 @@ export default function PlanRoutePage() {
         const { address } = await reverseGeocode(lat, lng);
         setStartPoint(address);
         setStartCoords({ lat, lng });
-        savedPlacesRef.current.addRecentSearch({ address, lat, lng });
       } catch (err) {
         setStartPoint(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         setStartCoords({ lat, lng });
       } finally {
         setIsGettingLocation(false);
-        setActiveSearchField(null);
       }
     },
     [],
@@ -1141,22 +908,7 @@ export default function PlanRoutePage() {
       return;
     }
 
-    // Belt-and-suspenders: getCurrentPosition is supposed to always call
-    // one of its two callbacks, but real devices (permission dialogs that
-    // never get answered, OS-level location toggles, flaky GPS hardware)
-    // have been known to just never call either one. This guarantees the
-    // page renders — with a default center — no matter what the device
-    // does, instead of sitting on the "Getting your location..." screen
-    // forever.
-    const hardFallback = window.setTimeout(() => {
-      setLocationError(
-        (prev) => prev ?? "Location is taking too long — showing default area.",
-      );
-      setMapReady(true);
-    }, 8000);
-
     const onSuccess = (position: GeolocationPosition) => {
-      window.clearTimeout(hardFallback);
       const loc: [number, number] = [
         position.coords.latitude,
         position.coords.longitude,
@@ -1166,7 +918,6 @@ export default function PlanRoutePage() {
     };
 
     const onFinalError = (error: GeolocationPositionError) => {
-      window.clearTimeout(hardFallback);
       let message = "Unable to retrieve your location";
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -1202,8 +953,6 @@ export default function PlanRoutePage() {
       requestAccuratePosition,
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
     );
-
-    return () => window.clearTimeout(hardFallback);
   }, []);
 
   useEffect(() => {
@@ -1272,86 +1021,6 @@ export default function PlanRoutePage() {
     );
   }, [reverseGeocodeStartPoint]);
 
-  // Reverse geocode the device's current position into the destination
-  // field — the "Search around current location" action for Point B.
-  // (Point A already has this via handleUseMyLocation/"Use my location".)
-  const handleUseCurrentLocationForDestination = useCallback(() => {
-    if (!navigator.geolocation) {
-      setDestinationLocationError("Geolocation not supported by your browser");
-      return;
-    }
-    setIsLocatingDestination(true);
-    setDestinationLocationError(null);
-
-    const resolve = async (lat: number, lng: number) => {
-      try {
-        const { address } = await reverseGeocode(lat, lng);
-        setDestination(address);
-        setDestinationCoords({ lat, lng });
-        savedPlacesRef.current.addRecentSearch({ address, lat, lng });
-      } catch {
-        const fallback = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        setDestination(fallback);
-        setDestinationCoords({ lat, lng });
-      } finally {
-        setIsLocatingDestination(false);
-        setActiveSearchField(null);
-      }
-    };
-
-    const onError = (error: GeolocationPositionError) => {
-      let message = "Unable to retrieve your location";
-      switch (error.code) {
-        case error.PERMISSION_DENIED:
-          message = "Location permission denied. Please enable it in settings.";
-          break;
-        case error.POSITION_UNAVAILABLE:
-          message = "Location information unavailable.";
-          break;
-        case error.TIMEOUT:
-          message = "Location request timed out.";
-          break;
-      }
-      setDestinationLocationError(message);
-      setIsLocatingDestination(false);
-    };
-
-    if (userLocation) {
-      resolve(userLocation[0], userLocation[1]);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) =>
-        resolve(position.coords.latitude, position.coords.longitude),
-      onError,
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
-    );
-  }, [userLocation]);
-
-  // Selecting a saved place, favourite, or recent search from the
-  // suggestions panel — fills whichever field (start/destination) is
-  // currently active.
-  const handleSelectSuggestion = useCallback(
-    (place: {
-      address: string;
-      lat: number;
-      lng: number;
-      placeId?: string;
-    }) => {
-      if (activeSearchField === "start") {
-        setStartPoint(place.address);
-        setStartCoords({ lat: place.lat, lng: place.lng });
-      } else if (activeSearchField === "destination") {
-        setDestination(place.address);
-        setDestinationCoords({ lat: place.lat, lng: place.lng });
-      }
-      savedPlacesRef.current.addRecentSearch(place);
-      setActiveSearchField(null);
-    },
-    [activeSearchField],
-  );
-
   const handleRecenter = useCallback(() => {
     if (userLocation && mapInstance) {
       mapInstance.panTo({ lat: userLocation[0], lng: userLocation[1] });
@@ -1400,7 +1069,7 @@ export default function PlanRoutePage() {
     setShowScanResults(true);
 
     planRouteMutation.mutate(
-      { origin, destination: dest, stops: stopCoords },
+      { origin, destination: dest },
       {
         onSuccess: (data) => {
           console.log("[route] plan succeeded", data);
@@ -1464,7 +1133,6 @@ export default function PlanRoutePage() {
     setShowUpcomingAlert(false);
     setStartPoint("");
     setDestination("");
-    setStops([]);
     setShowScanResults(false);
     setRouteError(null);
     trip.pause();
@@ -1533,7 +1201,7 @@ export default function PlanRoutePage() {
 
     resumeReplanFiredRef.current = true;
     pendingResumeDestRef.current = null;
-    planRouteMutation.mutate({ origin, destination: dest, stops: stopCoords });
+    planRouteMutation.mutate({ origin, destination: dest });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation, locationError]);
 
@@ -1559,11 +1227,7 @@ export default function PlanRoutePage() {
       if (!loc) return;
 
       planRouteMutation.mutate(
-        {
-          origin: { lat: loc[0], lng: loc[1] },
-          destination: dest,
-          stops: stopCoordsRef.current,
-        },
+        { origin: { lat: loc[0], lng: loc[1] }, destination: dest },
         {
           onSuccess: (data) => {
             const updated = data.routes[selectedMode];
@@ -1629,34 +1293,7 @@ export default function PlanRoutePage() {
   }, [collisionGuard.activeWarning, collisionGuardEnabled, isNavigating]);
 
   // ── Arrival ──
-  // Modeled on how real turn-by-turn apps (Google Maps/Waze) do this —
-  // Google's own navigation patents describe the same two-part shape:
-  // a distance gate around the destination, then a confirmation step
-  // before actually declaring arrival, rather than trusting one sample.
-  //
-  // Straight-line distance alone isn't enough: it can look small while
-  // the destination is still a real drive away (across a highway median,
-  // a canal, a walled estate — "3 km left" but only 40m as the crow
-  // flies). So the gate requires BOTH the straight-line distance AND the
-  // distance remaining *along the actual route* to be small.
-  //
-  // A GPS fix's reported accuracy is its own error budget, so instead of
-  // a fixed accuracy cutoff (which real fixes routinely miss — outdoor
-  // GPS commonly reports 20-50m and spikes higher near buildings, so a
-  // rigid "must be under 30m" gate can simply never pass), the gate
-  // WIDENS with the fix's own accuracy, capped so a wildly noisy fix
-  // can't just claim arrival from anywhere. Tighter GPS -> tighter,
-  // more confident gate; looser GPS -> a wider but still bounded one.
-  const ARRIVAL_RADIUS_METERS = 30;
-  const ARRIVAL_ROUTE_REMAINING_METERS = 40;
-  const ARRIVAL_ACCURACY_ALLOWANCE_CAP_METERS = 60;
-  const ARRIVAL_DEFAULT_ACCURACY_METERS = 50; // assumed if the browser reports none
-  const ARRIVAL_CONFIRM_MS = 3000;
-  // A single noisy reading shouldn't discard seconds of already-accrued
-  // confirmation (or an already-confirmed arrival) — only give up once
-  // we've been outside the gate continuously for this long.
-  const ARRIVAL_GRACE_MS = 1500;
-
+  const ARRIVAL_RADIUS_METERS = 50;
   const distanceToDestinationMeters =
     userLocation && destinationCoords
       ? haversineMeters(
@@ -1665,93 +1302,18 @@ export default function PlanRoutePage() {
         )
       : null;
 
-  const routeRemainingMeters =
-    liveProgress != null ? (1 - liveProgress) * totalLength(routeCum) : null;
-
-  const arrivalAccuracyAllowanceMeters = Math.min(
-    locationAccuracyMeters ?? ARRIVAL_DEFAULT_ACCURACY_METERS,
-    ARRIVAL_ACCURACY_ALLOWANCE_CAP_METERS,
-  );
-
-  const isArrivalCandidate =
+  const hasArrived =
     isNavigating &&
     liveProgress != null &&
-    displayProgress >= 0.97 &&
+    displayProgress >= 0.995 &&
     distanceToDestinationMeters != null &&
-    distanceToDestinationMeters <=
-      ARRIVAL_RADIUS_METERS + arrivalAccuracyAllowanceMeters &&
-    routeRemainingMeters != null &&
-    routeRemainingMeters <=
-      ARRIVAL_ROUTE_REMAINING_METERS + arrivalAccuracyAllowanceMeters;
-
-  const [hasArrived, setHasArrived] = useState(false);
-  const arrivalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const arrivalGraceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
-  useEffect(() => {
-    const clearArrivalTimer = () => {
-      if (arrivalTimerRef.current) {
-        clearTimeout(arrivalTimerRef.current);
-        arrivalTimerRef.current = null;
-      }
-    };
-    const clearGraceTimer = () => {
-      if (arrivalGraceTimerRef.current) {
-        clearTimeout(arrivalGraceTimerRef.current);
-        arrivalGraceTimerRef.current = null;
-      }
-    };
-
-    if (!isNavigating) {
-      clearArrivalTimer();
-      clearGraceTimer();
-      setHasArrived(false);
-      return;
-    }
-
-    if (isArrivalCandidate) {
-      // Inside the gate on this reading — cancel any pending "give up"
-      // grace timer, and start the confirm timer if one isn't already
-      // running (don't restart it on every render/GPS tick, or it'd
-      // never finish counting down).
-      clearGraceTimer();
-      if (!hasArrived && !arrivalTimerRef.current) {
-        arrivalTimerRef.current = setTimeout(() => {
-          setHasArrived(true);
-          arrivalTimerRef.current = null;
-        }, ARRIVAL_CONFIRM_MS);
-      }
-      return;
-    }
-
-    // Outside the gate on this reading. Only actually reset once we've
-    // stayed outside it for the whole grace window — a lone bad fix
-    // shouldn't undo an in-progress (or already-confirmed) arrival.
-    if (!arrivalGraceTimerRef.current && (arrivalTimerRef.current || hasArrived)) {
-      arrivalGraceTimerRef.current = setTimeout(() => {
-        clearArrivalTimer();
-        setHasArrived(false);
-        arrivalGraceTimerRef.current = null;
-      }, ARRIVAL_GRACE_MS);
-    }
-  }, [isArrivalCandidate, isNavigating, hasArrived]);
-
-  useEffect(() => {
-    return () => {
-      if (arrivalTimerRef.current) clearTimeout(arrivalTimerRef.current);
-      if (arrivalGraceTimerRef.current)
-        clearTimeout(arrivalGraceTimerRef.current);
-    };
-  }, []);
+    distanceToDestinationMeters <= ARRIVAL_RADIUS_METERS;
 
   const upcomingHazard = describeUpcomingHazard(effectiveRoute?.hazards);
 
   // ── Top-stack alert priority ──────────────────────────
   const activeTopAlert:
     | "collision"
-    | "wrongway"
     | "offroute"
     | "gpserror"
     | "gpswaiting"
@@ -1759,57 +1321,41 @@ export default function PlanRoutePage() {
     | null =
     collisionGuardEnabled && collisionGuard.activeWarning
       ? "collision"
-      : isWrongWay
-        ? "wrongway"
-        : isOffRoute
-          ? "offroute"
-          : gpsStatus === "error"
-            ? "gpserror"
-            : gpsStatus === "waiting"
-              ? "gpswaiting"
-              : showUpcomingAlert && !hasArrived && upcomingHazard
-                ? "hazard"
-                : null;
+      : isOffRoute
+        ? "offroute"
+        : gpsStatus === "error"
+          ? "gpserror"
+          : gpsStatus === "waiting"
+            ? "gpswaiting"
+            : showUpcomingAlert && !hasArrived && upcomingHazard
+              ? "hazard"
+              : null;
 
   const navHazardCount = activeRoute?.hazards?.length || scanHazards.length;
+  const remainingKm = effectiveRoute
+    ? Math.max(0, effectiveRoute.distance * (1 - displayProgress))
+    : 0;
+  const etaMinutes = effectiveRoute
+    ? Math.max(0, Math.round(effectiveRoute.duration * (1 - displayProgress)))
+    : 0;
 
-  // ── ETA system ──────────────────────────────────────
-  // Centralizes current ETA, remaining time/distance, and the
-  // traffic-adjusted delta. It recomputes continuously (ticking every
-  // second, plus whenever `effectiveRoute`/progress change), and its
-  // traffic baseline resets automatically on a genuine reroute or a
-  // stop being added/removed, since those change the route's identity.
-  const eta = useEtaSystem({
-    route: effectiveRoute,
-    progress: displayProgress,
-    isNavigating,
-    hasArrived,
-  });
-  const remainingKm = eta.remainingKm;
-  const etaMinutes = eta.remainingMinutes;
-  const plannedArrivalLabel = eta.plannedEtaClock;
-  const liveArrivalLabel = eta.currentEtaClock;
+  // ── Arrival time (ETA as a clock time) ──
+  const formatClockTime = useCallback((minutesFromNow: number) => {
+    const arrival = new Date(Date.now() + Math.max(0, minutesFromNow) * 60000);
+    return arrival.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }, []);
 
-  // Tint the road-ahead portion of the route line itself to match the
-  // same 4-tier traffic legend already used for the live-traffic layer
-  // (see TRAFFIC_LEGEND in MapControls.tsx) — green/amber/red/dark-red —
-  // so a hold-up is visible right on the route being driven, not just as
-  // a background road tile color or a text badge.
-  const routeAheadColor = useMemo(() => {
-    if (!isNavigating || !eta.traffic) return undefined;
-    const { tone, deltaMinutes } = eta.traffic;
-    if (tone !== "slower") return "#34a853"; // Normal traffic
-    if (deltaMinutes >= 20) return "#a50e0e"; // Severe congestion / major hold-up
-    if (deltaMinutes >= 10) return "#ea4335"; // Heavy congestion
-    return "#fbbc04"; // Moderate congestion / small hold-up
-  }, [isNavigating, eta.traffic]);
+  const plannedArrivalLabel = effectiveRoute
+    ? formatClockTime(effectiveRoute.duration)
+    : null;
+
+  const liveArrivalLabel = effectiveRoute ? formatClockTime(etaMinutes) : null;
 
   // ── Turn-by-turn voice guidance ──────────────────────
   const voiceGuidance = useVoiceGuidance();
-  const navPhrases = useMemo(
-    () => phrasesFor(voiceGuidance.navLanguage),
-    [voiceGuidance.navLanguage],
-  );
   const announcedArrivalRef = useRef(false);
   const announcedOffRouteRef = useRef(false);
   const lastMilestoneKmRef = useRef<number | null>(null);
@@ -1825,7 +1371,9 @@ export default function PlanRoutePage() {
     const isFirstReading = lastMilestoneKmRef.current === null;
     lastMilestoneKmRef.current = remainingKmFloor;
     if (isFirstReading || remainingKmFloor <= 0) return;
-    voiceGuidance.speak(navPhrases.kmRemaining(remainingKmFloor, etaMinutes));
+    voiceGuidance.speak(
+      `${remainingKmFloor} kilometer${remainingKmFloor === 1 ? "" : "s"} remaining. E.T.A. ${etaMinutes} minute${etaMinutes === 1 ? "" : "s"}.`,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingKmFloor]);
 
@@ -1836,7 +1384,7 @@ export default function PlanRoutePage() {
     }
     if (isOffRoute && !announcedOffRouteRef.current) {
       announcedOffRouteRef.current = true;
-      voiceGuidance.speak(navPhrases.offRoute, {
+      voiceGuidance.speak("You've gone off route. Recalculating.", {
         interrupt: true,
       });
     } else if (!isOffRoute) {
@@ -1848,7 +1396,7 @@ export default function PlanRoutePage() {
   useEffect(() => {
     if (hasArrived && !announcedArrivalRef.current) {
       announcedArrivalRef.current = true;
-      voiceGuidance.speak(navPhrases.arrived, {
+      voiceGuidance.speak("You've arrived at your destination.", {
         interrupt: true,
       });
     }
@@ -1858,45 +1406,13 @@ export default function PlanRoutePage() {
 
   useEffect(() => {
     if (showUpcomingAlert && isNavigating && !hasArrived && upcomingHazard) {
-      voiceGuidance.speak(navPhrases.hazardAhead(upcomingHazard.label));
+      voiceGuidance.speak(`Caution: ${upcomingHazard.label} ahead.`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showUpcomingAlert]);
 
-  // ── Traffic announcements ──────────────────────────
-  // Announce once when the live traffic-aware ETA first tips into
-  // "slower" territory (heavy traffic ahead added noticeable delay) and
-  // again if it later clears back to typical — mirrors the visual
-  // TrafficBadge but only speaks up when the traffic picture actually
-  // changes, not on every tick.
-  const announcedTrafficToneRef = useRef<
-    "typical" | "slower" | "faster" | null
-  >(null);
-  useEffect(() => {
-    if (!isNavigating || hasArrived || !eta.traffic) return;
-    const tone = eta.traffic.tone;
-    if (announcedTrafficToneRef.current === tone) return;
-    const wasAnnounced = announcedTrafficToneRef.current !== null;
-    announcedTrafficToneRef.current = tone;
-    if (!wasAnnounced) return; // don't announce the very first reading, only genuine changes
-    if (tone === "slower") {
-      voiceGuidance.speak(navPhrases.heavyTraffic(eta.traffic.label));
-    } else if (tone === "typical") {
-      voiceGuidance.speak(navPhrases.trafficCleared);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eta.traffic?.tone, isNavigating, hasArrived]);
-
-  useEffect(() => {
-    if (!isNavigating) announcedTrafficToneRef.current = null;
-  }, [isNavigating]);
-
   // ── Turn-by-turn maneuver call-outs ──────────────────
-  // Ordinary turns get a heads-up at 300m; sharp turns, roundabouts,
-  // highway exits, and U-turns get it earlier (500m — see
-  // maneuverWarnDistance) since they need more reaction time, plus a
-  // pointed lead-in ("Sharp turn ahead") ahead of the normal "In X, …"
-  // phrasing instead of blending in with routine turn call-outs.
+  const MANEUVER_WARN_METERS = 300;
   const MANEUVER_NOW_METERS = 30;
   const announcedWarnRef = useRef<string | null>(null);
   const announcedNowRef = useRef<string | null>(null);
@@ -1907,24 +1423,16 @@ export default function PlanRoutePage() {
     if (!step || step.type === "arrive") return;
 
     const distance = turnByTurn.distanceToNextManeuverMeters;
-    const lang = voiceGuidance.navLanguage;
-    const instruction = describeManeuver(step, turnByTurn.nextRoadName, lang);
-    const warnDistance = maneuverWarnDistance(step.type);
-    const leadIn =
-      lang === "en"
-        ? maneuverWarningLeadIn(step.type)
-        : translateManeuverLeadIn(step.type, lang);
+    const instruction = describeManeuver(step, turnByTurn.nextRoadName);
 
-    if (distance <= warnDistance && announcedWarnRef.current !== step.id) {
+    if (
+      distance <= MANEUVER_WARN_METERS &&
+      announcedWarnRef.current !== step.id
+    ) {
       announcedWarnRef.current = step.id;
-      const body =
-        lang === "en"
-          ? `In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`
-          : navPhrases.maneuverIn(
-              formatManeuverDistance(distance),
-              instruction,
-            );
-      voiceGuidance.speak(leadIn ? `${leadIn}. ${body}` : body);
+      voiceGuidance.speak(
+        `In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`,
+      );
     }
 
     if (
@@ -1932,9 +1440,7 @@ export default function PlanRoutePage() {
       announcedNowRef.current !== step.id
     ) {
       announcedNowRef.current = step.id;
-      voiceGuidance.speak(navPhrases.maneuverNow(instruction), {
-        interrupt: true,
-      });
+      voiceGuidance.speak(`${instruction} now.`, { interrupt: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1951,125 +1457,6 @@ export default function PlanRoutePage() {
       announcedNowRef.current = null;
     }
   }, [isNavigating]);
-
-  // ── "You are now in <area>" callouts ──────────────────
-  // Separate from the road-level maneuver call-outs above: this speaks up
-  // whenever the driver crosses into a new neighborhood/area (reverse
-  // geocoded from the live GPS fix), the same way a passenger giving
-  // directions would say "you're in Baruwa now" as landmarks change,
-  // rather than only ever naming the street you're turning onto.
-  // Geocoded on a distance gate (not every GPS tick) so a real drive
-  // doesn't fire one lookup per position update.
-  const AREA_ANNOUNCE_MIN_DISTANCE_METERS = 150;
-  const lastAreaLookupPosRef = useRef<{ lat: number; lng: number } | null>(
-    null,
-  );
-  const lastAnnouncedAreaRef = useRef<string | null>(null);
-  const areaLookupInFlightRef = useRef(false);
-
-  useEffect(() => {
-    if (!isNavigating) {
-      lastAreaLookupPosRef.current = null;
-      lastAnnouncedAreaRef.current = null;
-      return;
-    }
-    if (!userLocation || hasArrived) return;
-
-    const current = { lat: userLocation[0], lng: userLocation[1] };
-    const last = lastAreaLookupPosRef.current;
-    if (
-      last &&
-      haversineMeters(last, current) < AREA_ANNOUNCE_MIN_DISTANCE_METERS
-    ) {
-      return;
-    }
-    if (areaLookupInFlightRef.current) return;
-
-    lastAreaLookupPosRef.current = current;
-    areaLookupInFlightRef.current = true;
-    let cancelled = false;
-
-    reverseGeocode(current.lat, current.lng)
-      .then(({ address }) => {
-        if (cancelled) return;
-        const area = areaNameFromAddress(address);
-        if (area && area !== lastAnnouncedAreaRef.current) {
-          lastAnnouncedAreaRef.current = area;
-          voiceGuidance.speak(navPhrases.enteringArea(area));
-        }
-      })
-      .catch(() => {
-        // Best-effort — a failed lookup just means we try again once the
-        // driver has moved another AREA_ANNOUNCE_MIN_DISTANCE_METERS.
-      })
-      .finally(() => {
-        areaLookupInFlightRef.current = false;
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isNavigating, hasArrived, userLocation]);
-
-  // ── Destination approaching ──────────────────────────
-  // A distinct heads-up shortly before arrival ("Approaching your
-  // destination") — separate from the "You've arrived" announcement,
-  // which only fires once hasArrived flips true.
-  const DESTINATION_APPROACH_METERS = 400;
-  const announcedApproachRef = useRef(false);
-  useEffect(() => {
-    if (!isNavigating) {
-      announcedApproachRef.current = false;
-      return;
-    }
-    if (hasArrived || announcedApproachRef.current) return;
-    if (remainingKm * 1000 <= DESTINATION_APPROACH_METERS) {
-      announcedApproachRef.current = true;
-      voiceGuidance.speak(navPhrases.approachingDestination);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNavigating, hasArrived, remainingKm]);
-
-  // ── Wrong-way warning ─────────────────────────────────
-  // Distinct from the off-route/"Recalculating" announcement above:
-  // this fires when the driver is still on the route line but their
-  // actual GPS heading points roughly opposite the route's direction of
-  // travel — e.g. driving backwards down a one-way stretch.
-  const announcedWrongWayRef = useRef(false);
-  useEffect(() => {
-    if (!isNavigating) {
-      announcedWrongWayRef.current = false;
-      return;
-    }
-    if (isWrongWay && !announcedWrongWayRef.current) {
-      announcedWrongWayRef.current = true;
-      voiceGuidance.speak(navPhrases.wrongWay, { interrupt: true });
-    } else if (!isWrongWay) {
-      announcedWrongWayRef.current = false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWrongWay, isNavigating]);
-
-  // ── Speed-limit warning (where supported) ─────────────
-  // Only ever fires when the route actually carries a `speedLimitKph` —
-  // the backend doesn't send one today, so this stays silent until it
-  // does. Re-arms once the driver's speed drops back under the limit,
-  // so it can warn again on a later stretch without spamming while
-  // still over.
-  const announcedSpeedRef = useRef(false);
-  useEffect(() => {
-    if (!isNavigating) {
-      announcedSpeedRef.current = false;
-      return;
-    }
-    if (isOverSpeedLimit && !announcedSpeedRef.current) {
-      announcedSpeedRef.current = true;
-      voiceGuidance.speak(navPhrases.overSpeedLimit(speedLimitKph ?? 0));
-    } else if (!isOverSpeedLimit) {
-      announcedSpeedRef.current = false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOverSpeedLimit, isNavigating]);
 
   const [wakeWordEnabled, setWakeWordEnabled] = useState(
     () =>
@@ -2096,7 +1483,7 @@ export default function PlanRoutePage() {
     setRouteError(null);
     setShowPlanModal(true);
     setVoiceCaptureStatus("listening");
-    voiceGuidance.speak(navPhrases.whereTo, { interrupt: true });
+    voiceGuidance.speak("Where would you like to go?", { interrupt: true });
 
     window.setTimeout(() => {
       destinationVoiceSearch.start(async (transcript) => {
@@ -2111,20 +1498,24 @@ export default function PlanRoutePage() {
             setDestination(result.address || transcript);
             setDestinationCoords({ lat: result.lat, lng: result.lng });
             voiceGuidance.speak(
-              navPhrases.destinationSet(result.address || transcript),
+              `Got it — ${result.address || transcript}. Tap Scan Route when you're ready.`,
             );
           } else {
-            voiceGuidance.speak(navPhrases.destinationNotFound);
+            voiceGuidance.speak(
+              "I couldn't find that place. Please pick it from the list.",
+            );
           }
         } catch {
-          voiceGuidance.speak(navPhrases.destinationNotFound);
+          voiceGuidance.speak(
+            "I couldn't find that place. Please pick it from the list.",
+          );
         } finally {
           setVoiceCaptureStatus("idle");
         }
       });
     }, 1200);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [destinationVoiceSearch, navPhrases]);
+  }, [destinationVoiceSearch]);
 
   const wakeWord = useWakeWord({
     phrase: WAKE_PHRASE,
@@ -2142,18 +1533,9 @@ export default function PlanRoutePage() {
       id: r.id,
       lat: r.lat,
       lng: r.lng,
-      html:
-        r.type === "closure"
-          ? closurePinHtml(r.color, r.id === selectedPin)
-          : reportPinHtml(r.color, r.id === selectedPin),
+      html: reportPinHtml(r.color, r.id === selectedPin),
       anchor:
-        r.type === "closure"
-          ? r.id === selectedPin
-            ? CLOSURE_PIN_SELECTED_ANCHOR
-            : CLOSURE_PIN_ANCHOR
-          : r.id === selectedPin
-            ? REPORT_PIN_SELECTED_ANCHOR
-            : REPORT_PIN_ANCHOR,
+        r.id === selectedPin ? REPORT_PIN_SELECTED_ANCHOR : REPORT_PIN_ANCHOR,
       onClick: () => setSelectedPin(r.id === selectedPin ? null : r.id),
     }));
 
@@ -2187,58 +1569,6 @@ export default function PlanRoutePage() {
           anchor: START_PIN_ANCHOR,
         });
       }
-
-      // Traffic/incident "delay" bubbles along the route while actively
-      // navigating — snap each reported hazard onto the route line, keep
-      // only the ones still ahead of the driver, and show the nearest
-      // handful so the map doesn't get cluttered on a long route.
-      if (isNavigating && effectiveRoute?.hazards?.length) {
-        const upcoming = (effectiveRoute.hazards as unknown[])
-          .map((h) => {
-            const latLng = extractHazardLatLng(h);
-            if (!latLng) return null;
-            const projection = projectPointOntoPath(
-              routePath,
-              routeCum,
-              latLng,
-            );
-            return { hazard: h as any, projection };
-          })
-          .filter(
-            (
-              entry,
-            ): entry is {
-              hazard: any;
-              projection: ReturnType<typeof projectPointOntoPath>;
-            } => entry != null && entry.projection.fraction > displayProgress,
-          )
-          .sort((a, b) => a.projection.fraction - b.projection.fraction)
-          .slice(0, 4);
-
-        for (const { hazard, projection } of upcoming) {
-          const type =
-            typeof hazard.type === "string"
-              ? hazard.type.toUpperCase()
-              : undefined;
-          const icon = (type && HAZARD_ICON[type]) || "⚠️";
-          const minutes = estimateDelayMinutes(type, hazard.severity);
-          const label = minutes
-            ? `${minutes} min`
-            : (type && HAZARD_LABEL[type]) || "Ahead";
-          const severity =
-            hazard.severity === "HIGH" || hazard.severity === "LOW"
-              ? hazard.severity
-              : "MEDIUM";
-
-          markers.push({
-            id: `__hazard_${hazard.id ?? projection.fraction}__`,
-            lat: projection.point.lat,
-            lng: projection.point.lng,
-            html: trafficDelayBubbleHtml(icon, label, severity),
-            anchor: TRAFFIC_DELAY_BUBBLE_ANCHOR,
-          });
-        }
-      }
     }
 
     return markers;
@@ -2248,8 +1578,6 @@ export default function PlanRoutePage() {
     isNavigating,
     effectiveRoute,
     routePath,
-    routeCum,
-    displayProgress,
     destinationCoords,
     startCoords,
   ]);
@@ -2292,15 +1620,21 @@ export default function PlanRoutePage() {
     setShowNotifications(true);
   };
 
-  // NOTE: this page intentionally never gates its main return on
-  // `mapReady`/geolocation. The map always has a usable center — either
-  // the user's real location once GPS resolves, or the `reports[0]`
-  // fallback baked into `mapCenter` — so the page can render right away.
-  // GPS failing, hanging, or being denied should degrade to "map shows a
-  // default area" plus a small dismissible notice, never a blank screen.
-  // See `mapReady`'s effect above for the 8s hard-fallback timeout that
-  // guarantees `locationError`/`mapReady` settle even if the browser
-  // never calls back at all.
+  if (!mapReady) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[100dvh] w-full bg-gray-100">
+        <div className="w-10 h-10 mb-4 border-4 border-red-500 rounded-full sm:w-12 sm:h-12 border-t-transparent animate-spin" />
+        <p className="text-sm font-medium text-gray-600 sm:text-base">
+          Getting your location...
+        </p>
+        {locationError && (
+          <p className="px-8 mt-2 text-xs text-center text-red-500 sm:text-sm">
+            {locationError}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -2312,7 +1646,7 @@ export default function PlanRoutePage() {
           <RouteMapView
             route={effectiveRoute}
             markers={mapMarkers}
-            zoom={isNavigating ? navZoom : 15}
+            zoom={isNavigating ? 17 : 15}
             progress={isNavigating ? displayProgress : undefined}
             flowing={!isNavigating}
             heading={isNavigating ? displayHeading : manualHeading}
@@ -2322,8 +1656,6 @@ export default function PlanRoutePage() {
             mapTypeId={mapTypeId}
             tilt={mapTilt}
             showTraffic={showTraffic}
-            theme={mapTheme}
-            remainingColor={routeAheadColor}
             onReady={setMapInstance}
             className="w-full h-full"
           />
@@ -2336,40 +1668,9 @@ export default function PlanRoutePage() {
             mapTypeId={mapTypeId}
             tilt={mapTilt}
             showTraffic={showTraffic}
-            theme={mapTheme}
             onReady={setMapInstance}
           />
         )}
-      </div>
-
-      {/* Connectivity status — sits above the map, below any modal sheets;
-          shows nothing while online so it never takes up permanent space. */}
-      <div className="absolute z-[500] left-1/2 -translate-x-1/2 top-[calc(env(safe-area-inset-top)+12px)] w-[calc(100%-32px)] max-w-sm pointer-events-none">
-        <div className="flex flex-col items-center gap-2 pointer-events-auto">
-          <OfflineBanner />
-          {/* Small, non-blocking location status. The map itself never
-              waits on this — it's already showing a real center (GPS or
-              the default fallback) — this is just a courtesy heads-up. */}
-          {!mapReady && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 shadow text-xs font-medium text-gray-600">
-              <div className="w-3 h-3 border-2 border-red-500 rounded-full border-t-transparent animate-spin" />
-              Finding your location…
-            </div>
-          )}
-          {mapReady && locationError && !locationNoticeDismissed && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 shadow text-xs font-medium text-amber-700 max-w-full">
-              <span className="truncate">{locationError}</span>
-              <button
-                type="button"
-                onClick={() => setLocationNoticeDismissed(true)}
-                className="text-gray-400 shrink-0 hover:text-gray-600"
-                aria-label="Dismiss"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Map Controls */}
@@ -2382,14 +1683,6 @@ export default function PlanRoutePage() {
           onToggleTilt={() => setMapTilt((t) => (t > 0 ? 0 : 45))}
           trafficEnabled={showTraffic}
           onToggleTraffic={() => setShowTraffic((t) => !t)}
-          mapTheme={mapTheme}
-          onToggleTheme={() =>
-            setMapTheme((t) => {
-              const next = t === "dark" ? "light" : "dark";
-              persistMapTheme(next);
-              return next;
-            })
-          }
           heading={isNavigating ? displayHeading : manualHeading}
           onHeadingChange={setManualHeading}
           rotatable={!isNavigating}
@@ -2604,15 +1897,15 @@ export default function PlanRoutePage() {
 
       {/* Navigation Top Stack */}
       {isNavigating && (
-        <div className="absolute top-0 left-0 right-0 z-20 px-2.5 sm:px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-1 sm:pb-2 sm:flex sm:justify-center">
-          <div className="space-y-1.5 sm:space-y-2 sm:w-full sm:max-w-md">
+        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2 sm:flex sm:justify-center">
+          <div className="space-y-2 sm:w-full sm:max-w-md">
             <div
-              className={`flex items-center gap-1.5 sm:gap-3 px-2.5 py-1.5 sm:px-4 sm:py-3 shadow-sm rounded-xl sm:rounded-2xl ${hasArrived ? "bg-purple-600" : "bg-emerald-500"}`}
+              className={`flex items-center gap-3 px-4 py-3 shadow-sm rounded-2xl ${hasArrived ? "bg-purple-600" : "bg-emerald-500"}`}
             >
-              <div className="flex items-center justify-center w-6 h-6 rounded-lg sm:w-10 sm:h-10 sm:rounded-xl bg-white/20">
+              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20">
                 <svg
                   viewBox="0 0 24 24"
-                  className="w-3 h-3 text-white sm:w-5 sm:h-5"
+                  className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
@@ -2626,12 +1919,16 @@ export default function PlanRoutePage() {
                   )}
                 </svg>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[8px] sm:text-xs font-medium tracking-wide uppercase text-white/80 truncate leading-tight">
-                  {hasArrived ? "Done" : `${remainingKm.toFixed(1)} km left`}
+              <div className="flex-1">
+                <p className="text-[10px] sm:text-xs font-medium tracking-wide uppercase text-white/80">
+                  {hasArrived
+                    ? "Trip complete"
+                    : `${remainingKm.toFixed(1)} KM left`}
                 </p>
-                <p className="text-[10px] sm:text-sm font-semibold text-white truncate leading-tight">
-                  {hasArrived ? "You've arrived" : "Follow the route"}
+                <p className="text-xs font-semibold text-white sm:text-sm">
+                  {hasArrived
+                    ? "You've arrived"
+                    : "Head out and follow the route"}
                 </p>
               </div>
               {voiceGuidance.isSupported && (
@@ -2640,12 +1937,6 @@ export default function PlanRoutePage() {
                   toggleMuted={voiceGuidance.toggleMuted}
                   volume={voiceGuidance.volume}
                   setVolume={voiceGuidance.setVolume}
-                  languages={voiceGuidance.languages}
-                  language={voiceGuidance.language}
-                  setLanguage={voiceGuidance.setLanguage}
-                  gender={voiceGuidance.gender}
-                  setGenderPreference={voiceGuidance.setGenderPreference}
-                  hasAfricanVoice={voiceGuidance.hasAfricanVoice}
                 />
               )}
               {collisionGuard.isSupported && (
@@ -2657,7 +1948,7 @@ export default function PlanRoutePage() {
                       : "Turn on Collision Guard"
                   }
                   title="Collision Guard — forward-collision warning"
-                  className={`flex items-center justify-center flex-shrink-0 w-6 h-6 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl transition ${
+                  className={`flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition ${
                     collisionGuardEnabled
                       ? "bg-white text-emerald-600"
                       : "bg-white/20 text-white"
@@ -2665,7 +1956,7 @@ export default function PlanRoutePage() {
                 >
                   <svg
                     viewBox="0 0 24 24"
-                    className="w-3 h-3 sm:w-5 sm:h-5"
+                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -2684,11 +1975,11 @@ export default function PlanRoutePage() {
                     ? "Collapse trip details"
                     : "Expand trip details"
                 }
-                className="flex items-center justify-center flex-shrink-0 w-6 h-6 text-white transition rounded-lg sm:w-10 sm:h-10 sm:rounded-xl bg-white/20 hover:bg-white/30"
+                className="flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 text-white transition rounded-xl bg-white/20 hover:bg-white/30"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className={`w-3 h-3 sm:w-5 sm:h-5 transition-transform ${topStackExpanded ? "rotate-180" : ""}`}
+                  className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform ${topStackExpanded ? "rotate-180" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
@@ -2706,7 +1997,6 @@ export default function PlanRoutePage() {
                 distanceMeters={turnByTurn.distanceToNextManeuverMeters}
                 currentRoadName={turnByTurn.currentRoadName}
                 nextRoadName={turnByTurn.nextRoadName}
-                nextManeuver={turnByTurn.nextStep}
               />
             )}
 
@@ -2747,35 +2037,6 @@ export default function PlanRoutePage() {
                   </p>
                   <p className="text-xs font-medium truncate text-amber-900 sm:text-sm">
                     {gpsErrorMessage}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {topStackExpanded && activeTopAlert === "wrongway" && (
-              <div className="flex items-center gap-3 px-4 py-3 border border-red-200 shadow-sm bg-red-50 rounded-xl animate-in slide-in-from-top-2">
-                <div className="flex items-center justify-center flex-shrink-0 bg-red-100 rounded-lg w-7 h-7 sm:w-8 sm:h-8">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path
-                      d="M12 19V5M5 12l7-7 7 7"
-                      transform="rotate(180 12 12)"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] sm:text-[10px] text-red-400 font-medium uppercase tracking-wide">
-                    Wrong way
-                  </p>
-                  <p className="text-xs font-medium text-red-900 truncate sm:text-sm">
-                    You're heading opposite the route — turn around when safe
                   </p>
                 </div>
               </div>
@@ -2866,11 +2127,6 @@ export default function PlanRoutePage() {
                     <p className="text-xs font-medium text-gray-900 truncate sm:text-sm">
                       {upcomingHazard.label}
                     </p>
-                    {upcomingHazard.delayLabel && (
-                      <p className="text-[10px] sm:text-[11px] font-medium text-amber-600">
-                        {upcomingHazard.delayLabel}
-                      </p>
-                    )}
                   </div>
                   <button
                     onClick={() => setShowUpcomingAlert(false)}
@@ -2953,37 +2209,6 @@ export default function PlanRoutePage() {
                     </p>
                   </div>
                 </button>
-
-                {eta.traffic && (
-                  <TrafficEtaBadge
-                    traffic={eta.traffic}
-                    freshnessLabel={eta.freshnessLabel}
-                    className="mb-3"
-                  />
-                )}
-
-                {/* Speed-limit warning — only renders where the route
-                    actually carries a posted limit (speedLimitKph);
-                    the backend doesn't send one today. */}
-                {typeof speedLimitKph === "number" &&
-                  deviceSpeedKph != null && (
-                    <div
-                      className={`flex items-center justify-between px-3 py-2 mb-3 rounded-xl text-xs font-semibold ${
-                        isOverSpeedLimit
-                          ? "bg-red-50 text-red-700 border border-red-200"
-                          : "bg-gray-50 text-gray-600 border border-gray-200"
-                      }`}
-                    >
-                      <span>
-                        {isOverSpeedLimit ? "Over the speed limit" : "Speed"}
-                      </span>
-                      <span>
-                        {Math.round(deviceSpeedKph)} /{" "}
-                        {Math.round(speedLimitKph)} km/h
-                      </span>
-                    </div>
-                  )}
-
                 <button
                   onClick={handleEndTrip}
                   className="w-full h-11 sm:h-12 bg-red-500 hover:bg-red-600 text-white text-sm sm:text-base font-semibold rounded-xl transition active:scale-[0.98]"
@@ -3040,30 +2265,18 @@ export default function PlanRoutePage() {
         </div>
       )}
 
-      {/* StreetViewPegman anchors to the bottom-left corner — the same
-          corner the collision-guard camera PiP occupies while it's on.
-          Push it clear of the PiP (and hide it outright while the guard
-          is expanded full-screen) instead of letting it sit on top of /
-          block the camera feed. */}
-      {!showSOS &&
-        !showPlanModal &&
-        !showScanResults &&
-        !(collisionGuardEnabled && isNavigating && collisionGuardExpanded) && (
-          <StreetViewPegman
-            onClick={() => setStreetViewOpen(true)}
-            className={`absolute z-[999] transition-[left,bottom] ${
-              collisionGuardEnabled && isNavigating
-                ? "left-[172px] sm:left-[220px]"
-                : "left-4 sm:left-8"
-            } ${
-              isNavigating
-                ? navPanelExpanded
-                  ? "bottom-56"
-                  : "bottom-24"
-                : "bottom-32"
-            }`}
-          />
-        )}
+      {!showSOS && !showPlanModal && !showScanResults && (
+        <StreetViewPegman
+          onClick={() => setStreetViewOpen(true)}
+          className={`absolute z-[999] left-4 sm:left-8 transition-[bottom] ${
+            isNavigating
+              ? navPanelExpanded
+                ? "bottom-56"
+                : "bottom-24"
+              : "bottom-32"
+          }`}
+        />
+      )}
 
       <StreetViewModal
         isOpen={streetViewOpen}
@@ -3157,76 +2370,40 @@ export default function PlanRoutePage() {
       {/* ═══════════════════════════════════════════════════════
           PLAN ROUTE MODAL
           ═══════════════════════════════════════════════════════ */}
-      {/* ═══════════════════════════════════════════════════════
-    PLAN ROUTE MODAL
-    MOBILE RESPONSIVE VERSION
-    ═══════════════════════════════════════════════════════ */}
-
       {showPlanModal && (
-        <div
-          className="
-      fixed inset-0 z-[60]
-      flex items-end sm:items-center sm:justify-center
-      bg-black/30
-    "
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="plan-route-title"
-        >
-          {/* Modal Panel */}
+        // <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/0 sm:bg-black/40">
+        //   <div className="flex flex-col w-full h-full sm:h-auto sm:max-h-[85vh] sm:max-w-md bg-white animate-in slide-in-from-bottom sm:rounded-3xl sm:shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center sm:justify-center bg-black/20 pointer-events-none">
           <div
             className="
-  relative
-  flex
-  flex-col
-  w-full
-  max-h-[100dvh]
-  h-[100dvh]
-  sm:w-[min(100%-2rem,28rem)]
-  sm:h-auto
-  sm:max-h-[75vh]
-  bg-white
-  rounded-t-[24px]
-  sm:rounded-3xl
-  shadow-2xl
-  overflow-hidden
-"
+      pointer-events-auto
+      flex flex-col
+      w-full sm:max-w-md
+      h-[88dvh] sm:h-auto sm:max-h-[80vh]
+      bg-white
+      rounded-t-[24px] sm:rounded-3xl
+      shadow-2xl
+      overflow-hidden
+    "
           >
-            {/* ═══════════════════════════════════════════════
-          MOBILE DRAG HANDLE
-          ═══════════════════════════════════════════════ */}
-            <div className="flex justify-center flex-shrink-0 pt-3 pb-3 sm:hidden">
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
-            </div>
-
-            {/* ═══════════════════════════════════════════════
-          HEADER
-          ═══════════════════════════════════════════════ */}
-            <div className="flex-shrink-0 px-5 pt-4 pb-4 border-b border-gray-100">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2
-                    id="plan-route-title"
-                    className="text-xl font-extrabold text-gray-900 sm:text-2xl"
-                  >
+            <div className="flex-shrink-0 px-5 pt-6 pb-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-extrabold text-gray-900 sm:text-2xl">
                     Plan a route
                   </h2>
-
-                  <p className="mt-1 text-xs leading-5 text-gray-500 sm:text-sm">
-                    We'll scan reported hazards along the way before you drive.
+                  <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+                    We&apos;ll scan reported hazards along the way before you
+                    drive.
                   </p>
                 </div>
-
-                {/* Close button */}
                 <button
-                  type="button"
                   onClick={() => setShowPlanModal(false)}
-                  aria-label="Close route planner"
-                  className="flex items-center justify-center flex-shrink-0 text-gray-500 transition bg-gray-100 rounded-full w-9 h-9 hover:bg-gray-200 active:bg-gray-300 touch-manipulation"
+                  className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-gray-500 transition bg-gray-100 rounded-full sm:w-9 sm:h-9 hover:bg-gray-200"
                 >
                   <svg
                     viewBox="0 0 24 24"
-                    className="w-5 h-5"
+                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"
@@ -3238,133 +2415,54 @@ export default function PlanRoutePage() {
               </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════
-          SCROLLABLE FORM AREA
-          
-          IMPORTANT:
-          Only this section scrolls.
-          The Scan Route button NEVER scrolls away.
-          ═══════════════════════════════════════════════ */}
-            <div
-              className="
-          flex-1
-          min-h-0
-          overflow-y-auto
-          overscroll-contain
-          px-5
-          py-5
-          space-y-6
-          [-ms-overflow-style:none]
-          [scrollbar-width:none]
-          [&::-webkit-scrollbar]:hidden
-        "
-            >
-              {/* ═══════════════════════════════════════════════
-            POINT A — START
-            ═══════════════════════════════════════════════ */}
-              <div ref={startFieldContainerRef}>
+            <div className="flex-1 px-5 space-y-5 overflow-y-auto min-h-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex items-center justify-center w-5 h-5 border-2 rounded-full border-emerald-500">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
-
                   <span className="text-xs font-medium text-gray-900 sm:text-sm">
                     Point A — Start
                   </span>
                 </div>
-
-                <div className="flex items-center gap-2 px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
+                <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl">
                   <AddressAutocompleteInput
                     value={startPoint}
                     onChange={setStartPoint}
-                    onSelect={(result) => {
-                      setStartCoords({
-                        lat: result.lat,
-                        lng: result.lng,
-                      });
-                      savedPlacesRef.current.addRecentSearch(result);
-                      setActiveSearchField(null);
-                    }}
-                    onFocus={() => setActiveSearchField("start")}
-                    onPredictionsChange={(count) =>
-                      setStartPredictionsOpen(count > 0)
+                    onSelect={(result) =>
+                      setStartCoords({ lat: result.lat, lng: result.lng })
                     }
-                    locationBias={
-                      userLocation
-                        ? { lat: userLocation[0], lng: userLocation[1] }
-                        : null
-                    }
-                    placeholder="Search addresses, businesses, landmarks…"
+                    placeholder="Search a place or Address"
                     className="flex-1 min-w-0"
-                    inputClassName="
-                w-full
-                min-w-0
-                text-base
-                text-gray-900
-                placeholder-gray-400
-                bg-transparent
-                outline-none
-              "
+                    inputClassName="w-full min-w-0 text-base text-gray-900 placeholder-gray-400 bg-transparent outline-none"
                   />
-
-                  {/* Use my location */}
                   <button
-                    type="button"
                     onClick={handleUseMyLocation}
                     disabled={isGettingLocation}
-                    className="
-                flex
-                items-center
-                gap-1.5
-                flex-shrink-0
-                text-xs
-                sm:text-sm
-                font-medium
-                text-purple-600
-                whitespace-nowrap
-                hover:text-purple-700
-                active:text-purple-800
-                disabled:opacity-50
-                disabled:cursor-not-allowed
-                touch-manipulation
-              "
+                    className="shrink-0 text-xs sm:text-sm font-medium text-purple-600 whitespace-nowrap hover:text-purple-700 disabled:opacity-50 flex items-center gap-1.5"
                   >
                     {isGettingLocation ? (
                       <>
                         <SpinnerIcon className="w-3.5 h-3.5" />
-                        <span>Locating...</span>
+                        Locating...
                       </>
                     ) : (
                       "Use my location"
                     )}
                   </button>
                 </div>
-
                 {locationError && (
-                  <p className="mt-1.5 ml-1 text-[11px] leading-4 text-red-500 sm:text-xs">
+                  <p className="mt-1.5 ml-1 text-[11px] sm:text-xs text-red-500">
                     {locationError}
                   </p>
                 )}
-
-                {activeSearchField === "start" && !startPredictionsOpen && (
-                  <SearchSuggestionsPanel
-                    savedPlaces={savedPlaces}
-                    onSelect={handleSelectSuggestion}
-                    onUseCurrentLocation={handleUseMyLocation}
-                    isLocatingCurrentPosition={isGettingLocation}
-                    currentLocationErrorText={locationError}
-                  />
-                )}
               </div>
 
-              {/* ═══════════════════════════════════════════════
-            POINT B — DESTINATION
-            ═══════════════════════════════════════════════ */}
-              <div ref={destinationFieldContainerRef}>
+              <div>
                 <div className="flex items-center gap-2 mb-2">
                   <svg
                     viewBox="0 0 24 24"
-                    className="w-5 h-5 text-red-400"
+                    className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-red-400"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -3374,134 +2472,36 @@ export default function PlanRoutePage() {
                     <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
                     <line x1="4" y1="22" x2="4" y2="15" />
                   </svg>
-
                   <span className="text-xs font-medium text-gray-900 sm:text-sm">
                     Point B — Destination
                   </span>
                 </div>
-
-                <div className="px-4 py-3 transition border border-transparent bg-gray-50 rounded-xl focus-within:border-purple-200 focus-within:bg-white">
+                <div className="px-4 py-3 bg-gray-50 rounded-xl">
                   <AddressAutocompleteInput
                     value={destination}
                     onChange={setDestination}
-                    onSelect={(result) => {
-                      setDestinationCoords({
-                        lat: result.lat,
-                        lng: result.lng,
-                      });
-                      savedPlacesRef.current.addRecentSearch(result);
-                      setActiveSearchField(null);
-                    }}
-                    onFocus={() => setActiveSearchField("destination")}
-                    onPredictionsChange={(count) =>
-                      setDestinationPredictionsOpen(count > 0)
+                    onSelect={(result) =>
+                      setDestinationCoords({ lat: result.lat, lng: result.lng })
                     }
-                    locationBias={
-                      userLocation
-                        ? { lat: userLocation[0], lng: userLocation[1] }
-                        : null
-                    }
-                    placeholder="Search addresses, businesses, landmarks…"
-                    inputClassName="
-                w-full
-                text-base
-                text-gray-900
-                placeholder-gray-400
-                bg-transparent
-                outline-none
-              "
+                    placeholder="Where to?"
+                    inputClassName="w-full text-base text-gray-900 placeholder-gray-400 bg-transparent outline-none"
                   />
                 </div>
-
-                {destinationLocationError && (
-                  <p className="mt-1.5 ml-1 text-[11px] leading-4 text-red-500 sm:text-xs">
-                    {destinationLocationError}
-                  </p>
-                )}
-
-                {activeSearchField === "destination" &&
-                  !destinationPredictionsOpen && (
-                    <SearchSuggestionsPanel
-                      savedPlaces={savedPlaces}
-                      onSelect={handleSelectSuggestion}
-                      onUseCurrentLocation={
-                        handleUseCurrentLocationForDestination
-                      }
-                      isLocatingCurrentPosition={isLocatingDestination}
-                      currentLocationErrorText={destinationLocationError}
-                    />
-                  )}
               </div>
 
-              {/* ═══════════════════════════════════════════════
-            ADDITIONAL STOPS
-            ═══════════════════════════════════════════════ */}
-              <div>
-                <RouteStopsEditor stops={stops} onChange={setStops} />
-              </div>
-
-              {/* Extra bottom spacing inside scroll area */}
               <div className="h-4" />
             </div>
 
-            {/* ═══════════════════════════════════════════════
-          FIXED SCAN ROUTE FOOTER
-          
-          THIS IS THE IMPORTANT MOBILE FIX.
-          
-          This section is NOT inside the scrollable area.
-          ═══════════════════════════════════════════════ */}
-            <div
-              className="
-          relative
-          z-50
-          flex-shrink-0
-          w-full
-          px-5
-          pt-3
-          bg-white
-          border-t
-          border-gray-200
-          pb-[calc(90px+env(safe-area-inset-bottom))]  sm:pb-[calc(20px+env(safe-area-inset-bottom))]
-        "
-            >
-              {/* Error */}
+            <div className="flex-shrink-0 px-5 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-6">
               {routeError && (
-                <p className="mb-3 text-xs leading-5 text-center text-red-500 sm:text-sm">
+                <p className="mb-3 text-xs text-center text-red-500 sm:text-sm">
                   {routeError}
                 </p>
               )}
-
-              {/* Scan Route */}
               <button
-                type="button"
                 onClick={handleScanRoute}
                 disabled={!startPoint || !destination}
-                className="
-      block
-      w-full
-      min-h-[56px]
-      h-14
-      px-4
-      bg-purple-700
-      hover:bg-purple-800
-      active:bg-purple-900
-      disabled:bg-gray-300
-      disabled:text-gray-500
-      disabled:cursor-not-allowed
-      text-white
-      font-semibold
-      text-base
-      rounded-2xl
-      transition
-      active:scale-[0.98]
-      flex
-      items-center
-      justify-center
-      touch-manipulation
-      select-none
-      flex-shrink-0
-    "
+                className="w-full h-12 sm:h-14 bg-purple-700 hover:bg-purple-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm sm:text-base rounded-2xl transition active:scale-[0.98]"
               >
                 Scan route
               </button>
@@ -3588,18 +2588,11 @@ export default function PlanRoutePage() {
                     </div>
                   )}
 
-                  {stopCoords.length > 0 && (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-3 text-[11px] sm:text-xs font-medium text-purple-700 bg-purple-50 rounded-full">
-                      {stopCoords.length} stop
-                      {stopCoords.length === 1 ? "" : "s"} on this route
-                    </div>
-                  )}
-
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     <div className="p-3 text-center bg-gray-50 rounded-2xl">
                       <p className="text-base font-bold text-gray-900 sm:text-lg">
                         {effectiveRoute
-                          ? formatEtaDistance(effectiveRoute.distance)
+                          ? `${effectiveRoute.distance.toFixed(1)} km`
                           : "9.5 km"}
                       </p>
                       <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">
@@ -3609,7 +2602,7 @@ export default function PlanRoutePage() {
                     <div className="p-3 text-center bg-gray-50 rounded-2xl">
                       <p className="text-base font-bold text-gray-900 sm:text-lg">
                         {effectiveRoute
-                          ? formatEtaDuration(effectiveRoute.duration)
+                          ? `${Math.round(effectiveRoute.duration)} min`
                           : "23 min"}
                       </p>
                       <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">
@@ -3679,47 +2672,31 @@ export default function PlanRoutePage() {
                     {((activeRoute?.hazards as any[] | undefined)?.length
                       ? (activeRoute!.hazards as any[])
                       : scanHazards
-                    ).map((hazard: any) => {
-                      const hazardKey =
-                        REPORT_TYPE_TO_HAZARD_KEY[hazard.type] ?? hazard.type;
-                      const delayLabel = formatDelayDuration(
-                        estimateDelayMinutes(hazardKey, hazard.severity),
-                      );
-                      return (
-                        <div
-                          key={hazard.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
-                        >
-                          <HazardListIcon type={hazard.type} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-gray-900 truncate sm:text-sm">
-                              {typeof hazard.title === "string"
-                                ? hazard.title
-                                : "Reported hazard"}
-                            </p>
-                            <p className="text-[11px] sm:text-xs text-gray-400 truncate">
-                              {typeof hazard.location === "string"
-                                ? hazard.location
-                                : ""}
-                              {delayLabel && (
-                                <span className="font-medium text-amber-600">
-                                  {typeof hazard.location === "string" &&
-                                  hazard.location
-                                    ? " · "
-                                    : ""}
-                                  {delayLabel}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <span className="flex-shrink-0 px-2 py-1 text-[11px] sm:text-xs font-medium text-gray-500 bg-white rounded-lg">
-                            {typeof hazard.distanceKm === "number"
-                              ? `${hazard.distanceKm.toFixed(1)} km`
-                              : hazard.distance}
-                          </span>
+                    ).map((hazard: any) => (
+                      <div
+                        key={hazard.id}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                      >
+                        <HazardListIcon type={hazard.type} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-gray-900 truncate sm:text-sm">
+                            {typeof hazard.title === "string"
+                              ? hazard.title
+                              : "Reported hazard"}
+                          </p>
+                          <p className="text-[11px] sm:text-xs text-gray-400">
+                            {typeof hazard.location === "string"
+                              ? hazard.location
+                              : ""}
+                          </p>
                         </div>
-                      );
-                    })}
+                        <span className="flex-shrink-0 px-2 py-1 text-[11px] sm:text-xs font-medium text-gray-500 bg-white rounded-lg">
+                          {typeof hazard.distanceKm === "number"
+                            ? `${hazard.distanceKm.toFixed(1)} km`
+                            : hazard.distance}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}

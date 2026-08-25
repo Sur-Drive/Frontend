@@ -64,14 +64,6 @@ export function bearingBetween(a: LatLng, b: LatLng): number {
   return (toDeg(Math.atan2(y, x)) + 360) % 360
 }
 
-/** Smallest signed difference between two compass headings (degrees), in the range [-180, 180]. Useful for comparing a device's actual heading against the route's expected heading to flag driving the wrong way. */
-export function angleDifference(a: number, b: number): number {
-  let diff = (b - a) % 360
-  if (diff > 180) diff -= 360
-  if (diff < -180) diff += 360
-  return diff
-}
-
 /** Cumulative distance in meters at each vertex of `path`. cum[0] === 0. */
 export function cumulativeDistances(path: LatLng[]): number[] {
   const cum = [0]
@@ -265,35 +257,4 @@ export function splitPathAtFraction(
   const remaining = [sample.position, ...path.slice(sample.index + 1)]
 
   return { traveled, remaining, sample }
-}
-
-/**
- * A short stretch of `path` centered on `fraction`, extending
- * `windowMeters` in each direction (clamped to the path's start/end).
- * Used to draw a highlighted overlay segment — e.g. a thicker/colored
- * strip right where a reported hazard sits on the route — without
- * needing real per-segment traffic data, just the hazard's own location.
- */
-export function subPathAroundFraction(
-  path: LatLng[],
-  cum: number[],
-  fraction: number,
-  windowMeters: number
-): LatLng[] {
-  const total = totalLength(cum)
-  if (total <= 0 || path.length < 2) return []
-
-  const centerMeters = Math.min(total, Math.max(0, fraction * total))
-  const startMeters = Math.max(0, centerMeters - windowMeters)
-  const endMeters = Math.min(total, centerMeters + windowMeters)
-  if (endMeters <= startMeters) return []
-
-  const startPoint = pointAtFraction(path, cum, startMeters / total).position
-  const endPoint = pointAtFraction(path, cum, endMeters / total).position
-
-  const middleVertices = path.filter(
-    (_, i) => cum[i] > startMeters && cum[i] < endMeters
-  )
-
-  return [startPoint, ...middleVertices, endPoint]
 }
