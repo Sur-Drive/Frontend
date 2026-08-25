@@ -18,16 +18,6 @@ function roadNameFromAddress(address: string | undefined): string | undefined {
   return first || undefined
 }
 
-// The neighborhood/area name is the *second* comma-segment of the same
-// formatted address ("12 Whittier Street, Baruwa, Lagos" → "Baruwa") —
-// used for the "You are now in <area>" callouts as opposed to the
-// street-level "Turn left onto <road>" ones above.
-export function areaNameFromAddress(address: string | undefined): string | undefined {
-  const parts = address?.split(',').map((p) => p.trim()).filter(Boolean)
-  if (!parts || parts.length < 2) return undefined
-  return parts[1] || undefined
-}
-
 // Session-only cache, keyed to ~11m precision — plenty for "which road is
 // this", and keeps repeated lookups near the same maneuver off the network.
 const roadNameCache = new Map<string, string | undefined>()

@@ -38,7 +38,6 @@ import { ApiError } from "../lib/apiClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGoogleSignIn, prefetchOnboardingStatus } from "../hooks/useAuth";
 import { getGoogleIdToken } from "../lib/googleIdentity";
-import { getInitialMapTheme } from "../lib/mapThemes";
 import { useFleetOwnerGate } from "../hooks/useFleetOwnerGate";
 
 const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792];
@@ -70,10 +69,6 @@ export default function HomePage() {
     null,
   );
   const [locationError, setLocationError] = useState<string | null>(null);
-  // Keeps this screen's map visually consistent with the route/navigation
-  // screen's map — both read the same persisted light/dark preference
-  // rather than each picking their own default (see getInitialMapTheme).
-  const [mapTheme] = useState(getInitialMapTheme);
   const [mapReady, setMapReady] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [streetViewOpen, setStreetViewOpen] = useState(false);
@@ -566,7 +561,6 @@ export default function HomePage() {
           center={{ lat: mapCenter[0], lng: mapCenter[1] }}
           zoom={15}
           markers={mapMarkers}
-          theme={mapTheme}
         />
       </div>
 
@@ -794,10 +788,7 @@ export default function HomePage() {
 
       <AnimatePresence>
         {showCreateNewPassword && (
-          <CreateNewPassword
-            sessionId={resetSessionId}
-            onComplete={handleCreateNewPasswordComplete}
-          />
+          <CreateNewPassword onComplete={handleCreateNewPasswordComplete} />
         )}
       </AnimatePresence>
 
