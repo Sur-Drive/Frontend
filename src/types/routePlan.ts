@@ -27,8 +27,6 @@ export interface RouteOption {
   alternatives: unknown[]
   co2Emission: number
   caloriesBurned: number
-  /** Posted speed limit for this route/road, km/h — not supplied by the backend today, so speed-limit warnings only activate once/where this is actually present (see PlanRoutePage's live-speed check). Optional and forward-compatible, same pattern as the ROAD_CLOSURE hazard key above. */
-  speedLimitKph?: number
 }
 
 // The backend's exact field names for each entry in `RouteOption.alternatives`

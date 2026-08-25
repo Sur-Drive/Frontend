@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { cumulativeDistances, splitPathAtFraction, type LatLng } from '../../lib/geoPath'
 import { createHtmlMapOverlay, type HtmlMapOverlayInstance } from '../../lib/htmlMapOverlay'
-import { navCarPuckHtml, NAV_CAR_PUCK_ANCHOR } from './mapMarkerIcons'
+import { navHeadingArrowHtml, NAV_ARROW_ANCHOR } from './mapMarkerIcons'
 
 // Google's classic "moving arrows" flow effect: a transparent polyline
 // whose repeating arrow icon has its `offset` nudged forward every frame,
@@ -32,15 +32,6 @@ export interface AnimatedRoutePolylineProps {
   traveledColor?: string
   remainingColor?: string
   strokeWeight?: number
-  /**
-   * Draws a slightly wider light "casing" line underneath the route,
-   * matching the native Google Maps app look (a thick colored line with
-   * a subtle white/light border around it, rounded at the joints rather
-   * than a flat single-color stroke). On by default; set false to get
-   * the old flat single-line look.
-   */
-  casing?: boolean
-  casingColor?: string
   /** continuous marching-arrow animation along the full route */
   flowing?: boolean
   /** fraction of the route the arrows travel per second */
@@ -54,27 +45,22 @@ export default function AnimatedRoutePolyline({
   map,
   path,
   progress,
-  traveledColor = '#9aa0a6',
-  remainingColor = '#1a73e8',
-  strokeWeight = 9,
-  casing = true,
-  casingColor = '#ffffff',
+  traveledColor = '#94a3b8',
+  remainingColor = '#3b82f6',
+  strokeWeight = 6,
   flowing = true,
   flowSpeed = 0.05,
   showPositionMarker = true,
-  markerColor = '#4285F4',
+  markerColor = '#0ea5e9',
   zIndex = 10,
 }: AnimatedRoutePolylineProps) {
   const traveledLineRef = useRef<google.maps.Polyline | null>(null)
   const remainingLineRef = useRef<google.maps.Polyline | null>(null)
-  const traveledCasingRef = useRef<google.maps.Polyline | null>(null)
-  const remainingCasingRef = useRef<google.maps.Polyline | null>(null)
   const flowLineRef = useRef<google.maps.Polyline | null>(null)
   const markerRef = useRef<HtmlMapOverlayInstance | null>(null)
   const cumRef = useRef<number[]>([])
 
   const hasPath = path.length >= 2
-  const casingWeight = strokeWeight + 5
 
   // Create/destroy the polyline objects whenever the map or route identity
   // changes. Path styling (color/weight) is applied here too, so callers
@@ -84,41 +70,12 @@ export default function AnimatedRoutePolyline({
 
     cumRef.current = cumulativeDistances(path)
 
-    let remainingCasing: google.maps.Polyline | null = null
-    let traveledCasing: google.maps.Polyline | null = null
-
-    // The light "casing" border sits directly beneath the colored line at
-    // the same z-index band, drawn first (and a hair wider) so only its
-    // edges peek out — this is what gives Google Maps' route line its
-    // characteristic soft, rounded-looking edge instead of a flat block
-    // of color.
-    if (casing) {
-      remainingCasing = new google.maps.Polyline({
-        path,
-        strokeColor: casingColor,
-        strokeOpacity: 1,
-        strokeWeight: casingWeight,
-        zIndex,
-        map,
-      })
-      traveledCasing = new google.maps.Polyline({
-        path: [],
-        strokeColor: casingColor,
-        strokeOpacity: 1,
-        strokeWeight: casingWeight,
-        zIndex: zIndex + 1,
-        map,
-      })
-      remainingCasingRef.current = remainingCasing
-      traveledCasingRef.current = traveledCasing
-    }
-
     const remaining = new google.maps.Polyline({
       path,
       strokeColor: remainingColor,
       strokeOpacity: 0.95,
       strokeWeight,
-      zIndex: zIndex + 2,
+      zIndex,
       map,
     })
 
@@ -127,7 +84,7 @@ export default function AnimatedRoutePolyline({
       strokeColor: traveledColor,
       strokeOpacity: 0.9,
       strokeWeight,
-      zIndex: zIndex + 3,
+      zIndex: zIndex + 1,
       map,
     })
 
@@ -140,7 +97,7 @@ export default function AnimatedRoutePolyline({
       flow = new google.maps.Polyline({
         path,
         strokeOpacity: 0,
-        zIndex: zIndex + 4,
+        zIndex: zIndex + 2,
         map,
         icons: [{ ...FLOW_ICON, offset: '0%' }],
       })
@@ -150,24 +107,20 @@ export default function AnimatedRoutePolyline({
     return () => {
       remaining.setMap(null)
       traveled.setMap(null)
-      remainingCasing?.setMap(null)
-      traveledCasing?.setMap(null)
       flow?.setMap(null)
       remainingLineRef.current = null
       traveledLineRef.current = null
-      remainingCasingRef.current = null
-      traveledCasingRef.current = null
       flowLineRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, path, flowing, remainingColor, traveledColor, strokeWeight, casing, casingColor, zIndex])
+  }, [map, path, flowing, remainingColor, traveledColor, strokeWeight, zIndex])
 
   // Position marker lifecycle, independent of the polylines above so
   // toggling `showPositionMarker` doesn't tear down the route lines.
   useEffect(() => {
     if (!map || !showPositionMarker || !hasPath) return
 
-    const overlay = createHtmlMapOverlay(path[0], navCarPuckHtml(0, markerColor), NAV_CAR_PUCK_ANCHOR)
+    const overlay = createHtmlMapOverlay(path[0], navHeadingArrowHtml(0, markerColor), NAV_ARROW_ANCHOR)
     overlay.setMap(map)
     markerRef.current = overlay
 
@@ -186,11 +139,9 @@ export default function AnimatedRoutePolyline({
 
     traveledLineRef.current?.setPath(traveled)
     remainingLineRef.current?.setPath(remaining)
-    traveledCasingRef.current?.setPath(traveled)
-    remainingCasingRef.current?.setPath(remaining)
 
     markerRef.current?.updatePosition(sample.position)
-    markerRef.current?.updateHtml(navCarPuckHtml(sample.heading, markerColor))
+    markerRef.current?.updateHtml(navHeadingArrowHtml(sample.heading, markerColor))
   }, [progress, path, markerColor, hasPath])
 
   // Continuous "flowing" animation, decoupled from `progress` — runs

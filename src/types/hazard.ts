@@ -6,7 +6,6 @@ export type BackendHazardType =
   | 'ACCIDENT'
   | 'DEBRIS'
   | 'ROAD_WORKS'
-  | 'ROAD_CLOSURE'
   | 'CHECKPOINT'
   | 'DANGER'
   | 'SOS'
