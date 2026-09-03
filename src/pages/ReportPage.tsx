@@ -1,58 +1,59 @@
-
-import { useState } from 'react'
-import { Paperclip, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react'
-import AddReportModal from '../components/Addreportmodal'
-import AuthFlow from '../components/AuthFlow'
-import { useMyHazards } from '../hooks/useHazards'
-import type { BackendHazardType, Hazard } from '../types/hazard'
-
-
+import { useState } from "react";
+import { Paperclip, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import AddReportModal from "../components/Addreportmodal";
+import AuthFlow from "../components/AuthFlow";
+import { useMyHazards } from "../hooks/useHazards";
+import type { BackendHazardType, Hazard } from "../types/hazard";
 
 const HAZARD_EMOJI: Record<BackendHazardType, string> = {
-  POTHOLE: '🕳️',
-  FLOOD: '🌊',
-  ACCIDENT: '🚧',
-  DEBRIS: '🪨',
-  ROAD_WORKS: '🚜',
-  CHECKPOINT: '🛂',
-  DANGER: '⚠️',
-  SOS: '🆘',
-  OTHER: '❓',
-}
-
-
+  POTHOLE: "🕳️",
+  FLOOD: "🌊",
+  ACCIDENT: "🚧",
+  DEBRIS: "🪨",
+  ROAD_WORKS: "🚜",
+  CHECKPOINT: "🛂",
+  DANGER: "⚠️",
+  SOS: "🆘",
+  OTHER: "❓",
+};
 
 function formatTimeAgo(dateStr: string): string {
-  const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  return `${Math.floor(minutes / 60)}h ago`
+  const minutes = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / 60000,
+  );
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ago`;
 }
-
-// ---------- Signed-out state ----------
 
 function SignedOutState({
   onSignIn,
   onCreateAccount,
 }: {
-  onSignIn: () => void
-  onCreateAccount: () => void
+  onSignIn: () => void;
+  onCreateAccount: () => void;
 }) {
   return (
     <div className="flex flex-col items-center px-6 text-center pt-14 sm:px-8 sm:pt-16 lg:pt-20">
       <div className="relative flex items-center justify-center w-32 h-32 mb-6 sm:w-36 sm:h-36 lg:w-40 lg:h-40 sm:mb-8">
         <div className="absolute w-36 h-[72px] rounded-full sm:w-40 sm:h-20 lg:w-48 lg:h-24 bg-purple-50" />
-        <span className="absolute text-sm text-purple-200 sm:text-base -left-2 top-2">✦</span>
-        <span className="absolute text-lg text-purple-200 sm:text-xl -right-2 top-8 sm:top-10">✦</span>
+        <span className="absolute text-sm text-purple-200 sm:text-base -left-2 top-2">
+          ✦
+        </span>
+        <span className="absolute text-lg text-purple-200 sm:text-xl -right-2 top-8 sm:top-10">
+          ✦
+        </span>
         <div className="relative flex items-center justify-center w-[72px] h-[72px] bg-purple-100 rounded-full sm:w-20 sm:h-20 lg:w-24 lg:h-24">
           <LockIcon />
         </div>
       </div>
 
-      <h2 className="text-base font-bold text-gray-900 sm:text-lg">Sign in to see your reports</h2>
+      <h2 className="text-base font-bold text-gray-900 sm:text-lg">
+        Sign in to see your reports
+      </h2>
       <p className="max-w-sm mt-2 text-xs leading-relaxed text-gray-400 sm:mt-3 sm:text-sm">
-        You need an account to submit and track road hazard reports. Sign in or create an account
-        to get started.
+        You need an account to submit and track road hazard reports. Sign in or
+        create an account to get started.
       </p>
 
       <div className="flex flex-col w-full max-w-sm gap-3 mt-6 sm:mt-8">
@@ -63,7 +64,7 @@ function SignedOutState({
         >
           Create Account
         </button>
-        {/* Purple button (Sign In) on bottom */}
+
         <button
           onClick={onSignIn}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-700 py-3 sm:py-3.5 text-sm sm:text-[15px] font-semibold text-white transition active:scale-[0.98]"
@@ -72,7 +73,7 @@ function SignedOutState({
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 function LockIcon() {
@@ -89,19 +90,23 @@ function LockIcon() {
       <rect x="3" y="11" width="18" height="11" rx="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </svg>
-  )
+  );
 }
-
-// ---------- Empty state (signed in, no reports) ----------
 
 function EmptyState({ onAddReport }: { onAddReport: () => void }) {
   return (
     <div className="flex flex-col items-center px-6 text-center pt-14 sm:px-8 sm:pt-16 lg:pt-20">
       <div className="relative flex items-center justify-center w-32 h-32 mb-6 sm:w-36 sm:h-36 lg:w-40 lg:h-40 sm:mb-8">
         <div className="absolute w-36 h-[72px] rounded-full sm:w-40 sm:h-20 lg:w-48 lg:h-24 bg-gray-50" />
-        <span className="absolute text-sm text-gray-300 sm:text-base -left-2 top-2">✦</span>
-        <span className="absolute text-lg text-gray-300 sm:text-xl -right-2 top-8 sm:top-10">✦</span>
-        <span className="absolute left-0 text-[11px] text-gray-300 sm:text-xs bottom-6 sm:bottom-8">✦</span>
+        <span className="absolute text-sm text-gray-300 sm:text-base -left-2 top-2">
+          ✦
+        </span>
+        <span className="absolute text-lg text-gray-300 sm:text-xl -right-2 top-8 sm:top-10">
+          ✦
+        </span>
+        <span className="absolute left-0 text-[11px] text-gray-300 sm:text-xs bottom-6 sm:bottom-8">
+          ✦
+        </span>
         <div className="relative w-14 h-[72px] bg-gray-300 rounded-lg shadow-sm sm:w-20 sm:h-24 -rotate-6" />
         <div className="absolute w-14 h-[72px] bg-white rounded-lg shadow-sm sm:w-20 sm:h-24 rotate-3 ring-1 ring-gray-100">
           <div className="mt-4 sm:mt-5 flex flex-col gap-1 sm:gap-1.5 px-2.5 sm:px-3">
@@ -116,10 +121,13 @@ function EmptyState({ onAddReport }: { onAddReport: () => void }) {
         />
       </div>
 
-      <h2 className="text-base font-bold text-gray-900 sm:text-lg">No Reports Yet</h2>
+      <h2 className="text-base font-bold text-gray-900 sm:text-lg">
+        No Reports Yet
+      </h2>
       <p className="max-w-sm mt-2 text-xs leading-relaxed text-gray-400 sm:mt-3 sm:text-sm">
-        You haven't submitted any road hazard reports yet. Help make the roads safer by reporting
-        potholes, accidents, floods, roadworks, and other hazards you encounter.
+        You haven't submitted any road hazard reports yet. Help make the roads
+        safer by reporting potholes, accidents, floods, roadworks, and other
+        hazards you encounter.
       </p>
 
       <button
@@ -129,24 +137,26 @@ function EmptyState({ onAddReport }: { onAddReport: () => void }) {
         <span className="text-sm leading-none sm:text-base">+</span> Add report
       </button>
     </div>
-  )
+  );
 }
-
-// ---------- Report card ----------
 
 function MyReportCard({ report }: { report: Hazard }) {
   return (
     <div className="w-full overflow-hidden bg-white border border-gray-100 shadow-sm rounded-3xl">
       <div className="relative flex items-center justify-center h-24 sm:h-28 lg:h-32 bg-gradient-to-br from-emerald-100 via-teal-50 to-sky-100">
         {report.photoUrl ? (
-          <img src={report.photoUrl} alt="" className="absolute inset-0 object-cover w-full h-full" />
+          <img
+            src={report.photoUrl}
+            alt=""
+            className="absolute inset-0 object-cover w-full h-full"
+          />
         ) : (
           <>
             <div
               className="absolute inset-0 opacity-40"
               style={{
                 backgroundImage:
-                  'repeating-linear-gradient(115deg, transparent, transparent 38px, rgba(100,130,150,0.35) 38px, rgba(100,130,150,0.35) 40px)',
+                  "repeating-linear-gradient(115deg, transparent, transparent 38px, rgba(100,130,150,0.35) 38px, rgba(100,130,150,0.35) 40px)",
               }}
             />
             <span className="relative text-2xl sm:text-3xl drop-shadow-sm">
@@ -171,7 +181,7 @@ function MyReportCard({ report }: { report: Hazard }) {
         </h3>
 
         <p className="mt-1 text-xs sm:text-[13px] text-gray-500">
-          📍 {report.location.address || 'Unknown location'}
+          📍 {report.location.address || "Unknown location"}
         </p>
 
         <div className="mt-3 sm:mt-3.5 flex items-center gap-2 sm:gap-2.5">
@@ -184,37 +194,38 @@ function MyReportCard({ report }: { report: Hazard }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // ---------- Page ----------
 
 export default function MyReport() {
-  const [showModal, setShowModal] = useState(false)
-  const [showAuth, setShowAuth] = useState(false)
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
-  const { data: reports = [], isLoading, isError, refetch } = useMyHazards()
+  const [showModal, setShowModal] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const { data: reports = [], isLoading, isError, refetch } = useMyHazards();
 
-  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+  const isLoggedIn =
+    typeof window !== "undefined" && !!localStorage.getItem("token");
 
   const openAddReport = () => {
     if (isLoggedIn) {
-      setShowModal(true)
+      setShowModal(true);
     } else {
-      setAuthMode('signin')
-      setShowAuth(true)
+      setAuthMode("signin");
+      setShowAuth(true);
     }
-  }
+  };
 
   const handleSignIn = () => {
-    setAuthMode('signin')
-    setShowAuth(true)
-  }
+    setAuthMode("signin");
+    setShowAuth(true);
+  };
 
   const handleCreateAccount = () => {
-    setAuthMode('signup')
-    setShowAuth(true)
-  }
+    setAuthMode("signup");
+    setShowAuth(true);
+  };
 
   return (
     <div className="min-h-[100dvh] bg-gray-50 pb-28">
@@ -243,7 +254,9 @@ export default function MyReport() {
             <Loader2 size={22} className="text-purple-700 animate-spin" />
           </div>
         ) : isError ? (
-          <p className="px-6 text-xs text-center text-red-500 sm:text-sm">Failed to load your reports.</p>
+          <p className="px-6 text-xs text-center text-red-500 sm:text-sm">
+            Failed to load your reports.
+          </p>
         ) : reports.length === 0 ? (
           <EmptyState onAddReport={openAddReport} />
         ) : (
@@ -255,20 +268,23 @@ export default function MyReport() {
         )}
 
         {showModal && (
-          <AddReportModal onClose={() => setShowModal(false)} onSuccess={() => setShowModal(false)} />
+          <AddReportModal
+            onClose={() => setShowModal(false)}
+            onSuccess={() => setShowModal(false)}
+          />
         )}
 
         {showAuth && (
           <AuthFlow
-            initialScreen={authMode}   // <-- FIXED: was mode={authMode}
+            initialScreen={authMode}
             onClose={() => setShowAuth(false)}
             onAuthSuccess={() => {
-              setShowAuth(false)
-              refetch()
+              setShowAuth(false);
+              refetch();
             }}
           />
         )}
       </div>
     </div>
-  )
+  );
 }

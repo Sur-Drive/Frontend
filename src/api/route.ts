@@ -1,83 +1,92 @@
+import { api } from "../lib/apiClient";
+import { toLatLngPath, type LatLng as GeoLatLng } from "../lib/geoPath";
+import type {
+  RouteModeKey,
+  RouteOption,
+  RoutePlanResponse,
+  RouteAlternative,
+} from "../types/routePlan";
 
-import { api } from '../lib/apiClient'
-import { toLatLngPath, type LatLng as GeoLatLng } from '../lib/geoPath'
-import type { RouteModeKey, RouteOption, RoutePlanResponse, RouteAlternative } from '../types/routePlan'
-
-export type { RouteModeKey, RouteOption, RoutePlanResponse, RouteAlternative }
-
-
+export type { RouteModeKey, RouteOption, RoutePlanResponse, RouteAlternative };
 
 export interface LatLng {
-  lat: number
-  lng: number
+  lat: number;
+  lng: number;
 }
 
 export interface PlanRoutePayload {
-  origin: LatLng
-  destination: LatLng
+  origin: LatLng;
+  destination: LatLng;
 }
 
 export interface RouteHazard {
-  id: string
-  type: string
-  title: string
-  location: string
-  distanceKm: number
+  id: string;
+  type: string;
+  title: string;
+  location: string;
+  distanceKm: number;
 }
 
 export interface PlanRouteResult {
-  distanceKm: number
-  etaMinutes: number
-  safetyScore: number
-  hazards: RouteHazard[]
-  polyline?: string
-  raw: unknown
+  distanceKm: number;
+  etaMinutes: number;
+  safetyScore: number;
+  hazards: RouteHazard[];
+  polyline?: string;
+  raw: unknown;
 }
 
-
 function formatHazardLocation(h: any): string {
-  const location = h?.location
+  const location = h?.location;
 
-  if (typeof location === 'string') return location
-  if (typeof h?.locationAddress === 'string') return h.locationAddress
+  if (typeof location === "string") return location;
+  if (typeof h?.locationAddress === "string") return h.locationAddress;
 
-  if (location && typeof location === 'object') {
-    if (typeof location.address === 'string') return location.address
-    if (typeof location.lat === 'number' && typeof location.lng === 'number') {
-      return `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`
+  if (location && typeof location === "object") {
+    if (typeof location.address === "string") return location.address;
+    if (typeof location.lat === "number" && typeof location.lng === "number") {
+      return `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`;
     }
-    if (typeof location.latitude === 'number' && typeof location.longitude === 'number') {
-      return `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
+    if (
+      typeof location.latitude === "number" &&
+      typeof location.longitude === "number"
+    ) {
+      return `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
     }
   }
 
-  return ''
+  return "";
 }
-
 
 function normalizePlanRouteResult(body: any): PlanRouteResult {
   const distanceKm =
     body?.distanceKm ??
-    (typeof body?.distanceMeters === 'number' ? body.distanceMeters / 1000 : undefined) ??
+    (typeof body?.distanceMeters === "number"
+      ? body.distanceMeters / 1000
+      : undefined) ??
     body?.distance ??
-    0
+    0;
 
   const etaMinutes =
     body?.etaMinutes ??
     body?.durationMinutes ??
-    (typeof body?.durationSeconds === 'number' ? body.durationSeconds / 60 : undefined) ??
-    0
+    (typeof body?.durationSeconds === "number"
+      ? body.durationSeconds / 60
+      : undefined) ??
+    0;
 
-  const safetyScore = body?.safetyScore ?? body?.safety ?? 0
+  const safetyScore = body?.safetyScore ?? body?.safety ?? 0;
 
-  const hazardsSource: any[] = body?.hazards ?? body?.hazardsOnRoute ?? []
+  const hazardsSource: any[] = body?.hazards ?? body?.hazardsOnRoute ?? [];
   const hazards: RouteHazard[] = hazardsSource.map((h: any) => ({
     id: h.id ?? h._id ?? String(Math.random()),
-    type: h.type ?? 'hazard',
-    title: h.title ?? h.description ?? 'Reported hazard',
+    type: h.type ?? "hazard",
+    title: h.title ?? h.description ?? "Reported hazard",
     location: formatHazardLocation(h),
-    distanceKm: h.distanceKm ?? (typeof h.distanceMeters === 'number' ? h.distanceMeters / 1000 : 0),
-  }))
+    distanceKm:
+      h.distanceKm ??
+      (typeof h.distanceMeters === "number" ? h.distanceMeters / 1000 : 0),
+  }));
 
   return {
     distanceKm,
@@ -86,29 +95,32 @@ function normalizePlanRouteResult(body: any): PlanRouteResult {
     hazards,
     polyline: body?.polyline ?? body?.overviewPolyline,
     raw: body,
-  }
+  };
 }
 
-// ─── Alternative routes ────────────────────────────────────────────
-// Each mode's RouteOption carries an `alternatives` array alongside its
-// own best path, but the exact field names on each entry aren't pinned
-// down yet — normalize defensively the same way normalizePlanRouteResult
-// does above, so the UI still works whichever shape the backend sends.
 function normalizeRouteAlternative(raw: any): RouteAlternative {
-  const path = raw?.path ?? raw?.geometry?.coordinates ?? []
+  const path = raw?.path ?? raw?.geometry?.coordinates ?? [];
 
   const distance =
     raw?.distance ??
-    (typeof raw?.distanceMeters === 'number' ? raw.distanceMeters / 1000 : undefined) ??
-    (typeof raw?.distanceKm === 'number' ? raw.distanceKm : undefined) ??
-    0
+    (typeof raw?.distanceMeters === "number"
+      ? raw.distanceMeters / 1000
+      : undefined) ??
+    (typeof raw?.distanceKm === "number" ? raw.distanceKm : undefined) ??
+    0;
 
   const duration =
     raw?.duration ??
-    (typeof raw?.durationInSeconds === 'number' ? raw.durationInSeconds / 60 : undefined) ??
-    (typeof raw?.durationSeconds === 'number' ? raw.durationSeconds / 60 : undefined) ??
-    (typeof raw?.durationMinutes === 'number' ? raw.durationMinutes : undefined) ??
-    0
+    (typeof raw?.durationInSeconds === "number"
+      ? raw.durationInSeconds / 60
+      : undefined) ??
+    (typeof raw?.durationSeconds === "number"
+      ? raw.durationSeconds / 60
+      : undefined) ??
+    (typeof raw?.durationMinutes === "number"
+      ? raw.durationMinutes
+      : undefined) ??
+    0;
 
   return {
     path,
@@ -119,210 +131,68 @@ function normalizeRouteAlternative(raw: any): RouteAlternative {
     safetyScore: raw?.safetyScore,
     safetyLevel: raw?.safetyLevel,
     raw,
-  }
+  };
 }
 
-/** Up to `limit` alternative routes for a mode's RouteOption (default 2),
- *  skipping any entry that doesn't actually have a path to draw. */
-export function getRouteAlternatives(route: RouteOption | undefined | null, limit = 2): RouteAlternative[] {
-  const source = Array.isArray(route?.alternatives) ? (route!.alternatives as any[]) : []
+export function getRouteAlternatives(
+  route: RouteOption | undefined | null,
+  limit = 2,
+): RouteAlternative[] {
+  const source = Array.isArray(route?.alternatives)
+    ? (route!.alternatives as any[])
+    : [];
 
   return source
     .map(normalizeRouteAlternative)
     .filter((alt) => alt.path.length > 0)
-    .slice(0, limit)
+    .slice(0, limit);
 }
 
 // POST /route/plan  { origin: { lat, lng }, destination: { lat, lng } }
-export async function planRoute(payload: PlanRoutePayload): Promise<PlanRouteResult> {
-  const body = await api.post<any>('/route/plan', payload)
-  return normalizePlanRouteResult(body)
+export async function planRoute(
+  payload: PlanRoutePayload,
+): Promise<PlanRouteResult> {
+  const body = await api.post<any>("/route/plan", payload);
+  return normalizePlanRouteResult(body);
 }
-
-// ─── Multi-modal route plan (real backend shape) ──────────────────────
-// The backend actually answers /route/plan with `{ routes: { driving,
-// walking, cycling, motorcycle }, summary }` — one full RouteOption per
-// mode, not the single flattened result normalizePlanRouteResult above
-// assumes. planRouteOptions/parseRoutePlanResponse expose that shape
-// as-is so route-rendering UI (mode switcher, animated polyline) can
-// work directly off real distances/durations/paths per mode, instead of
-// guessing at one "best" route up front.
 
 const EMPTY_SUMMARY = {
-  bestRoute: 'driving' as RouteModeKey,
-  fastest: 'driving' as RouteModeKey,
-  shortest: 'driving' as RouteModeKey,
-  safest: 'driving' as RouteModeKey,
-}
+  bestRoute: "driving" as RouteModeKey,
+  fastest: "driving" as RouteModeKey,
+  shortest: "driving" as RouteModeKey,
+  safest: "driving" as RouteModeKey,
+};
 
 export function parseRoutePlanResponse(body: any): RoutePlanResponse {
   return {
     routes: body?.routes ?? {},
     summary: body?.summary ?? EMPTY_SUMMARY,
-  }
+  };
 }
 
 /** The first mode with a route, preferring the backend's declared best/fastest. */
-export function pickDefaultMode(plan: RoutePlanResponse): RouteModeKey | undefined {
-  const preferred = [plan.summary?.bestRoute, plan.summary?.fastest].filter(Boolean) as RouteModeKey[]
-  const available = Object.keys(plan.routes) as RouteModeKey[]
+export function pickDefaultMode(
+  plan: RoutePlanResponse,
+): RouteModeKey | undefined {
+  const preferred = [plan.summary?.bestRoute, plan.summary?.fastest].filter(
+    Boolean,
+  ) as RouteModeKey[];
+  const available = Object.keys(plan.routes) as RouteModeKey[];
 
-  return preferred.find((mode) => plan.routes[mode]) ?? available[0]
+  return preferred.find((mode) => plan.routes[mode]) ?? available[0];
 }
 
 /** Converts a route's raw [lng, lat] path into map-ready {lat, lng} points. */
-export function getRoutePath(route: RouteOption | undefined | null): GeoLatLng[] {
-  if (!route?.path?.length) return []
-  return toLatLngPath(route.path)
+export function getRoutePath(
+  route: RouteOption | undefined | null,
+): GeoLatLng[] {
+  if (!route?.path?.length) return [];
+  return toLatLngPath(route.path);
 }
 
-// POST /route/plan — multi-modal variant, see parseRoutePlanResponse above.
-export async function planRouteOptions(payload: PlanRoutePayload): Promise<RoutePlanResponse> {
-  const body = await api.post<any>('/route/plan', payload)
-  return parseRoutePlanResponse(body)
+export async function planRouteOptions(
+  payload: PlanRoutePayload,
+): Promise<RoutePlanResponse> {
+  const body = await api.post<any>("/route/plan", payload);
+  return parseRoutePlanResponse(body);
 }
-
-
-
-
-
-
-
-// import { api } from '../lib/apiClient'
-// import { toLatLngPath, type LatLng as GeoLatLng } from '../lib/geoPath'
-// import type { RouteModeKey, RouteOption, RoutePlanResponse } from '../types/routePlan'
-
-// export type { RouteModeKey, RouteOption, RoutePlanResponse }
-
-
-
-// export interface LatLng {
-//   lat: number
-//   lng: number
-// }
-
-// export interface PlanRoutePayload {
-//   origin: LatLng
-//   destination: LatLng
-// }
-
-// export interface RouteHazard {
-//   id: string
-//   type: string
-//   title: string
-//   location: string
-//   distanceKm: number
-// }
-
-// export interface PlanRouteResult {
-//   distanceKm: number
-//   etaMinutes: number
-//   safetyScore: number
-//   hazards: RouteHazard[]
-//   polyline?: string
-//   raw: unknown
-// }
-
-
-// function formatHazardLocation(h: any): string {
-//   const location = h?.location
-
-//   if (typeof location === 'string') return location
-//   if (typeof h?.locationAddress === 'string') return h.locationAddress
-
-//   if (location && typeof location === 'object') {
-//     if (typeof location.address === 'string') return location.address
-//     if (typeof location.lat === 'number' && typeof location.lng === 'number') {
-//       return `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`
-//     }
-//     if (typeof location.latitude === 'number' && typeof location.longitude === 'number') {
-//       return `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
-//     }
-//   }
-
-//   return ''
-// }
-
-
-// function normalizePlanRouteResult(body: any): PlanRouteResult {
-//   const distanceKm =
-//     body?.distanceKm ??
-//     (typeof body?.distanceMeters === 'number' ? body.distanceMeters / 1000 : undefined) ??
-//     body?.distance ??
-//     0
-
-//   const etaMinutes =
-//     body?.etaMinutes ??
-//     body?.durationMinutes ??
-//     (typeof body?.durationSeconds === 'number' ? body.durationSeconds / 60 : undefined) ??
-//     0
-
-//   const safetyScore = body?.safetyScore ?? body?.safety ?? 0
-
-//   const hazardsSource: any[] = body?.hazards ?? body?.hazardsOnRoute ?? []
-//   const hazards: RouteHazard[] = hazardsSource.map((h: any) => ({
-//     id: h.id ?? h._id ?? String(Math.random()),
-//     type: h.type ?? 'hazard',
-//     title: h.title ?? h.description ?? 'Reported hazard',
-//     location: formatHazardLocation(h),
-//     distanceKm: h.distanceKm ?? (typeof h.distanceMeters === 'number' ? h.distanceMeters / 1000 : 0),
-//   }))
-
-//   return {
-//     distanceKm,
-//     etaMinutes,
-//     safetyScore,
-//     hazards,
-//     polyline: body?.polyline ?? body?.overviewPolyline,
-//     raw: body,
-//   }
-// }
-
-// // POST /route/plan  { origin: { lat, lng }, destination: { lat, lng } }
-// export async function planRoute(payload: PlanRoutePayload): Promise<PlanRouteResult> {
-//   const body = await api.post<any>('/route/plan', payload)
-//   return normalizePlanRouteResult(body)
-// }
-
-// // ─── Multi-modal route plan (real backend shape) ──────────────────────
-// // The backend actually answers /route/plan with `{ routes: { driving,
-// // walking, cycling, motorcycle }, summary }` — one full RouteOption per
-// // mode, not the single flattened result normalizePlanRouteResult above
-// // assumes. planRouteOptions/parseRoutePlanResponse expose that shape
-// // as-is so route-rendering UI (mode switcher, animated polyline) can
-// // work directly off real distances/durations/paths per mode, instead of
-// // guessing at one "best" route up front.
-
-// const EMPTY_SUMMARY = {
-//   bestRoute: 'driving' as RouteModeKey,
-//   fastest: 'driving' as RouteModeKey,
-//   shortest: 'driving' as RouteModeKey,
-//   safest: 'driving' as RouteModeKey,
-// }
-
-// export function parseRoutePlanResponse(body: any): RoutePlanResponse {
-//   return {
-//     routes: body?.routes ?? {},
-//     summary: body?.summary ?? EMPTY_SUMMARY,
-//   }
-// }
-
-// /** The first mode with a route, preferring the backend's declared best/fastest. */
-// export function pickDefaultMode(plan: RoutePlanResponse): RouteModeKey | undefined {
-//   const preferred = [plan.summary?.bestRoute, plan.summary?.fastest].filter(Boolean) as RouteModeKey[]
-//   const available = Object.keys(plan.routes) as RouteModeKey[]
-
-//   return preferred.find((mode) => plan.routes[mode]) ?? available[0]
-// }
-
-// /** Converts a route's raw [lng, lat] path into map-ready {lat, lng} points. */
-// export function getRoutePath(route: RouteOption | undefined | null): GeoLatLng[] {
-//   if (!route?.path?.length) return []
-//   return toLatLngPath(route.path)
-// }
-
-// // POST /route/plan — multi-modal variant, see parseRoutePlanResponse above.
-// export async function planRouteOptions(payload: PlanRoutePayload): Promise<RoutePlanResponse> {
-//   const body = await api.post<any>('/route/plan', payload)
-//   return parseRoutePlanResponse(body)
-// }
