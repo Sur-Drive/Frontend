@@ -92,19 +92,19 @@ export default function TurnByTurnCard({ step, distanceMeters, currentRoadName, 
   const isArrive = step.type === 'arrive'
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 bg-gray-900 shadow-lg rounded-2xl ${className}`}>
-      <div className="flex items-center justify-center flex-shrink-0 text-white bg-white/15 rounded-xl w-11 h-11 sm:w-12 sm:h-12">
-        <ManeuverIcon type={step.type} className="w-6 h-6 sm:w-7 sm:h-7" />
+    <div className={`flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 bg-gray-900 shadow-lg rounded-xl sm:rounded-2xl ${className}`}>
+      <div className="flex items-center justify-center flex-shrink-0 text-white bg-white/15 rounded-lg sm:rounded-xl w-9 h-9 sm:w-12 sm:h-12">
+        <ManeuverIcon type={step.type} className="w-5 h-5 sm:w-7 sm:h-7" />
       </div>
       <div className="flex-1 min-w-0">
         {!isArrive && (
-          <p className="text-xs font-semibold tracking-wide text-white/70">{formatManeuverDistance(distanceMeters)}</p>
+          <p className="text-[10px] sm:text-xs font-semibold tracking-wide text-white/70">{formatManeuverDistance(distanceMeters)}</p>
         )}
-        <p className="text-[15px] sm:text-base font-bold leading-tight text-white truncate">
+        <p className="text-[13px] sm:text-base font-bold leading-tight text-white truncate">
           {describeManeuver(step, nextRoadName)}
         </p>
         {currentRoadName && !isArrive && (
-          <p className="text-[11px] sm:text-xs text-white/60 truncate">On {currentRoadName}</p>
+          <p className="text-[10px] sm:text-xs text-white/60 truncate">On {currentRoadName}</p>
         )}
       </div>
     </div>
