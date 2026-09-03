@@ -18,8 +18,8 @@ interface AddressAutocompleteInputProps {
   placeholder?: string
   className?: string
   inputClassName?: string
-  /** ISO 3166-1 alpha-2 country code to restrict results to. Defaults to Nigeria. */
-  countryRestriction?: string
+  /** ISO 3166-1 alpha-2 country code(s) to restrict results to. Defaults to Nigeria + United Kingdom. */
+  countryRestriction?: string | string[]
   /** Show the tap-to-speak mic button (auto-hidden if the browser doesn't support voice input). Defaults to true. */
   enableVoice?: boolean
 }
@@ -33,6 +33,12 @@ interface Prediction {
 const DEBOUNCE_MS = 300
 const MIN_QUERY_LENGTH = 3
 
+/** Google's AutocompleteService allows up to 5 country codes per request. */
+function normalizeCountryRestriction(restriction: string | string[]): string[] {
+  const list = Array.isArray(restriction) ? restriction : [restriction]
+  return list.map((c) => c.toLowerCase()).slice(0, 5)
+}
+
 export default function AddressAutocompleteInput({
   value,
   onChange,
@@ -40,7 +46,7 @@ export default function AddressAutocompleteInput({
   placeholder = 'Search a place or address',
   className = '',
   inputClassName = '',
-  countryRestriction = 'ng',
+  countryRestriction = ['ng', 'gb'],
   enableVoice = true,
 }: AddressAutocompleteInputProps) {
   const { isLoaded, error: loadError } = useGoogleMaps()
@@ -81,6 +87,9 @@ export default function AddressAutocompleteInput({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const countries = normalizeCountryRestriction(countryRestriction)
+  const cacheCountryKey = countries.join(',')
+
   const search = useCallback(
     (query: string) => {
       if (!autocompleteServiceRef.current || query.trim().length < MIN_QUERY_LENGTH) {
@@ -88,7 +97,7 @@ export default function AddressAutocompleteInput({
         return
       }
 
-      const cached = getCachedPredictions<Prediction[]>(query, countryRestriction)
+      const cached = getCachedPredictions<Prediction[]>(query, cacheCountryKey)
       if (cached) {
         setPredictions(cached)
         setIsOpen(cached.length > 0)
@@ -103,7 +112,8 @@ export default function AddressAutocompleteInput({
       autocompleteServiceRef.current.getPlacePredictions(
         {
           input: query,
-          componentRestrictions: { country: countryRestriction },
+          // Google accepts a single country or an array of up to 5.
+          componentRestrictions: { country: countries },
           sessionToken: sessionTokenRef.current,
         },
         (results, status) => {
@@ -123,11 +133,11 @@ export default function AddressAutocompleteInput({
 
           setPredictions(mapped)
           setIsOpen(mapped.length > 0)
-          setCachedPredictions(query, countryRestriction, mapped)
+          setCachedPredictions(query, cacheCountryKey, mapped)
         }
       )
     },
-    [countryRestriction]
+    [cacheCountryKey]
   )
 
   const handleInputChange = (text: string) => {
