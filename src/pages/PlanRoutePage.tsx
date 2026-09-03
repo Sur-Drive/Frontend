@@ -1147,11 +1147,6 @@ export default function PlanRoutePage() {
     clearStoredActiveTrip();
   };
 
-  // ── Resume a trip in progress ──────────────────────────
-  // If the app is backgrounded/reloaded mid-trip (screen locked, tab
-  // suspended, browser killed the page to save memory, etc.) and the
-  // driver comes back, we shouldn't drop them back on the plan screen
-  // as if the trip ended — restore the same navigating view they left.
   const resumedActiveTripRef = useRef(false);
   const pendingResumeDestRef = useRef<{ lat: number; lng: number } | null>(
     null,
@@ -1175,13 +1170,7 @@ export default function PlanRoutePage() {
     setIsNavigating(true);
     setNavPanelExpanded(true);
 
-    // Don't replan from the ORIGINAL start point — the driver has
-    // likely moved since the trip began. Wait for a fresh GPS fix
-    // (below) so the resumed route continues from where they
-    // actually are now, and only fall back to the original start
-    // point if a live fix never arrives.
     pendingResumeDestRef.current = stored.destinationCoords;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1975,7 +1964,7 @@ export default function PlanRoutePage() {
                     ? "Collapse trip details"
                     : "Expand trip details"
                 }
-                className="flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 text-white transition rounded-xl bg-white/20 hover:bg-white/30"
+                className="flex items-center justify-center flex-shrink-0 text-white transition w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 hover:bg-white/30"
               >
                 <svg
                   viewBox="0 0 24 24"

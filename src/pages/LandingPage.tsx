@@ -20,36 +20,36 @@ import { PartnersFO } from "../components/sections/PartnersFO";
 import { FullWidthImage } from "../components/sections/FullWidthImage";
 
 function LandingPage() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const handleSubscribe = (email: string) => {
-        console.log("Subscribed:", email);
-        // Here you would typically send this to your backend
-    };
+  const handleSubscribe = (email: string) => {
+    console.log("Subscribed:", email);
+    // Here you would typically send this to your backend
+  };
 
-    return (
-        <div className="min-h-screen">
-            <Header onModalOpen={() => setIsModalOpen(true)} />
-            <Hero onModalOpen={() => setIsModalOpen(true)} />
-            <PartnersFO />
-            <Features />
-            <NavigationSection />
-            <HowItWorks />
-            <HazardAlerts />
-            <ScoutMode onModalOpen={() => setIsModalOpen(true)} />
-            <EmergencySOS />
-            <Community />
-            <Fleets />
-            <Partners />
-            <ComingSoon onModalOpen={() => setIsModalOpen(true)} />
-            <FAQ />
-            <FinalCTA onModalOpen={() => setIsModalOpen(true)} />
-            <FullWidthImage />
-            <Contact />
-            <Footer />
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-        </div>
-    );
+  return (
+    <div className="min-h-screen">
+      <Header onModalOpen={() => setIsModalOpen(true)} />
+      <Hero onModalOpen={() => setIsModalOpen(true)} />
+      <PartnersFO />
+      <Features />
+      <NavigationSection />
+      <HowItWorks />
+      <HazardAlerts />
+      <ScoutMode onModalOpen={() => setIsModalOpen(true)} />
+      <EmergencySOS />
+      <Community />
+      <Fleets />
+      <Partners />
+      <ComingSoon onModalOpen={() => setIsModalOpen(true)} />
+      <FAQ />
+      <FinalCTA onModalOpen={() => setIsModalOpen(true)} />
+      <FullWidthImage />
+      <Contact />
+      <Footer />
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </div>
+  );
 }
 
 export default LandingPage;
