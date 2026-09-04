@@ -191,6 +191,46 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                             transition={{ delay: 0.5 }}
                             className="flex flex-col gap-4 w-full max-w-md"
                         >
+                            <motion.button
+                                whileHover={{
+                                    scale: 1.02,
+                                    boxShadow:
+                                        "0 20px 40px -10px rgba(99, 102, 241, 0.3)",
+                                }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => navigate("/home")}
+                                className="group relative w-full bg-white rounded-2xl overflow-hidden shadow-lg border border-indigo-100 hover:border-indigo-300 transition-all duration-300"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <div className="absolute -right-20 -top-20 w-56 h-56 bg-indigo-200/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                                <div className="absolute -left-20 -bottom-20 w-56 h-56 bg-blue-200/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+
+                                <div className="relative z-10 flex items-center justify-between p-5">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-1 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-xl">
+                                            <img
+                                                src="/navigation.svg"
+                                                alt="Navigation"
+                                                className="w-12 h-12"
+                                            />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="text-lg font-bold text-gray-900">
+                                                Navigation
+                                            </div>
+                                            <div className="text-sm text-gray-500 flex items-center gap-1.5">
+                                                <span>Plan & Track Routes</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="px-3 py-1 bg-indigo-100 rounded-full text-xs font-medium text-indigo-700">
+                                            Routes
+                                        </div>
+                                        <ArrowRight className="w-5 h-5 text-indigo-600 group-hover:translate-x-1.5 transition-transform duration-300" />
+                                    </div>
+                                </div>
+                            </motion.button>
                             {/* Fleet Owner Card */}
                             <motion.button
                                 whileHover={{
@@ -268,6 +308,8 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                                     </div>
                                 </div>
                             </motion.button>
+
+                            {/* Navigation Button - New */}
                         </motion.div>
 
                         {/* Feature Badges */}
@@ -336,12 +378,12 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                                         fallback.className =
                                             "h-64 md:h-80 w-full max-w-[280px] md:max-w-[380px] lg:max-w-[420px] bg-gradient-to-b from-purple-50 to-white flex items-center justify-center rounded-3xl relative z-10";
                                         fallback.innerHTML = `
-                                            <div class="text-center px-4">
-                                                <div class="text-5xl mb-3">🚛</div>
-                                                <p class="text-gray-800 font-bold text-lg">SUR-DRIVE<span style="color:#D4AF37;">HT</span></p>
-                                                <p class="text-sm text-gray-500 mt-1">Fleet Management</p>
-                                            </div>
-                                        `;
+                                <div class="text-center px-4">
+                                    <div class="text-5xl mb-3">🚛</div>
+                                    <p class="text-gray-800 font-bold text-lg">SUR-DRIVE<span style="color:#D4AF37;">HT</span></p>
+                                    <p class="text-sm text-gray-500 mt-1">Fleet Management</p>
+                                </div>
+                            `;
                                         parent.appendChild(fallback);
                                     }
                                 }}
