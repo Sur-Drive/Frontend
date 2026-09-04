@@ -333,7 +333,13 @@ export default function Profile() {
         <EmergencyContactModal onClose={() => setOpenModal(null)} />
       )}
       {openModal === "privacy" && (
-        <PrivacyModal onClose={() => setOpenModal(null)} />
+        <PrivacyModal
+          onClose={() => setOpenModal(null)}
+          onAccountDeleted={() => {
+            queryClient.clear();
+            navigate("/home", { replace: true });
+          }}
+        />
       )}
       {openModal === "fleet" && (
         <FleetModal onClose={() => setOpenModal(null)} />

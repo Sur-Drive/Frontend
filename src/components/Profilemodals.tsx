@@ -40,6 +40,7 @@ import {
 } from '../hooks/useEmergencyContacts'
 import type { EmergencyContactDto, EmergencyContactInput } from '../api/emergencyContacts'
 import { useUpdatePassword } from '../hooks/useAuth'
+import { useDeleteAccount } from '../hooks/useProfile'
 import { useFleet } from '../hooks/useFleet'
 import type { FleetManager } from '../hooks/useFleet'
 
@@ -782,11 +783,14 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 interface PrivacyModalProps {
   onClose: () => void
+  // Called after the account has been permanently deleted, so the parent
+  // can navigate away and clear any remaining local state.
+  onAccountDeleted?: () => void
 }
 
-type PrivacyStep = 'main' | 'password' | 'password-success' | 'terms'
+type PrivacyStep = 'main' | 'password' | 'password-success' | 'terms' | 'delete'
 
-export function PrivacyModal({ onClose }: PrivacyModalProps) {
+export function PrivacyModal({ onClose, onAccountDeleted }: PrivacyModalProps) {
   const [step, setStep] = useState<PrivacyStep>('main')
   const [locationEnabled, setLocationEnabled] = useState(true)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -797,6 +801,23 @@ export function PrivacyModal({ onClose }: PrivacyModalProps) {
   const [showRetype, setShowRetype] = useState(false)
 
   const updatePasswordMutation = useUpdatePassword()
+  const deleteAccountMutation = useDeleteAccount()
+
+  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+
+  const handleDeleteAccount = () => {
+    // Guard rail: the delete request itself also requires a valid token
+    // (deleteUserAccount throws without one), but we check here too so we
+    // can show a clear message instead of a raw request error.
+    if (!isLoggedIn) return
+
+    deleteAccountMutation.mutate(undefined, {
+      onSuccess: () => {
+        onAccountDeleted?.()
+        onClose()
+      },
+    })
+  }
 
   const canUpdatePassword =
     currentPassword !== '' && newPassword !== '' && newPassword === retypePassword
@@ -922,6 +943,24 @@ export function PrivacyModal({ onClose }: PrivacyModalProps) {
     )
   }
 
+  if (step === 'delete') {
+    return (
+      <DeleteAccountConfirm
+        isLoggedIn={isLoggedIn}
+        isDeleting={deleteAccountMutation.isPending}
+        errorMessage={
+          deleteAccountMutation.isError
+            ? deleteAccountMutation.error instanceof Error
+              ? deleteAccountMutation.error.message
+              : 'Could not delete account.'
+            : null
+        }
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setStep('main')}
+      />
+    )
+  }
+
   // main step
   return (
     <ModalSheet title="Privacy" onClose={onClose}>
@@ -967,8 +1006,112 @@ export function PrivacyModal({ onClose }: PrivacyModalProps) {
           </div>
           <span className="text-gray-300 shrink-0">›</span>
         </button>
+
+        <button
+          onClick={() => setStep('delete')}
+          className="flex items-center gap-3 px-4 py-4 text-left bg-gray-100 rounded-2xl"
+        >
+          <div className="flex items-center justify-center w-10 h-10 bg-red-100 rounded-full shrink-0">
+            <Trash2 size={18} className="text-red-500" />
+          </div>
+          <p className="text-[15px] font-semibold text-red-500">Delete account</p>
+        </button>
       </div>
     </ModalSheet>
+  )
+}
+
+// ============================================================
+// Delete account confirmation
+// ============================================================
+
+function DeleteAccountConfirm({
+  isLoggedIn,
+  isDeleting,
+  errorMessage,
+  onConfirm,
+  onCancel,
+}: {
+  isLoggedIn: boolean
+  isDeleting: boolean
+  errorMessage: string | null
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  useEffect(() => {
+    const original = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = original
+    }
+  }, [])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
+
+      {/* Dialog */}
+      <div className="relative z-10 w-full max-w-sm p-6 text-center bg-white shadow-2xl rounded-3xl sm:p-8">
+        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-5 bg-red-100 rounded-full">
+          <Trash2 size={28} className="text-red-500" />
+        </div>
+
+        {!isLoggedIn ? (
+          <>
+            <h3 className="text-lg font-bold text-gray-900 sm:text-xl">Please sign in first</h3>
+            <p className="mt-3 text-[15px] leading-relaxed text-gray-500">
+              You must be logged in to your account before we can delete it. Please sign in and
+              try again.
+            </p>
+            <div className="flex flex-col gap-3 mt-7">
+              <button
+                onClick={onCancel}
+                className="w-full rounded-2xl bg-gray-100 py-3.5 text-[15px] font-semibold text-gray-700 transition active:scale-[0.98]"
+              >
+                Okay
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
+              Are you sure you want to delete account?
+            </h3>
+            <p className="mt-3 text-[15px] leading-relaxed text-gray-500">
+              By proceeding, you will permanently lose access to your account and all associated
+              data
+            </p>
+
+            {errorMessage && (
+              <div className="flex items-center gap-2 px-4 py-3 mt-4 text-left text-red-600 bg-red-50 rounded-2xl">
+                <AlertCircle size={16} className="shrink-0" />
+                <p className="text-[13px]">{errorMessage}</p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 mt-7">
+              <button
+                onClick={onConfirm}
+                disabled={isDeleting}
+                className={`w-full rounded-2xl py-3.5 text-[15px] font-semibold text-white transition ${
+                  isDeleting ? 'bg-red-300' : 'bg-red-600 active:scale-[0.98]'
+                }`}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete account'}
+              </button>
+              <button
+                onClick={onCancel}
+                disabled={isDeleting}
+                className="w-full py-1 text-[15px] font-semibold text-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   )
 }
 

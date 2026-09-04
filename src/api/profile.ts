@@ -112,3 +112,25 @@ export async function updateUserProfile(
 
   return res.json();
 }
+
+// ── Delete account ──────────────────────────────────────────
+// NOTE: verify this path/method against your actual backend route —
+// adjust if the API uses a different endpoint (e.g. /users/me).
+
+export async function deleteUserAccount(): Promise<void> {
+  const res = await fetch(`${API_BASE}/users/profile`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  if (res.status === 401) {
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(
+      errBody.message || `Failed to delete account (${res.status})`,
+    );
+  }
+}

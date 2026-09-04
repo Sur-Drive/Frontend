@@ -54,6 +54,7 @@ import { useMutation, useQuery, useQueryClient, QueryClient } from '@tanstack/re
 import {
   getUserProfile,
   updateUserProfile,
+  deleteUserAccount,
   type UserProfileResponse,
   type UpdateProfileInput,
 } from '../api/profile'
@@ -88,6 +89,20 @@ export function useUpdateProfile() {
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(profileQueryKey, updatedUser)
       queryClient.invalidateQueries({ queryKey: profileQueryKey })
+    },
+  })
+}
+
+// Requires the user to be logged in (a valid token) — deleteUserAccount
+// throws before hitting the network if the token is missing/expired.
+export function useDeleteAccount() {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, Error, void>({
+    mutationFn: deleteUserAccount,
+    onSuccess: () => {
+      localStorage.removeItem('token')
+      queryClient.clear()
     },
   })
 }
