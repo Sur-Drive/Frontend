@@ -45,6 +45,8 @@ import ManagerDriver from "./pages/Fleet/Manager/ManagerDriver";
 import ManagerSidebar from "./pages/Fleet/Manager/ManagerSidebar";
 import ManagerForgotPassword from "./pages/Fleet/Manager/ManagerForgotPassword";
 import ManagerVehicles from "./pages/Fleet/Manager/ManagerVehicles";
+import PrivacyPage from "./pages/PrivacyPage";
+import DeleteAccount from "./pages/DeleteAccount";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -143,6 +145,8 @@ function AppRoutes() {
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/report" element={<ReportPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
           <Route
             path="/test"
             element={

@@ -163,7 +163,7 @@ export default function SignInModal({
             </motion.button>
 
             <motion.h1
-              className="pr-12 text-2xl font-extrabold text-gray-900 sm:text-3xl shrink-0"
+              className="pr-12 text-xl font-extrabold text-gray-900 sm:text-2xl md:text-3xl shrink-0"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
@@ -176,7 +176,7 @@ export default function SignInModal({
             </motion.h1>
 
             <motion.p
-              className="mt-2 text-gray-600 shrink-0"
+              className="mt-2 text-sm text-gray-600 sm:text-base shrink-0"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
@@ -380,7 +380,7 @@ export default function SignInModal({
             <motion.button
               onClick={handleSubmit}
               disabled={!isFormValid}
-              className={`mt-6 h-14 rounded-xl font-semibold text-white shrink-0 ${
+              className={`mt-6 h-14 rounded-xl font-semibold text-sm sm:text-base text-white shrink-0 ${
                 isFormValid
                   ? "bg-[#6E43A3]"
                   : "bg-purple-300 cursor-not-allowed"
@@ -416,7 +416,7 @@ export default function SignInModal({
             {/* ─── Google Button ─── */}
             <motion.button
               onClick={onGoogleSignIn}
-              className="flex items-center justify-center gap-3 mt-6 font-medium text-gray-900 border border-gray-200 h-14 rounded-xl bg-gray-50 shrink-0"
+              className="flex items-center justify-center gap-3 mt-6 font-medium text-sm sm:text-base text-gray-900 border border-gray-200 h-14 rounded-xl bg-gray-50 shrink-0"
               whileTap={{ scale: 0.97 }}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -447,7 +447,7 @@ export default function SignInModal({
             {/* ─── Sign Up Link (always at bottom, no overlap) ─── */}
             <div className="mt-8 shrink-0">
               <motion.p
-                className="text-center text-gray-700"
+                className="text-sm text-center text-gray-700 sm:text-base"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.78, duration: 0.5 }}
