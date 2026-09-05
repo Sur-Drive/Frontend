@@ -14,8 +14,7 @@ import StreetViewModal, {
 } from "../components/map/StreetView";
 import {
   reportPinHtml,
-  REPORT_PIN_ANCHOR,
-  REPORT_PIN_SELECTED_ANCHOR,
+  getReportPinAnchor,
   userLocationPinHtml,
   USER_LOCATION_ANCHOR,
 } from "../components/map/mapMarkerIcons";
@@ -509,15 +508,17 @@ export default function HomePage() {
   );
 
   const mapMarkers = useMemo<MapMarkerSpec[]>(() => {
-    const markers: MapMarkerSpec[] = reports.map((r) => ({
-      id: r.id,
-      lat: r.lat,
-      lng: r.lng,
-      html: reportPinHtml(r.color, r.id === selectedId),
-      anchor:
-        r.id === selectedId ? REPORT_PIN_SELECTED_ANCHOR : REPORT_PIN_ANCHOR,
-      onClick: () => setSelectedId(r.id === selectedId ? null : r.id),
-    }));
+    const markers: MapMarkerSpec[] = reports.map((r) => {
+      const isSelected = r.id === selectedId;
+      return {
+        id: r.id,
+        lat: r.lat,
+        lng: r.lng,
+        html: reportPinHtml(r.color, isSelected, r.type),
+        anchor: getReportPinAnchor(isSelected),
+        onClick: () => setSelectedId(isSelected ? null : r.id),
+      };
+    });
 
     if (userLocation) {
       markers.push({

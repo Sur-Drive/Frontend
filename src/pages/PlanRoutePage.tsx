@@ -13,8 +13,7 @@ import AddressAutocompleteInput, {
 } from "../components/map/AddressAutocompleteInput";
 import {
   reportPinHtml,
-  REPORT_PIN_ANCHOR,
-  REPORT_PIN_SELECTED_ANCHOR,
+  getReportPinAnchor,
   userLocationPinHtml,
   USER_LOCATION_ANCHOR,
   destinationPinHtml,
@@ -87,14 +86,6 @@ interface Report {
   color: string;
   type: ReportType;
   label: string;
-}
-
-interface HazardItem {
-  id: string;
-  type: ReportType;
-  title: string;
-  location: string;
-  distance: string;
 }
 
 interface HazardLike {
@@ -263,24 +254,6 @@ const reports: Report[] = [
     color: "#ef4444",
     type: "warning",
     label: "Bretton Place",
-  },
-];
-
-// Mock hazards for scan results
-const scanHazards: HazardItem[] = [
-  {
-    id: "h1",
-    type: "pothole",
-    title: "Deep pothole on 3rd Avenue",
-    location: "3rd Ave & Market St",
-    distance: "0.4 km",
-  },
-  {
-    id: "h2",
-    type: "hazard",
-    title: "Police checkpoint",
-    location: "Old Toll Gate",
-    distance: "3.4 km",
   },
 ];
 
@@ -737,6 +710,9 @@ export default function PlanRoutePage() {
     "waiting",
   );
   const [gpsErrorMessage, setGpsErrorMessage] = useState<string | null>(null);
+  const [gpsAccuracyMeters, setGpsAccuracyMeters] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isNavigating || routePath.length < 2) {
@@ -769,6 +745,7 @@ export default function PlanRoutePage() {
       setLiveHeading(sample.heading);
       setRouteDeviationMeters(projection.distanceMeters);
       setUserLocation([raw.lat, raw.lng]);
+      setGpsAccuracyMeters(position.coords.accuracy ?? null);
     };
 
     const startWatch = (options: PositionOptions) => {
@@ -934,25 +911,17 @@ export default function PlanRoutePage() {
       setMapReady(true);
     };
 
-    const requestAccuratePosition = () => {
-      navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      });
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (position.coords.accuracy <= 100) {
-          onSuccess(position);
-        } else {
-          requestAccuratePosition();
-        }
-      },
-      requestAccuratePosition,
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
-    );
+    // Go straight for a high-accuracy fix instead of trying a cheap
+    // low-accuracy one first: the first pass could return a stale
+    // (up to 60s old) cell/Wi-Fi position and cost several seconds
+    // before falling back anyway. If it's denied, report that
+    // immediately rather than silently retrying (retrying after a
+    // denial just triggers the same denial again).
+    navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    });
   }, []);
 
   useEffect(() => {
@@ -1000,25 +969,11 @@ export default function PlanRoutePage() {
       setIsGettingLocation(false);
     };
 
-    const requestAccuratePosition = () => {
-      navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      });
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (position.coords.accuracy <= 100) {
-          onSuccess(position);
-        } else {
-          requestAccuratePosition();
-        }
-      },
-      requestAccuratePosition,
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
-    );
+    navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    });
   }, [reverseGeocodeStartPoint]);
 
   const handleRecenter = useCallback(() => {
@@ -1147,11 +1102,6 @@ export default function PlanRoutePage() {
     clearStoredActiveTrip();
   };
 
-  // ── Resume a trip in progress ──────────────────────────
-  // If the app is backgrounded/reloaded mid-trip (screen locked, tab
-  // suspended, browser killed the page to save memory, etc.) and the
-  // driver comes back, we shouldn't drop them back on the plan screen
-  // as if the trip ended — restore the same navigating view they left.
   const resumedActiveTripRef = useRef(false);
   const pendingResumeDestRef = useRef<{ lat: number; lng: number } | null>(
     null,
@@ -1175,13 +1125,7 @@ export default function PlanRoutePage() {
     setIsNavigating(true);
     setNavPanelExpanded(true);
 
-    // Don't replan from the ORIGINAL start point — the driver has
-    // likely moved since the trip began. Wait for a fresh GPS fix
-    // (below) so the resumed route continues from where they
-    // actually are now, and only fall back to the original start
-    // point if a live fix never arrives.
     pendingResumeDestRef.current = stored.destinationCoords;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1293,6 +1237,13 @@ export default function PlanRoutePage() {
   }, [collisionGuard.activeWarning, collisionGuardEnabled, isNavigating]);
 
   // ── Arrival ──
+  // Arrival is judged purely on proximity to the destination pin, the same
+  // way Google Maps does it — not on how far along the route polyline we've
+  // projected. Requiring both meant a route whose polyline didn't terminate
+  // exactly on the destination coordinate (routing snaps to the nearest
+  // road, not the literal pin) could keep displayProgress just under 0.995
+  // forever, so "arrived" would never fire even when the user was standing
+  // right there.
   const ARRIVAL_RADIUS_METERS = 50;
   const distanceToDestinationMeters =
     userLocation && destinationCoords
@@ -1302,12 +1253,17 @@ export default function PlanRoutePage() {
         )
       : null;
 
+  // Widen the radius when the GPS fix itself is noisy, so a jittery signal
+  // near the destination doesn't cause a missed arrival.
+  const effectiveArrivalRadiusMeters = Math.max(
+    ARRIVAL_RADIUS_METERS,
+    gpsAccuracyMeters ?? 0,
+  );
+
   const hasArrived =
     isNavigating &&
-    liveProgress != null &&
-    displayProgress >= 0.995 &&
     distanceToDestinationMeters != null &&
-    distanceToDestinationMeters <= ARRIVAL_RADIUS_METERS;
+    distanceToDestinationMeters <= effectiveArrivalRadiusMeters;
 
   const upcomingHazard = describeUpcomingHazard(effectiveRoute?.hazards);
 
@@ -1331,7 +1287,7 @@ export default function PlanRoutePage() {
               ? "hazard"
               : null;
 
-  const navHazardCount = activeRoute?.hazards?.length || scanHazards.length;
+  const navHazardCount = activeRoute?.hazards?.length ?? 0;
   const remainingKm = effectiveRoute
     ? Math.max(0, effectiveRoute.distance * (1 - displayProgress))
     : 0;
@@ -1529,15 +1485,17 @@ export default function PlanRoutePage() {
   );
 
   const mapMarkers = useMemo<MapMarkerSpec[]>(() => {
-    const markers: MapMarkerSpec[] = reports.map((r) => ({
-      id: r.id,
-      lat: r.lat,
-      lng: r.lng,
-      html: reportPinHtml(r.color, r.id === selectedPin),
-      anchor:
-        r.id === selectedPin ? REPORT_PIN_SELECTED_ANCHOR : REPORT_PIN_ANCHOR,
-      onClick: () => setSelectedPin(r.id === selectedPin ? null : r.id),
-    }));
+    const markers: MapMarkerSpec[] = reports.map((r) => {
+      const isSelected = r.id === selectedPin;
+      return {
+        id: r.id,
+        lat: r.lat,
+        lng: r.lng,
+        html: reportPinHtml(r.color, isSelected, r.type),
+        anchor: getReportPinAnchor(isSelected),
+        onClick: () => setSelectedPin(isSelected ? null : r.id),
+      };
+    });
 
     if (userLocation && !isNavigating) {
       markers.push({
@@ -1703,7 +1661,7 @@ export default function PlanRoutePage() {
       {locationError && !showPlanModal && !showScanResults && !showSOS && (
         <div className="absolute top-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-md z-[500] bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 flex items-start gap-3">
           <div className="text-yellow-600 mt-0.5">⚠️</div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-yellow-800 sm:text-sm">
               {locationError}
             </p>
@@ -1711,6 +1669,13 @@ export default function PlanRoutePage() {
               Showing default area
             </p>
           </div>
+          <button
+            onClick={handleUseMyLocation}
+            disabled={isGettingLocation}
+            className="flex-shrink-0 text-[11px] sm:text-xs font-semibold text-yellow-800 underline disabled:opacity-50"
+          >
+            {isGettingLocation ? "Retrying…" : "Retry"}
+          </button>
         </div>
       )}
 
@@ -1736,7 +1701,7 @@ export default function PlanRoutePage() {
 
       {/* Home Header */}
       {!isNavigating && !showScanResults && (
-        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-12 pb-2 sm:flex sm:justify-center">
+        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6 pb-2 sm:pt-12 sm:flex sm:justify-center">
           <div className="sm:w-full sm:max-w-md">
             <div className="flex items-center gap-2 mb-3">
               <button
@@ -1900,12 +1865,12 @@ export default function PlanRoutePage() {
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2 sm:flex sm:justify-center">
           <div className="space-y-2 sm:w-full sm:max-w-md">
             <div
-              className={`flex items-center gap-3 px-4 py-3 shadow-sm rounded-2xl ${hasArrived ? "bg-purple-600" : "bg-emerald-500"}`}
+              className={`flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 shadow-sm rounded-xl sm:rounded-2xl ${hasArrived ? "bg-purple-600" : "bg-emerald-500"}`}
             >
-              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg sm:w-10 sm:h-10 sm:rounded-xl bg-white/20">
                 <svg
                   viewBox="0 0 24 24"
-                  className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white"
+                  className="w-4 h-4 text-white sm:w-5 sm:h-5"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
@@ -1920,12 +1885,12 @@ export default function PlanRoutePage() {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-[10px] sm:text-xs font-medium tracking-wide uppercase text-white/80">
+                <p className="text-[9px] sm:text-xs font-medium tracking-wide uppercase text-white/80">
                   {hasArrived
                     ? "Trip complete"
                     : `${remainingKm.toFixed(1)} KM left`}
                 </p>
-                <p className="text-xs font-semibold text-white sm:text-sm">
+                <p className="text-[11px] sm:text-sm font-semibold text-white">
                   {hasArrived
                     ? "You've arrived"
                     : "Head out and follow the route"}
@@ -1948,7 +1913,7 @@ export default function PlanRoutePage() {
                       : "Turn on Collision Guard"
                   }
                   title="Collision Guard — forward-collision warning"
-                  className={`flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl transition ${
+                  className={`flex items-center justify-center flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl transition ${
                     collisionGuardEnabled
                       ? "bg-white text-emerald-600"
                       : "bg-white/20 text-white"
@@ -1956,7 +1921,7 @@ export default function PlanRoutePage() {
                 >
                   <svg
                     viewBox="0 0 24 24"
-                    className="w-4.5 h-4.5 sm:w-5 sm:h-5"
+                    className="w-4 h-4 sm:w-5 sm:h-5"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -1975,11 +1940,11 @@ export default function PlanRoutePage() {
                     ? "Collapse trip details"
                     : "Expand trip details"
                 }
-                className="flex items-center justify-center flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 text-white transition rounded-xl bg-white/20 hover:bg-white/30"
+                className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-white transition rounded-lg sm:w-10 sm:h-10 sm:rounded-xl bg-white/20 hover:bg-white/30"
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform ${topStackExpanded ? "rotate-180" : ""}`}
+                  className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${topStackExpanded ? "rotate-180" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
@@ -2386,7 +2351,7 @@ export default function PlanRoutePage() {
       overflow-hidden
     "
           >
-            <div className="flex-shrink-0 px-5 pt-6 pb-4">
+            <div className="flex-shrink-0 px-5 pt-5 pb-3">
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-extrabold text-gray-900 sm:text-2xl">
@@ -2415,7 +2380,7 @@ export default function PlanRoutePage() {
               </div>
             </div>
 
-            <div className="flex-1 px-5 space-y-5 overflow-y-auto min-h-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex-1 min-h-0 px-5 pt-2 space-y-4 overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex items-center justify-center w-5 h-5 border-2 rounded-full border-emerald-500">
@@ -2492,7 +2457,7 @@ export default function PlanRoutePage() {
               <div className="h-4" />
             </div>
 
-            <div className="flex-shrink-0 px-5 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-6">
+            <div className="flex-shrink-0 px-5 pt-4 pb-[calc(7.25rem+env(safe-area-inset-bottom))] sm:pb-6">
               {routeError && (
                 <p className="mb-3 text-xs text-center text-red-500 sm:text-sm">
                   {routeError}
@@ -2642,12 +2607,30 @@ export default function PlanRoutePage() {
                   )}
 
                   {(() => {
-                    const liveHazards = activeRoute?.hazards as
-                      | any[]
-                      | undefined;
-                    const hazardCount = liveHazards?.length
-                      ? liveHazards.length
-                      : scanHazards.length;
+                    const liveHazards =
+                      (activeRoute?.hazards as any[] | undefined) ?? [];
+                    const hazardCount = liveHazards.length;
+
+                    if (hazardCount === 0) {
+                      return (
+                        <div className="flex items-center gap-2 px-4 py-3 mb-4 border bg-emerald-50 rounded-xl border-emerald-100">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="flex-shrink-0 w-4.5 h-4.5 sm:w-5 sm:h-5 text-emerald-500"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          >
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                          <p className="text-xs font-medium sm:text-sm text-emerald-700">
+                            No hazards reported on this route right now.
+                          </p>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div className="flex items-center gap-2 px-4 py-3 mb-4 border bg-amber-50 rounded-xl border-amber-100">
                         <svg
@@ -2661,43 +2644,43 @@ export default function PlanRoutePage() {
                           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         </svg>
                         <p className="text-xs font-medium sm:text-sm text-amber-700">
-                          {hazardCount} hazards reported on this route. Drive
-                          carefully.
+                          {hazardCount} hazard{hazardCount === 1 ? "" : "s"}{" "}
+                          reported on this route. Drive carefully.
                         </p>
                       </div>
                     );
                   })()}
 
-                  <div className="mb-4 space-y-3">
-                    {((activeRoute?.hazards as any[] | undefined)?.length
-                      ? (activeRoute!.hazards as any[])
-                      : scanHazards
-                    ).map((hazard: any) => (
-                      <div
-                        key={hazard.id}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
-                      >
-                        <HazardListIcon type={hazard.type} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-gray-900 truncate sm:text-sm">
-                            {typeof hazard.title === "string"
-                              ? hazard.title
-                              : "Reported hazard"}
-                          </p>
-                          <p className="text-[11px] sm:text-xs text-gray-400">
-                            {typeof hazard.location === "string"
-                              ? hazard.location
-                              : ""}
-                          </p>
+                  {((activeRoute?.hazards as any[] | undefined)?.length ?? 0) >
+                    0 && (
+                    <div className="mb-4 space-y-3">
+                      {(activeRoute!.hazards as any[]).map((hazard: any) => (
+                        <div
+                          key={hazard.id}
+                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                        >
+                          <HazardListIcon type={hazard.type} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-gray-900 truncate sm:text-sm">
+                              {typeof hazard.title === "string"
+                                ? hazard.title
+                                : "Reported hazard"}
+                            </p>
+                            <p className="text-[11px] sm:text-xs text-gray-400">
+                              {typeof hazard.location === "string"
+                                ? hazard.location
+                                : ""}
+                            </p>
+                          </div>
+                          <span className="flex-shrink-0 px-2 py-1 text-[11px] sm:text-xs font-medium text-gray-500 bg-white rounded-lg">
+                            {typeof hazard.distanceKm === "number"
+                              ? `${hazard.distanceKm.toFixed(1)} km`
+                              : hazard.distance}
+                          </span>
                         </div>
-                        <span className="flex-shrink-0 px-2 py-1 text-[11px] sm:text-xs font-medium text-gray-500 bg-white rounded-lg">
-                          {typeof hazard.distanceKm === "number"
-                            ? `${hazard.distanceKm.toFixed(1)} km`
-                            : hazard.distance}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
             </div>

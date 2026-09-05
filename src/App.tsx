@@ -55,6 +55,8 @@ import PlanGuard from "./components/PlanGuard";
 import LiveTracking from "./pages/Fleet/Dashboard/LiveTracking";
 import DriverAcceptInvite from "./pages/Fleet/SubFleets/DriverAcceptInvite";
 import ManagerLiveTracking from "./pages/Fleet/Manager/ManagerLiveTracking";
+import PrivacyPage from "./pages/PrivacyPage";
+import DeleteAccount from "./pages/DeleteAccount";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -108,6 +110,8 @@ const NO_NAV_PAGES = [
     "/fleet/live-tracking",
     "/driver/accept-invite",
     "/manager/live-tracking",
+    "/privacy",
+    "/delete-account",
 ];
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -120,7 +124,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function AppRoutes() {
     const location = useLocation();
-
     const pathname = location.pathname;
 
     // Check if current page is an app route (should show splash and nav)
@@ -165,6 +168,8 @@ function AppRoutes() {
                     <Route path="/feed" element={<FeedPage />} />
                     <Route path="/report" element={<ReportPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/delete-account" element={<DeleteAccount />} />
                     <Route
                         path="/test"
                         element={
@@ -202,17 +207,93 @@ function AppRoutes() {
                         path="/fleet/accept-invite"
                         element={<ManagerAcceptInvite />}
                     />
-
                     <Route
                         path="/driver/accept-invite"
                         element={<DriverAcceptInvite />}
                     />
+
                     <Route
                         path="/manager/dashboard"
                         element={<ManagerDashboard />}
                     />
+                    <Route path="/manager" element={<ManagerSignIn />} />
+
+                    <Route
+                        path="/manager/drivers"
+                        element={
+                            <ManagerSidebar>
+                                <ManagerDriver />
+                            </ManagerSidebar>
+                        }
+                    />
+                    <Route
+                        path="/manager/vehicles"
+                        element={
+                            <ManagerSidebar>
+                                <ManagerVehicles />
+                            </ManagerSidebar>
+                        }
+                    />
+                    <Route path="/manager/trips" element={<ManagerTrips />} />
+
+                    <Route
+                        path="/manager/report"
+                        element={
+                            <PlanGuard requiredPlans={["pro", "enterprise"]}>
+                                <ManagerReports />
+                            </PlanGuard>
+                        }
+                    />
+
+                    <Route
+                        path="/manager/live-tracking"
+                        element={
+                            <PlanGuard requiredPlans={["pro", "enterprise"]}>
+                                <ManagerLiveTracking />
+                            </PlanGuard>
+                        }
+                    />
+
+                    <Route
+                        path="/manager/forgot-password"
+                        element={<ManagerForgotPassword />}
+                    />
+                    <Route
+                        path="/manager/settings"
+                        element={<ManagerSettings />}
+                    />
+
+                    <Route path="/payment/*" element={<PaymentCallback />} />
+                    <Route path="/plan-route" element={<PlanRoutePage />} />
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/fleet" element={<FleetRegistration />} />
+                    <Route
+                        path="/fleet/forgot-password"
+                        element={<ForgotPassword />}
+                    />
+
+                    <Route
+                        path="/fleet/kyc"
+                        element={
+                            <ProtectedRoute>
+                                <KYC />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route path="/fleet/kyc-pending" element={<KYCPending />} />
+                    <Route path="/fleet/settings" element={<FleetSettings />} />
+                    <Route
+                        path="/fleet/subscription/renew"
+                        element={<SubscriptionRenew />}
+                    />
+                    <Route
+                        path="/fleet/payment/pending"
+                        element={<PaymentPending />}
+                    />
 
                     <Route path="/fleet/trips" element={<FleetTrips />} />
+
                     <Route
                         path="/fleet/report"
                         element={
@@ -231,78 +312,6 @@ function AppRoutes() {
                         }
                     />
 
-                    <Route
-                        path="/manager/live-tracking"
-                        element={
-                            <PlanGuard requiredPlans={["pro", "enterprise"]}>
-                                <ManagerLiveTracking />
-                            </PlanGuard>
-                        }
-                    />
-
-                    <Route
-                        path="/manager/drivers"
-                        element={
-                            <ManagerSidebar>
-                                <ManagerDriver />
-                            </ManagerSidebar>
-                        }
-                    />
-
-                    <Route
-                        path="/manager/vehicles"
-                        element={
-                            <ManagerSidebar>
-                                <ManagerVehicles />
-                            </ManagerSidebar>
-                        }
-                    />
-
-                    <Route path="/manager" element={<ManagerSignIn />} />
-                    <Route
-                        path="/manager/report"
-                        element={
-                            <PlanGuard requiredPlans={["pro", "enterprise"]}>
-                                <ManagerReports />
-                            </PlanGuard>
-                        }
-                    />
-                    <Route path="/payment/*" element={<PaymentCallback />} />
-                    <Route path="/plan-route" element={<PlanRoutePage />} />
-                    <Route path="/admin/login" element={<AdminLogin />} />
-                    <Route path="/fleet" element={<FleetRegistration />} />
-                    <Route
-                        path="/fleet/forgot-password"
-                        element={<ForgotPassword />}
-                    />
-                    <Route
-                        path="/manager/forgot-password"
-                        element={<ManagerForgotPassword />}
-                    />
-                    <Route path="/manager/trips" element={<ManagerTrips />} />
-                    <Route
-                        path="/fleet/kyc"
-                        element={
-                            <ProtectedRoute>
-                                <KYC />
-                            </ProtectedRoute>
-                        }
-                    />
-
-                    <Route path="/fleet/kyc-pending" element={<KYCPending />} />
-                    <Route path="/fleet/settings" element={<FleetSettings />} />
-                    <Route
-                        path="/manager/settings"
-                        element={<ManagerSettings />}
-                    />
-                    <Route
-                        path="/fleet/subscription/renew"
-                        element={<SubscriptionRenew />}
-                    />
-                    <Route
-                        path="/fleet/payment/pending"
-                        element={<PaymentPending />}
-                    />
                     <Route element={<PrivateRoute />}>
                         <Route
                             path="/fleet/dashboard"
@@ -332,7 +341,6 @@ function AppRoutes() {
                                 </DashSidebar>
                             }
                         />
-
                         <Route
                             path="/fleet/vehicles"
                             element={
@@ -341,7 +349,6 @@ function AppRoutes() {
                                 </DashSidebar>
                             }
                         />
-
                         <Route
                             path="/fleet/billing"
                             element={
@@ -350,41 +357,42 @@ function AppRoutes() {
                                 </DashSidebar>
                             }
                         />
-
-                        {/*
-                        <Route
-                            path="/fleet/drivers"
-                            element={
-                                <DashSidebar>
-                                    <FleetDrivers />
-                                </DashSidebar>
-                            }
-                        />
-                        <Route
-                            path="/fleet/trips"
-                            element={
-                                <DashSidebar>
-                                    <Trips />
-                                </DashSidebar>
-                            }
-                        />
-                        <Route
-                            path="/fleet/billing"
-                            element={
-                                <DashSidebar>
-                                    <Billing />
-                                </DashSidebar>
-                            }
-                        />
-                        <Route
-                            path="/fleet/settings"
-                            element={
-                                <DashSidebar>
-                                    <Settings />
-                                </DashSidebar>
-                            }
-                        />  */}
+                        {/* 
+            <Route
+              path="/fleet/drivers"
+              element={
+                <DashSidebar>
+                  <FleetDrivers />
+                </DashSidebar>
+              }
+            />
+            <Route
+              path="/fleet/trips"
+              element={
+                <DashSidebar>
+                  <Trips />
+                </DashSidebar>
+              }
+            />
+            <Route
+              path="/fleet/billing"
+              element={
+                <DashSidebar>
+                  <Billing />
+                </DashSidebar>
+              }
+            />
+            <Route
+              path="/fleet/settings"
+              element={
+                <DashSidebar>
+                  <Settings />
+                </DashSidebar>
+              }
+            /> 
+            */}
                     </Route>
+
                     <Route
                         path="/admin/dashboard"
                         element={<AdminDashboard />}
@@ -423,9 +431,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
