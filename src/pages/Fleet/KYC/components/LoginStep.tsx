@@ -142,13 +142,13 @@ const LoginStep: React.FC<LoginStepProps> = ({
                 <div className="flex flex-col gap-6">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-[#1F083B]">
-                            Email or Phone
+                            Email
                         </label>
                         <input
                             type="text"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
-                            placeholder="Enter your email or phone number"
+                            placeholder="Enter your email"
                             className="h-14 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 font-['Outfit'] text-base outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3]"
                             required
                         />
