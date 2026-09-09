@@ -315,21 +315,6 @@ const BlurSidebar: React.FC<BlurSidebarProps> = ({
                                 • Access restricted until resolved
                             </span>
                         </div>
-                        <button
-                            onClick={() => {
-                                if (status === "pending") {
-                                    navigate("/fleet/kyc-pending");
-                                } else if (status === "expired") {
-                                    navigate("/fleet/subscription/renew");
-                                } else {
-                                    navigate("/fleet/payment/pending");
-                                }
-                            }}
-                            className="w-full rounded-lg bg-[#6E43A3] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 sm:w-auto"
-                            style={{ fontFamily: "Outfit" }}
-                        >
-                            Resolve Now
-                        </button>
                     </div>
                 )}
 
