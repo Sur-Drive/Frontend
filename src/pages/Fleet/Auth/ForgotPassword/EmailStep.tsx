@@ -22,7 +22,7 @@ const EmailStep: React.FC<EmailStepProps> = ({
         e.preventDefault();
 
         if (!identifier) {
-            onError("Please enter your email or phone number");
+            onError("Please enter your email");
             return;
         }
 
@@ -77,8 +77,7 @@ const EmailStep: React.FC<EmailStepProps> = ({
                     className="text-sm text-[#8E98A8] sm:text-base"
                     style={{ fontFamily: "Outfit" }}
                 >
-                    Enter your email or phone number to receive a password reset
-                    otp.
+                    Enter your email to receive a password reset otp.
                 </p>
             </div>
 
@@ -87,13 +86,13 @@ const EmailStep: React.FC<EmailStepProps> = ({
                 <div className="flex flex-col gap-4 sm:gap-6">
                     <div>
                         <label className="mb-1.5 block text-sm font-medium text-[#1F083B] sm:mb-2">
-                            Email or Phone
+                            Email
                         </label>
                         <input
                             type="text"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
-                            placeholder="Enter your email or phone number"
+                            placeholder="Enter your email"
                             className="h-12 w-full rounded-xl border border-[#D1D5DB] px-4 py-3 text-sm outline-none transition focus:border-[#6E43A3] focus:ring-1 focus:ring-[#6E43A3] sm:h-14 sm:text-base"
                             style={{
                                 fontFamily: "Outfit",

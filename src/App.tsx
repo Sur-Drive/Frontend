@@ -25,7 +25,6 @@ import FleetRegistration from "./pages/Fleet/FleetRegistration";
 import KYC from "./pages/Fleet/KYC/KYC";
 import FleetDashboard from "./pages/Fleet/Dashboard/FleetDashboard";
 import DashSidebar from "./pages/Fleet/Dashboard/DashSidebar";
-import { Settings } from "lucide-react";
 
 import SubFleetManagement from "./pages/Fleet/SubFleets/SubFleetManagement";
 import FleetManagers from "./pages/Fleet/SubFleets/FleetManagers";
