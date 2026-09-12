@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { GoogleLogin } from "@react-oauth/google";
 import { useLogin } from "../hooks/useAuth";
 import {
@@ -46,6 +46,7 @@ export default function SignInModal({
   const [error, setError] = useState("");
 
   const login = useLogin();
+  const dragControls = useDragControls();
 
   const formatPhone = (value: string): string => {
     const digits = value.replace(/\D/g, "");
@@ -116,7 +117,7 @@ export default function SignInModal({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 flex items-end justify-center z-[70]"
+        className="fixed inset-0 flex items-end justify-center sm:items-center z-[100]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -132,7 +133,10 @@ export default function SignInModal({
         />
 
         <motion.div
-          className="relative w-full max-w-[430px] h-[92dvh] max-h-[100dvh] bg-white rounded-t-[40px] flex flex-col overflow-hidden"
+          className="relative w-full max-w-[430px] sm:max-w-[480px] lg:max-w-[520px]
+                       max-h-[100dvh] overflow-y-auto scrollbar-thin
+                       bg-white rounded-t-[32px] sm:rounded-[40px] sm:m-4
+                       shadow-2xl"
           initial={{ y: "110%" }}
           animate={{ y: 0 }}
           exit={{ y: "110%" }}
@@ -143,27 +147,27 @@ export default function SignInModal({
             mass: 1.2,
           }}
           drag="y"
+          dragListener={false}
+          dragControls={dragControls}
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={0.15}
           onDragEnd={(_, info) => {
             if (info.offset.y > 150) onClose();
           }}
         >
-          <div
-            className="flex flex-col flex-1 px-6 pt-8 pb-24 overflow-y-auto"
-            style={{
-              WebkitOverflowScrolling: "touch",
-              paddingBottom: "max(6rem, env(safe-area-inset-bottom))",
-            }}
-          >
-            <div className="flex justify-center mb-2 -mt-2 shrink-0">
+          {/* Header */}
+          <div className="relative px-5 pt-3 pb-2 sm:px-8 sm:pt-8">
+            <div
+              className="flex justify-center py-2 -mt-1 touch-none sm:hidden"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
 
             <motion.button
               onClick={onClose}
               aria-label="Close"
-              className="absolute flex items-center justify-center text-gray-500 bg-gray-100 rounded-full top-6 right-6 w-9 h-9 shrink-0"
+              className="absolute flex items-center justify-center w-8 h-8 text-gray-500 bg-gray-100 rounded-full top-3 right-4 sm:top-6 sm:right-6 sm:w-9 sm:h-9"
               whileTap={{ scale: 0.92 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
@@ -171,12 +175,12 @@ export default function SignInModal({
             </motion.button>
 
             <motion.h1
-              className="pr-12 text-xl font-extrabold text-gray-900 sm:text-2xl md:text-3xl shrink-0"
-              initial={{ opacity: 0, y: 30 }}
+              className="pr-10 text-lg font-extrabold text-gray-900 sm:text-2xl lg:text-3xl"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                delay: 0.25,
-                duration: 0.5,
+                delay: 0.15,
+                duration: 0.35,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
@@ -184,29 +188,32 @@ export default function SignInModal({
             </motion.h1>
 
             <motion.p
-              className="mt-2 text-sm text-gray-600 sm:text-base shrink-0"
-              initial={{ opacity: 0, y: 30 }}
+              className="mt-1 text-xs text-gray-600 sm:text-base"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                delay: 0.32,
-                duration: 0.5,
+                delay: 0.2,
+                duration: 0.35,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
               Sign in to access real-time road alerts, safer routes, and your
               personalised driving experience.
             </motion.p>
+          </div>
 
-            {/* ─── Toggle: Driver / Fleet Owner ─── */}
+          {/* Content */}
+          <div className="px-5 pt-4 sm:px-8">
+            {/* Role Toggle */}
             <motion.div
-              className="flex p-1 mt-6 bg-gray-100 rounded-xl shrink-0"
-              initial={{ opacity: 0, y: 20 }}
+              className="flex p-1 bg-gray-100 rounded-xl"
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.4 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
             >
               <button
                 onClick={() => setRole("driver")}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${
                   role === "driver"
                     ? "bg-white text-[#6E43A3] shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -216,7 +223,7 @@ export default function SignInModal({
               </button>
               <button
                 onClick={() => setRole("fleet_owner")}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${
                   role === "fleet_owner"
                     ? "bg-white text-[#6E43A3] shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -226,16 +233,16 @@ export default function SignInModal({
               </button>
             </motion.div>
 
-            {/* ─── Toggle: Phone / Email ─── */}
+            {/* Toggle: Phone / Email */}
             <motion.div
-              className="flex p-1 mt-6 bg-gray-100 rounded-xl shrink-0"
-              initial={{ opacity: 0, y: 20 }}
+              className="flex p-1 mt-3 bg-gray-100 rounded-xl"
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.38, duration: 0.4 }}
+              transition={{ delay: 0.24, duration: 0.3 }}
             >
               <button
                 onClick={() => switchMode("phone")}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${
                   inputMode === "phone"
                     ? "bg-white text-[#6E43A3] shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -248,7 +255,7 @@ export default function SignInModal({
               </button>
               <button
                 onClick={() => switchMode("email")}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 ${
                   inputMode === "email"
                     ? "bg-white text-[#6E43A3] shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -261,14 +268,14 @@ export default function SignInModal({
               </button>
             </motion.div>
 
-            {/* ─── Identifier Input ─── */}
+            {/* Identifier Input */}
             <motion.div
-              className="mt-4 shrink-0"
-              initial={{ opacity: 0, y: 30 }}
+              className="mt-4"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                delay: 0.45,
-                duration: 0.5,
+                delay: 0.28,
+                duration: 0.35,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
@@ -276,16 +283,16 @@ export default function SignInModal({
                 {inputMode === "phone" ? (
                   <motion.div
                     key="phone-input"
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
+                    exit={{ opacity: 0, x: 16 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <label className="text-sm font-semibold text-gray-900">
+                    <label className="text-xs font-semibold text-gray-900 sm:text-sm">
                       Phone Number
                     </label>
-                    <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
-                      <div className="flex items-center px-4 text-gray-600 border-r border-gray-200 shrink-0">
+                    <div className="mt-1.5 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+                      <div className="flex items-center px-3 text-xs text-gray-600 border-r border-gray-200 shrink-0 sm:text-sm sm:px-4">
                         {countryCode}
                       </div>
                       <input
@@ -294,9 +301,9 @@ export default function SignInModal({
                         value={formatPhone(phone)}
                         onChange={handlePhoneChange}
                         placeholder="812-345-6789"
-                        className="flex-1 min-w-0 px-4 py-4 text-base text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                        className="flex-1 min-w-0 px-3 py-3 text-base text-gray-900 bg-transparent outline-none sm:px-4 sm:py-4 placeholder:text-gray-400"
                       />
-                      <div className="flex items-center pr-4 shrink-0">
+                      <div className="flex items-center pr-3 shrink-0 sm:pr-4">
                         <NigeriaFlagIcon />
                       </div>
                     </div>
@@ -304,16 +311,16 @@ export default function SignInModal({
                 ) : (
                   <motion.div
                     key="email-input"
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={{ opacity: 0, x: 16 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
+                    exit={{ opacity: 0, x: -16 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <label className="text-sm font-semibold text-gray-900">
+                    <label className="text-xs font-semibold text-gray-900 sm:text-sm">
                       Email Address
                     </label>
-                    <div className="mt-2 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
-                      <div className="flex items-center pl-4 pr-3 text-gray-400 shrink-0">
+                    <div className="mt-1.5 flex items-stretch rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+                      <div className="flex items-center pl-3 pr-2 text-gray-400 shrink-0 sm:pl-4 sm:pr-3">
                         <EmailIcon />
                       </div>
                       <input
@@ -322,7 +329,7 @@ export default function SignInModal({
                         value={email}
                         onChange={handleEmailChange}
                         placeholder="you@example.com"
-                        className="flex-1 min-w-0 px-0 py-4 text-base text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                        className="flex-1 min-w-0 px-0 py-3 text-base text-gray-900 bg-transparent outline-none sm:py-4 placeholder:text-gray-400"
                       />
                     </div>
                   </motion.div>
@@ -330,89 +337,78 @@ export default function SignInModal({
               </AnimatePresence>
             </motion.div>
 
-            {/* ─── Password Input ─── */}
+            {/* Password Input */}
             <motion.div
-              className="mt-4 shrink-0"
-              initial={{ opacity: 0, y: 30 }}
+              className="mt-4"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                delay: 0.52,
-                duration: 0.5,
+                delay: 0.3,
+                duration: 0.35,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-gray-900">
+                <label className="text-xs font-semibold text-gray-900 sm:text-sm">
                   Enter Password
                 </label>
                 <button
                   onClick={onForgotPassword}
-                  className="text-sm font-semibold text-red-500 hover:text-red-600"
+                  className="text-xs font-semibold text-red-500 hover:text-red-600 sm:text-sm"
                 >
                   Forgot password?
                 </button>
               </div>
-              <div className="mt-2 flex items-center rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
+              <div className="mt-1.5 flex items-center rounded-xl bg-gray-50 border border-gray-200 overflow-hidden focus-within:ring-2 focus-within:ring-purple-300 focus-within:border-[#6E43A3]">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={handlePasswordChange}
                   placeholder="Enter password"
-                  className="flex-1 min-w-0 px-4 py-4 text-base text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                  className="flex-1 min-w-0 px-3 py-3 text-base text-gray-900 bg-transparent outline-none sm:px-4 sm:py-4 placeholder:text-gray-400"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="px-4 text-gray-400 hover:text-gray-600 shrink-0"
+                  className="px-3 text-gray-400 hover:text-gray-600 shrink-0 sm:px-4"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
                 </button>
               </div>
-            </motion.div>
 
-            <AnimatePresence>
               {error && (
-                <motion.p
-                  className="mt-3 text-sm font-medium text-red-500 shrink-0"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {error}
-                </motion.p>
+                <p className="mt-2 text-xs text-red-500 sm:text-sm">{error}</p>
               )}
-            </AnimatePresence>
+            </motion.div>
 
             <motion.button
               onClick={handleSubmit}
               disabled={!isFormValid}
-              className={`mt-6 h-14 rounded-xl font-semibold text-sm sm:text-base text-white shrink-0 ${
+              className={`mt-4 h-12 sm:h-14 rounded-xl font-semibold text-white transition-colors w-full ${
                 isFormValid
                   ? "bg-[#6E43A3]"
                   : "bg-purple-300 cursor-not-allowed"
               }`}
               whileTap={isFormValid ? { scale: 0.97 } : {}}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                delay: 0.58,
-                duration: 0.5,
+                delay: 0.32,
+                duration: 0.35,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
               {login.isPending ? "Signing in..." : "Sign in"}
             </motion.button>
 
-            {/* ─── Divider ─── */}
             <motion.div
-              className="flex items-center gap-3 mt-6 text-sm font-medium text-gray-400 shrink-0"
-              initial={{ opacity: 0, scaleX: 0.8 }}
+              className="flex items-center gap-3 mt-4 text-xs font-medium text-gray-400 sm:text-sm"
+              initial={{ opacity: 0, scaleX: 0.85 }}
               animate={{ opacity: 1, scaleX: 1 }}
               transition={{
-                delay: 0.64,
-                duration: 0.6,
+                delay: 0.36,
+                duration: 0.4,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
@@ -427,16 +423,7 @@ export default function SignInModal({
                   click, so we get a real popup instead of the fragile
                   One Tap prompt() flow. Your styled button stays visible
                   underneath (z-0).                                      */}
-            <motion.div
-              className="relative mt-6 shrink-0"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: 0.7,
-                duration: 0.5,
-                ease: [0.25, 0.46, 0.45, 0.94],
-              }}
-            >
+            <div className="relative mt-4">
               {!isGoogleLoading && onGoogleCredential && (
                 <div className="absolute inset-0 z-10 opacity-0">
                   <GoogleLogin
@@ -452,22 +439,32 @@ export default function SignInModal({
                 </div>
               )}
 
-              <button
+              <motion.button
                 type="button"
                 disabled={isGoogleLoading}
-                className={`relative z-0 flex items-center justify-center w-full gap-3 font-medium text-sm sm:text-base text-gray-900 border border-gray-200 h-14 rounded-xl bg-gray-50 ${
+                className={`relative z-0 flex items-center justify-center w-full h-12 gap-3 font-medium text-gray-900 border border-gray-200 sm:h-14 rounded-xl bg-gray-50 ${
                   isGoogleLoading ? "opacity-70 cursor-not-allowed" : ""
                 }`}
+                whileTap={!isGoogleLoading ? { scale: 0.97 } : {}}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: 0.4,
+                  duration: 0.35,
+                  ease: [0.25, 0.46, 0.45, 0.94],
+                }}
               >
                 <GoogleIcon />
-                {isGoogleLoading ? "Signing in…" : "Continue with Google"}
-              </button>
-            </motion.div>
+                <span className="text-sm sm:text-base">
+                  {isGoogleLoading ? "Signing in…" : "Continue with Google"}
+                </span>
+              </motion.button>
+            </div>
 
             <AnimatePresence>
               {googleError && (
                 <motion.p
-                  className="mt-2 text-xs font-medium text-center text-red-500 shrink-0"
+                  className="mt-2 text-xs font-medium text-center text-red-500"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -477,22 +474,25 @@ export default function SignInModal({
                 </motion.p>
               )}
             </AnimatePresence>
-
-            {/* ─── Sign Up Link (always at bottom, no overlap) ─── */}
-            <div className="mt-8 shrink-0">
-              <motion.p
-                className="text-sm text-center text-gray-700 sm:text-base"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.78, duration: 0.5 }}
-              >
-                Don't have an account?{" "}
-                <button onClick={onSignUp} className="text-[#6E43A3] font-bold">
-                  Sign Up
-                </button>
-              </motion.p>
-            </div>
           </div>
+
+          {/* Footer */}
+          <motion.div
+            className="px-5 pt-4 mt-4 text-center border-t border-gray-100 sm:px-8"
+            style={{
+              paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))",
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45, duration: 0.35 }}
+          >
+            <p className="text-xs text-gray-700 sm:text-sm">
+              Don't have an account?{" "}
+              <button onClick={onSignUp} className="text-[#6E43A3] font-bold">
+                Sign Up
+              </button>
+            </p>
+          </motion.div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -553,7 +553,7 @@ function EyeClosedIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="w-5 h-5"
+      className="w-4 h-4"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -570,7 +570,7 @@ function EyeOpenIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="w-5 h-5"
+      className="w-4 h-4"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -586,7 +586,10 @@ function EyeOpenIcon() {
 
 function NigeriaFlagIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-6 h-6 overflow-hidden rounded-full">
+    <svg
+      viewBox="0 0 24 24"
+      className="w-5 h-5 overflow-hidden rounded-full sm:w-6 sm:h-6"
+    >
       <rect x="0" y="0" width="8" height="24" fill="#3a8f3a" />
       <rect x="8" y="0" width="8" height="24" fill="white" />
       <rect x="16" y="0" width="8" height="24" fill="#3a8f3a" />
@@ -596,7 +599,7 @@ function NigeriaFlagIcon() {
 
 function GoogleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
+    <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5">
       <path
         fill="#4285F4"
         d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3.01h3.87c2.27-2.09 3.58-5.17 3.58-8.66z"
