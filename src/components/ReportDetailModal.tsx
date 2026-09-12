@@ -80,12 +80,7 @@ export default function ReportDetailModal({
   }
 
   return (
-    <div className="bg-white rounded-t-[20px] lg:rounded-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.12)] overflow-hidden">
-      {/* Drag handle — mobile only, hidden on desktop card */}
-      <div className="flex justify-center pt-2.5 pb-1 lg:hidden">
-        <div className="w-10 h-1 bg-gray-300 rounded-full" />
-      </div>
-
+    <div>
       {/* Header */}
       <div className="flex items-start justify-between px-5 pt-3 pb-3 lg:pt-5">
         <h2 className="text-[22px] font-extrabold text-gray-900 leading-tight">{report.title}</h2>

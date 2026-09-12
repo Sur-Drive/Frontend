@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { GoogleLogin } from "@react-oauth/google";
 import { useLogin } from "../hooks/useAuth";
 import {
   setStoredRole,
@@ -12,7 +13,12 @@ type InputMode = "phone" | "email";
 interface SignInModalProps {
   onClose: () => void;
   onSignInSuccess?: (user: any) => void;
-  onGoogleSignIn?: () => void;
+  /** fires with the raw Google credential response on a successful Google sign-in */
+  onGoogleCredential?: (credentialResponse: any) => void;
+  /** fires when the Google popup itself fails/is closed (distinct from a backend error) */
+  onGoogleError?: () => void;
+  /** true while the Google credential is being exchanged for our own tokens */
+  isGoogleLoading?: boolean;
   /** shown under the Google button when a Google sign-in attempt fails */
   googleError?: string | null;
   onForgotPassword?: () => void;
@@ -23,7 +29,9 @@ interface SignInModalProps {
 export default function SignInModal({
   onClose,
   onSignInSuccess,
-  onGoogleSignIn,
+  onGoogleCredential,
+  onGoogleError,
+  isGoogleLoading = false,
   googleError,
   onForgotPassword,
   onSignUp,
@@ -124,7 +132,7 @@ export default function SignInModal({
         />
 
         <motion.div
-          className="relative w-full max-w-[430px] h-[92vh] max-h-[100vh] bg-white rounded-t-[40px] flex flex-col overflow-hidden"
+          className="relative w-full max-w-[430px] h-[92dvh] max-h-[100dvh] bg-white rounded-t-[40px] flex flex-col overflow-hidden"
           initial={{ y: "110%" }}
           animate={{ y: 0 }}
           exit={{ y: "110%" }}
@@ -413,11 +421,14 @@ export default function SignInModal({
               <div className="flex-1 h-px bg-gray-200" />
             </motion.div>
 
-            {/* ─── Google Button ─── */}
-            <motion.button
-              onClick={onGoogleSignIn}
-              className="flex items-center justify-center gap-3 mt-6 font-medium text-sm sm:text-base text-gray-900 border border-gray-200 h-14 rounded-xl bg-gray-50 shrink-0"
-              whileTap={{ scale: 0.97 }}
+            {/* ─── Google Button ───
+                  Same trick as CreateAccountModal: an invisible, real
+                  GoogleLogin iframe sits on top (z-10) and captures the
+                  click, so we get a real popup instead of the fragile
+                  One Tap prompt() flow. Your styled button stays visible
+                  underneath (z-0).                                      */}
+            <motion.div
+              className="relative mt-6 shrink-0"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
@@ -426,9 +437,32 @@ export default function SignInModal({
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
-              <GoogleIcon />
-              Continue with Google
-            </motion.button>
+              {!isGoogleLoading && onGoogleCredential && (
+                <div className="absolute inset-0 z-10 opacity-0">
+                  <GoogleLogin
+                    onSuccess={onGoogleCredential}
+                    onError={onGoogleError}
+                    type="standard"
+                    theme="outline"
+                    size="large"
+                    text="continue_with"
+                    shape="rectangular"
+                    width="100%"
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={isGoogleLoading}
+                className={`relative z-0 flex items-center justify-center w-full gap-3 font-medium text-sm sm:text-base text-gray-900 border border-gray-200 h-14 rounded-xl bg-gray-50 ${
+                  isGoogleLoading ? "opacity-70 cursor-not-allowed" : ""
+                }`}
+              >
+                <GoogleIcon />
+                {isGoogleLoading ? "Signing in…" : "Continue with Google"}
+              </button>
+            </motion.div>
 
             <AnimatePresence>
               {googleError && (

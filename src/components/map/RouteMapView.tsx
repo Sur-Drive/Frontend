@@ -51,6 +51,10 @@ export interface RouteMapViewProps {
   showTraffic?: boolean
   /** Exposes the underlying google.maps.Map once it's created, so a parent can drive zoom/recenter/etc. directly. */
   onReady?: (map: google.maps.Map) => void
+  /** Route line thickness in px — forwarded to AnimatedRoutePolyline. */
+  strokeWeight?: number
+  /** Diameter (px) of the followMode "you are here" puck — forwarded to GoogleMapView. */
+  puckSize?: number
 }
 
 /**
@@ -81,6 +85,8 @@ export default function RouteMapView({
   tilt = 0,
   showTraffic = false,
   onReady,
+  strokeWeight,
+  puckSize,
 }: RouteMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null)
 
@@ -90,6 +96,10 @@ export default function RouteMapView({
   }
 
   const path = useMemo(() => getRoutePath(route), [route])
+  // Drives which glyph the live-position marker draws: the walking/
+  // cycling/motorcycle arrow, or the driving mode's car — see
+  // navHeadingArrowHtml / GoogleMapView's puckMode.
+  const travelMode = route.mode
 
   const cum = useMemo(() => cumulativeDistances(path), [path])
 
@@ -146,6 +156,8 @@ export default function RouteMapView({
         mapTypeId={mapTypeId}
         tilt={tilt}
         showTraffic={showTraffic}
+        puckSize={puckSize}
+        puckMode={travelMode}
       />
 
       <AnimatedRoutePolyline
@@ -154,6 +166,8 @@ export default function RouteMapView({
         progress={progress}
         flowing={flowing}
         showPositionMarker={!followMode}
+        strokeWeight={strokeWeight}
+        mode={travelMode}
       />
     </div>
   )

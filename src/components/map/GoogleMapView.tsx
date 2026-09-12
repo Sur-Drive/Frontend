@@ -378,7 +378,15 @@ interface GoogleMapViewProps {
   }
   zoom: number
   markers?: MapMarkerSpec[]
-  onMapClick?: (lat: number, lng: number) => void
+  /**
+   * Fires on every map tap/click, including taps on one of Google's own
+   * POI icons (restaurants, shops, etc. baked into the base map tiles —
+   * distinct from our own HTML marker overlays above). When the tap
+   * landed on a POI icon, `placeId` is populated so the caller can fetch
+   * full place details for it; otherwise it's undefined and the caller
+   * should treat it as a manual pin drop at (lat, lng).
+   */
+  onMapClick?: (lat: number, lng: number, placeId?: string) => void
   onReady?: (map: google.maps.Map) => void
   className?: string
   loadingFallback?: React.ReactNode
@@ -411,6 +419,23 @@ interface GoogleMapViewProps {
    * themselves. Defaults to false.
    */
   showTraffic?: boolean
+
+  /**
+   * Diameter (px) of the fixed, screen-centered "you are here" puck shown
+   * in followMode. Defaults to 32, which reads small against real road
+   * width at typical navigation zoom — bump this (e.g. 44) for live
+   * turn-by-turn.
+   */
+  puckSize?: number
+
+  /**
+   * Which glyph the followMode "you are here" puck draws — a directional
+   * arrow for walking/cycling, or a top-down car for driving, mirroring
+   * how Google Maps swaps its own live-position marker per travel mode.
+   * Defaults to 'walking' (the arrow), so anything that doesn't pass
+   * this keeps the original look.
+   */
+  puckMode?: 'driving' | 'walking' | 'cycling' | 'motorcycle'
 }
 
 export default function GoogleMapView({
@@ -427,6 +452,8 @@ export default function GoogleMapView({
   mapTypeId = 'roadmap',
   tilt = 0,
   showTraffic = false,
+  puckSize = 32,
+  puckMode = 'walking',
 }: GoogleMapViewProps) {
   const { isLoaded, error } = useGoogleMaps()
 
@@ -453,7 +480,12 @@ export default function GoogleMapView({
       fullscreenControl: false,
       streetViewControl: false,
       rotateControl: false,
-      clickableIcons: false,
+      // Was false — turned on so tapping one of Google's baked-in POI
+      // icons (a restaurant, shop, etc.) fires a click event carrying a
+      // placeId, same as clicking a business on Google Maps itself. The
+      // listener below calls e.stop() on those taps so Google's own
+      // default info window never appears underneath our own sheet.
+      clickableIcons: true,
       gestureHandling: interactive ? 'greedy' : 'none',
       draggable: interactive,
       disableDoubleClickZoom: !interactive,
@@ -464,10 +496,21 @@ export default function GoogleMapView({
     mapRef.current = map
     hasCenteredRef.current = true
 
-    map.addListener('click', (e: google.maps.MapMouseEvent) => {
-      if (!e.latLng) return
-      onMapClickRef.current?.(e.latLng.lat(), e.latLng.lng())
-    })
+    map.addListener(
+      'click',
+      (e: google.maps.MapMouseEvent | google.maps.IconMouseEvent) => {
+        if (!e.latLng) return
+
+        const placeId = (e as google.maps.IconMouseEvent).placeId
+        if (placeId) {
+          // Suppress Google's default POI info window — we show our own
+          // PlaceDetailSheet for this instead.
+          e.stop()
+        }
+
+        onMapClickRef.current?.(e.latLng.lat(), e.latLng.lng(), placeId)
+      },
+    )
 
     onReady?.(map)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -652,7 +695,7 @@ export default function GoogleMapView({
           className="absolute z-10 pointer-events-none"
           style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
         >
-          <div style={{ position: 'relative', width: 32, height: 32 }}>
+          <div style={{ position: 'relative', width: puckSize, height: puckSize }}>
             <div
               style={{
                 position: 'absolute',
@@ -665,18 +708,26 @@ export default function GoogleMapView({
             <div
               style={{
                 position: 'absolute',
-                inset: 3,
+                inset: Math.round(puckSize * 0.09),
                 borderRadius: '50%',
                 background: '#0ea5e9',
-                border: '2px solid white',
+                border: `${Math.max(2, Math.round(puckSize * 0.08))}px solid white`,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <svg viewBox="0 0 24 24" width={16} height={16} fill="white">
-                <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
+              <svg viewBox="0 0 24 24" width={Math.round(puckSize * 0.5)} height={Math.round(puckSize * 0.5)} fill="white">
+                {puckMode === 'driving' ? (
+                  <>
+                    <rect x="7" y="2.5" width="10" height="19" rx="3.2" />
+                    <rect x="8.3" y="5.8" width="7.4" height="4" rx="1" fill="#0ea5e9" />
+                    <rect x="8.3" y="13.2" width="7.4" height="4" rx="1" fill="#0ea5e9" />
+                  </>
+                ) : (
+                  <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
+                )}
               </svg>
             </div>
           </div>

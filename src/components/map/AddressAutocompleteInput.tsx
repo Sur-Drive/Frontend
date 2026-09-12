@@ -3,6 +3,7 @@ import { Loader2, MapPin, Mic } from 'lucide-react'
 import { useGoogleMaps } from '../../lib/googleMaps'
 import { getCachedPredictions, setCachedPredictions } from '../../lib/addressCache'
 import { useVoiceSearch } from '../../hooks/useVoiceSearch'
+import { forwardGeocode } from '../../api/geocoding'
 
 export interface SelectedAddress {
   address: string
@@ -22,6 +23,17 @@ interface AddressAutocompleteInputProps {
   countryRestriction?: string | string[]
   /** Show the tap-to-speak mic button (auto-hidden if the browser doesn't support voice input). Defaults to true. */
   enableVoice?: boolean
+  /**
+   * Center point (typically the driver's current location) used to bias
+   * Places predictions toward nearby, specific results. Without this,
+   * Google's Autocomplete ranks purely by country-wide prominence, which
+   * surfaces well-known landmarks and buries smaller/local addresses —
+   * that's the "only major landmarks show up" gap. Optional; search still
+   * works without it, just less locally relevant.
+   */
+  biasLocation?: { lat: number; lng: number }
+  /** Bias radius in meters around `biasLocation`. Defaults to 50km. */
+  biasRadiusMeters?: number
 }
 
 interface Prediction {
@@ -48,12 +60,15 @@ export default function AddressAutocompleteInput({
   inputClassName = '',
   countryRestriction = ['ng', 'gb'],
   enableVoice = true,
+  biasLocation,
+  biasRadiusMeters = 50000,
 }: AddressAutocompleteInputProps) {
   const { isLoaded, error: loadError } = useGoogleMaps()
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
+  const [noResultsQuery, setNoResultsQuery] = useState<string | null>(null)
 
   const voiceSearch = useVoiceSearch()
   // Set right before a voice-driven search kicks off, so the predictions
@@ -89,6 +104,11 @@ export default function AddressAutocompleteInput({
 
   const countries = normalizeCountryRestriction(countryRestriction)
   const cacheCountryKey = countries.join(',')
+  // Round the bias point to ~1km so nearby searches still share a cache
+  // entry, but a genuinely different location (new city, new trip) isn't
+  // served stale results biased toward somewhere else.
+  const biasKey = biasLocation ? `${biasLocation.lat.toFixed(2)},${biasLocation.lng.toFixed(2)}` : 'none'
+  const cacheKeySuffix = `${cacheCountryKey}|${biasKey}`
 
   const search = useCallback(
     (query: string) => {
@@ -97,10 +117,13 @@ export default function AddressAutocompleteInput({
         return
       }
 
-      const cached = getCachedPredictions<Prediction[]>(query, cacheCountryKey)
+      setNoResultsQuery(null)
+
+      const cached = getCachedPredictions<Prediction[]>(query, cacheKeySuffix)
       if (cached) {
         setPredictions(cached)
         setIsOpen(cached.length > 0)
+        if (cached.length === 0) setNoResultsQuery(query)
         return
       }
 
@@ -115,6 +138,17 @@ export default function AddressAutocompleteInput({
           // Google accepts a single country or an array of up to 5.
           componentRestrictions: { country: countries },
           sessionToken: sessionTokenRef.current,
+          // Bias (not restrict) toward the driver's area so specific local
+          // addresses rank above country-wide "major landmark" results —
+          // without a bias, Google falls back to pure prominence ranking.
+          ...(biasLocation
+            ? {
+                locationBias: {
+                  center: new google.maps.LatLng(biasLocation.lat, biasLocation.lng),
+                  radius: biasRadiusMeters,
+                } as google.maps.places.LocationBias,
+              }
+            : {}),
         },
         (results, status) => {
           setIsSearching(false)
@@ -122,6 +156,12 @@ export default function AddressAutocompleteInput({
           if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
             setPredictions([])
             setIsOpen(false)
+            // ZERO_RESULTS (as opposed to an error status) means Places
+            // genuinely has nothing — offer the raw-text geocode fallback
+            // below instead of a dead end.
+            if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+              setNoResultsQuery(query)
+            }
             return
           }
 
@@ -133,11 +173,11 @@ export default function AddressAutocompleteInput({
 
           setPredictions(mapped)
           setIsOpen(mapped.length > 0)
-          setCachedPredictions(query, cacheCountryKey, mapped)
+          setCachedPredictions(query, cacheKeySuffix, mapped)
         }
       )
     },
-    [cacheCountryKey]
+    [cacheKeySuffix, biasLocation?.lat, biasLocation?.lng, biasRadiusMeters]
   )
 
   const handleInputChange = (text: string) => {
@@ -146,6 +186,8 @@ export default function AddressAutocompleteInput({
 
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
+    setNoResultsQuery(null)
+
     if (!text.trim()) {
       setPredictions([])
       setIsOpen(false)
@@ -153,6 +195,36 @@ export default function AddressAutocompleteInput({
     }
 
     debounceRef.current = setTimeout(() => search(text), DEBOUNCE_MS)
+  }
+
+  // Fallback for addresses Places Autocomplete doesn't know as a
+  // "place" (new developments, unnamed compounds, rural addresses) but
+  // that a straight geocode can still resolve. Also used when someone
+  // types a full address and hits Enter without ever opening the dropdown.
+  const handleManualSearch = async (query: string) => {
+    const trimmed = query.trim()
+    if (!trimmed) return
+
+    setIsSearching(true)
+    setIsOpen(false)
+    try {
+      const result = await forwardGeocode(trimmed)
+      if (typeof result.lat === 'number' && typeof result.lng === 'number') {
+        onChange(result.address || trimmed)
+        onSelect({
+          address: result.address || trimmed,
+          lat: result.lat,
+          lng: result.lng,
+          placeId: '',
+        })
+        setNoResultsQuery(null)
+        setPredictions([])
+      }
+    } catch {
+      // Leave the typed text as-is — nothing more to offer here.
+    } finally {
+      setIsSearching(false)
+    }
   }
 
   const handleSelect = (prediction: Prediction) => {
@@ -185,6 +257,7 @@ export default function AddressAutocompleteInput({
         })
         setIsOpen(false)
         setPredictions([])
+        setNoResultsQuery(null)
       }
     )
   }
@@ -211,6 +284,15 @@ export default function AddressAutocompleteInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && (!isOpen || predictions.length === 0)) {
+      // Dropdown has nothing to pick from (still loading, or a genuine
+      // no-results case) — try a raw geocode of the typed text instead of
+      // silently swallowing the keypress.
+      e.preventDefault()
+      if (value.trim().length >= MIN_QUERY_LENGTH) handleManualSearch(value)
+      return
+    }
+
     if (!isOpen || predictions.length === 0) return
 
     if (e.key === 'ArrowDown') {
@@ -220,9 +302,13 @@ export default function AddressAutocompleteInput({
       e.preventDefault()
       setHighlightIndex((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
+      e.preventDefault()
       if (highlightIndex >= 0) {
-        e.preventDefault()
         handleSelect(predictions[highlightIndex])
+      } else if (value.trim().length >= MIN_QUERY_LENGTH) {
+        // No suggestion picked (e.g. Places had nothing for this exact
+        // text) — fall back to geocoding whatever was typed.
+        handleManualSearch(value)
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false)
@@ -256,7 +342,7 @@ export default function AddressAutocompleteInput({
           onClick={handleMicClick}
           aria-label={voiceSearch.isListening ? 'Stop voice search' : 'Search by voice'}
           className={`absolute -translate-y-1/2 right-2.5 top-1/2 flex items-center justify-center w-5 h-5 rounded-full transition ${
-            voiceSearch.isListening ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-purple-600'
+            voiceSearch.isListening ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-[#6E43A3]'
           }`}
         >
           <Mic size={15} />
@@ -265,6 +351,25 @@ export default function AddressAutocompleteInput({
 
       {voiceSearch.error && (
         <p className="absolute left-0 mt-1 text-[11px] text-red-500 top-full">{voiceSearch.error}</p>
+      )}
+
+      {!isOpen && !isSearching && noResultsQuery && noResultsQuery === value && (
+        <ul className="absolute left-0 right-0 z-50 mt-1 overflow-y-auto bg-white border border-gray-100 shadow-lg top-full rounded-xl max-h-64">
+          <li>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleManualSearch(noResultsQuery)}
+              className="flex w-full items-start gap-2 px-3.5 py-2.5 text-left text-xs sm:text-sm hover:bg-gray-50"
+            >
+              <MapPin size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
+              <span>
+                <span className="font-medium text-gray-900">Use "{noResultsQuery}"</span>
+                <span className="block text-[11px] text-gray-400">No exact match — search this address directly</span>
+              </span>
+            </button>
+          </li>
+        </ul>
       )}
 
       {isOpen && predictions.length > 0 && (
@@ -276,7 +381,7 @@ export default function AddressAutocompleteInput({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(p)}
                 className={`flex w-full items-start gap-2 px-3.5 py-2.5 text-left text-xs sm:text-sm ${
-                  i === highlightIndex ? 'bg-purple-50' : 'hover:bg-gray-50'
+                  i === highlightIndex ? 'bg-[#6E43A3]/10' : 'hover:bg-gray-50'
                 }`}
               >
                 <MapPin size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />

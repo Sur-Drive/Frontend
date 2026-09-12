@@ -39,6 +39,8 @@ export interface AnimatedRoutePolylineProps {
   showPositionMarker?: boolean
   markerColor?: string
   zIndex?: number
+  /** Walking/cycling/motorcycle draws the directional arrow; driving draws a top-down car. */
+  mode?: 'driving' | 'walking' | 'cycling' | 'motorcycle'
 }
 
 export default function AnimatedRoutePolyline({
@@ -47,12 +49,15 @@ export default function AnimatedRoutePolyline({
   progress,
   traveledColor = '#94a3b8',
   remainingColor = '#3b82f6',
-  strokeWeight = 6,
+  // Bumped up from 6 — at typical navigation zoom levels a 6px line reads
+  // as a thin thread next to real road width, especially on phones.
+  strokeWeight = 9,
   flowing = true,
   flowSpeed = 0.05,
   showPositionMarker = true,
   markerColor = '#0ea5e9',
   zIndex = 10,
+  mode = 'walking',
 }: AnimatedRoutePolylineProps) {
   const traveledLineRef = useRef<google.maps.Polyline | null>(null)
   const remainingLineRef = useRef<google.maps.Polyline | null>(null)
@@ -120,7 +125,7 @@ export default function AnimatedRoutePolyline({
   useEffect(() => {
     if (!map || !showPositionMarker || !hasPath) return
 
-    const overlay = createHtmlMapOverlay(path[0], navHeadingArrowHtml(0, markerColor), NAV_ARROW_ANCHOR)
+    const overlay = createHtmlMapOverlay(path[0], navHeadingArrowHtml(0, markerColor, mode), NAV_ARROW_ANCHOR)
     overlay.setMap(map)
     markerRef.current = overlay
 
@@ -141,8 +146,8 @@ export default function AnimatedRoutePolyline({
     remainingLineRef.current?.setPath(remaining)
 
     markerRef.current?.updatePosition(sample.position)
-    markerRef.current?.updateHtml(navHeadingArrowHtml(sample.heading, markerColor))
-  }, [progress, path, markerColor, hasPath])
+    markerRef.current?.updateHtml(navHeadingArrowHtml(sample.heading, markerColor, mode))
+  }, [progress, path, markerColor, mode, hasPath])
 
   // Continuous "flowing" animation, decoupled from `progress` — runs
   // independently via its own rAF loop for as long as this component is
