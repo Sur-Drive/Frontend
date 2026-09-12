@@ -125,7 +125,7 @@ export default function StreetViewModal({ isOpen, onClose, lat, lng, label }: St
       {/* No imagery near this point — mirrors Google's own "no imagery" empty state */}
       {isLoaded && !loadError && panoState === 'unavailable' && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 px-8 text-center bg-[#1a1a1a]">
-          <PegmanGlyph size={56} muted />
+          <PegmanGlyph size={56} color="#9ca3af" />
           <div>
             <p className="text-base font-semibold text-white">Street View isn&apos;t available here</p>
             <p className="mt-1 text-sm text-white/50">Try a spot closer to a mapped road.</p>
@@ -148,9 +148,11 @@ interface StreetViewPegmanProps {
 }
 
 /**
- * The little draggable-orange-man toggle from Google Maps. Here it's a tap
- * target (not drag-and-drop onto the map) that opens Street View centered
- * on the map's current position — same entry point, simpler interaction.
+ * Street View entry point on the map. Styled as a solid brand-color
+ * button with a plain panorama glyph — deliberately not the cartoon
+ * "pegman" figure Google Maps uses, for a more grown-up look — but the
+ * same tap-to-open interaction: opens Street View centered on the map's
+ * current position.
  */
 export function StreetViewPegman({ onClick, className = '' }: StreetViewPegmanProps) {
   return (
@@ -158,25 +160,25 @@ export function StreetViewPegman({ onClick, className = '' }: StreetViewPegmanPr
       onClick={onClick}
       aria-label="Open Street View"
       title="Street View"
-      className={`flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-white active:scale-95 transition ${className}`}
+      className={`flex items-center justify-center w-12 h-12 rounded-full shadow-lg bg-[#6E43A3] active:scale-95 transition ${className}`}
     >
-      <PegmanGlyph size={26} />
+      <PegmanGlyph size={24} />
     </button>
   )
 }
 
-function PegmanGlyph({ size = 24, muted = false }: { size?: number; muted?: boolean }) {
-  const body = muted ? '#9ca3af' : '#f6ac00'
-  const shoe = muted ? '#6b7280' : '#3a3a3a'
+function PegmanGlyph({ size = 24, color = 'white' }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="4.6" r="2.3" fill={body} />
+      <rect x="2.5" y="4.5" width="19" height="15" rx="3" stroke={color} strokeWidth="1.7" />
+      <circle cx="8.7" cy="9.6" r="1.5" fill={color} />
       <path
-        d="M8.2 8.2c.5-.9 1.4-1.4 2.4-1.4h2.8c1 0 1.9.5 2.4 1.4l1.6 2.9c.3.6-.1 1.3-.8 1.3-.4 0-.8-.2-1-.6l-1-1.7v3.6l2 6.1c.2.6-.2 1.2-.9 1.2-.4 0-.8-.3-.9-.7l-1.6-4.9h-.8l-1.6 4.9c-.1.4-.5.7-.9.7-.7 0-1.1-.6-.9-1.2l2-6.1V9.5l-1 1.7c-.2.4-.6.6-1 .6-.7 0-1.1-.7-.8-1.3l1.6-2.9z"
-        fill={body}
+        d="M4.3 16.8 9 11.6l3.3 2.8 3-3.9 4.4 5.4"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <ellipse cx="9.3" cy="21.2" rx="1.5" ry="0.6" fill={shoe} />
-      <ellipse cx="14.7" cy="21.2" rx="1.5" ry="0.6" fill={shoe} />
     </svg>
   )
 }

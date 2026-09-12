@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getIpLocation } from "../lib/ipLocation";
 
 interface Coords {
   latitude: number;
@@ -12,6 +13,10 @@ interface UseCurrentLocationResult {
   retry: () => void;
 }
 
+// Last-resort fallback only — used if BOTH real GPS and the IP-based
+// lookup fail (e.g. fully offline). Everyone used to land here whenever
+// permission was denied, which is why the map always looked like it was
+// stuck on one fixed city instead of anywhere near the real user.
 const DEFAULT_COORDS: Coords = { latitude: 6.5244, longitude: 3.3792 };
 
 export function useCurrentLocation(): UseCurrentLocationResult {
@@ -39,7 +44,7 @@ export function useCurrentLocation(): UseCurrentLocationResult {
       setIsLoading(false);
     };
 
-    const onFinalError = (err: GeolocationPositionError) => {
+    const onFinalError = async (err: GeolocationPositionError) => {
       setError(
         err.code === 1
           ? "Location access denied. Please enable location permissions."
@@ -48,7 +53,10 @@ export function useCurrentLocation(): UseCurrentLocationResult {
             : "Location request timed out.",
       );
 
-      setCoords((prev) => prev ?? DEFAULT_COORDS);
+      // Real GPS is unavailable — approximate from the network/IP
+      // address instead of jumping straight to a fixed default point.
+      const ipLocation = await getIpLocation();
+      setCoords((prev) => prev ?? ipLocation ?? DEFAULT_COORDS);
       setIsLoading(false);
     };
 

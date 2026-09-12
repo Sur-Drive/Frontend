@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import LazyGoogleMap from "../components/map/LazyGoogleMap";
 import RouteMapView from "../components/map/RouteMapView";
@@ -58,7 +58,7 @@ import { useVoiceGuidance } from "../hooks/useVoiceGuidance";
 import { useTurnByTurn } from "../hooks/useTurnByTurn";
 import { useWakeWord, useVoiceSearch } from "../hooks/useVoiceSearch";
 import { forwardGeocode } from "../api/geocoding";
-import { Mic } from "lucide-react";
+import { Mic, MapPinned } from "lucide-react";
 import TurnByTurnCard, {
   describeManeuver,
 } from "../components/map/TurnByTurnCard";
@@ -67,6 +67,7 @@ import { formatManeuverDistance } from "../lib/maneuvers";
 import { useCollisionGuard } from "../hooks/useCollisionGuard";
 import CollisionGuardView from "../components/map/CollisionGuardView";
 import { describeWarning } from "../lib/collisionDetection";
+import { getIpLocation } from "../lib/ipLocation";
 
 // ─── Types ─────────────────────────────────────────────
 type ReportType =
@@ -500,6 +501,30 @@ function clearStoredActiveTrip() {
 // ─── Main Component ────────────────────────────────────
 export default function PlanRoutePage() {
   const navigate = useNavigate();
+  const routerLocation = useLocation();
+  // A place's "Directions" button (see HomePage's PlaceDetailSheet) sends
+  // us here with the destination already picked, instead of making the
+  // user retype it — read it once on mount. Consumed by the effect near
+  // handleUseMyLocation below, which waits for a start point too before
+  // actually kicking off route planning.
+  const incomingDestinationRef = useRef<{
+    lat: number;
+    lng: number;
+    label: string;
+  } | null>(
+    (() => {
+      const state = routerLocation.state as
+        | { destinationCoords?: { lat: number; lng: number }; destinationLabel?: string }
+        | null
+        | undefined;
+      if (!state?.destinationCoords) return null;
+      return {
+        lat: state.destinationCoords.lat,
+        lng: state.destinationCoords.lng,
+        label: state.destinationLabel ?? "",
+      };
+    })(),
+  );
 
   const isLoggedIn =
     typeof window !== "undefined" && !!localStorage.getItem("token");
@@ -563,6 +588,55 @@ export default function PlanRoutePage() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const [activeSosId, setActiveSosId] = useState<string | null>(null);
   const [sosError, setSosError] = useState<string | null>(null);
+
+  // ── Pick start/destination by tapping the map ──────────
+  // Lets the driver drop a pin for a spot that doesn't have a name Places
+  // Autocomplete would recognize (a gate, a specific compound entrance,
+  // an unmarked junction) — addresses issue where the desired location
+  // isn't reachable through search at all.
+  const [pickingLocationFor, setPickingLocationFor] = useState<
+    "start" | "destination" | null
+  >(null);
+  const [isMapPickLoading, setIsMapPickLoading] = useState(false);
+  const [mapPickError, setMapPickError] = useState<string | null>(null);
+
+  const beginMapPick = useCallback((target: "start" | "destination") => {
+    setMapPickError(null);
+    setPickingLocationFor(target);
+    setShowPlanModal(false);
+  }, []);
+
+  const cancelMapPick = useCallback(() => {
+    setPickingLocationFor(null);
+    setMapPickError(null);
+    setShowPlanModal(true);
+  }, []);
+
+  const handleMapPickSelect = useCallback(
+    async (lat: number, lng: number) => {
+      if (!pickingLocationFor) return;
+      const target = pickingLocationFor;
+      setIsMapPickLoading(true);
+      setMapPickError(null);
+      try {
+        const { address } = await reverseGeocode(lat, lng);
+        if (target === "start") {
+          setStartPoint(address);
+          setStartCoords({ lat, lng });
+        } else {
+          setDestination(address);
+          setDestinationCoords({ lat, lng });
+        }
+        setPickingLocationFor(null);
+        setShowPlanModal(true);
+      } catch {
+        setMapPickError("Couldn't get an address for that spot. Try tapping again.");
+      } finally {
+        setIsMapPickLoading(false);
+      }
+    },
+    [pickingLocationFor],
+  );
 
   const planRouteMutation = usePlanRouteOptions();
   const triggerSosMutation = useTriggerSos();
@@ -688,6 +762,14 @@ export default function PlanRoutePage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null,
   );
+  // Coarse, IP-based approximation used ONLY while real GPS hasn't
+  // resolved yet (denied/unavailable/timed out) — keeps the map centered
+  // somewhere near the user's actual area instead of jumping to the
+  // hardcoded sample-report location (which is what made it look like it
+  // was always stuck on one fixed city).
+  const [ipFallbackLocation, setIpFallbackLocation] = useState<
+    [number, number] | null
+  >(null);
   const [mapReady, setMapReady] = useState(false);
 
   // ── Map display controls ─────
@@ -699,12 +781,20 @@ export default function PlanRoutePage() {
   const [manualHeading, setManualHeading] = useState(0);
 
   const routeCum = useMemo(() => cumulativeDistances(routePath), [routePath]);
+  // Kept in sync every render so the GPS watch effect (which deliberately
+  // does not depend on routePath/routeCum — see below) can always project
+  // against the current route without needing to restart on every reroute.
+  const routePathRef = useRef(routePath);
+  routePathRef.current = routePath;
+  const routeCumRef = useRef(routeCum);
+  routeCumRef.current = routeCum;
   const [liveProgress, setLiveProgress] = useState<number | null>(null);
   const [liveHeading, setLiveHeading] = useState(0);
 
   const [routeDeviationMeters, setRouteDeviationMeters] = useState<
     number | null
   >(null);
+  const [isRerouting, setIsRerouting] = useState(false);
 
   const [gpsStatus, setGpsStatus] = useState<"waiting" | "active" | "error">(
     "waiting",
@@ -737,8 +827,13 @@ export default function PlanRoutePage() {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       };
-      const projection = projectPointOntoPath(routePath, routeCum, raw);
-      const sample = pointAtFraction(routePath, routeCum, projection.fraction);
+      // Read the current route off refs, not the effect's closed-over
+      // routePath/routeCum — this effect intentionally does NOT restart
+      // when the route changes (see below), so it needs the live values.
+      const path = routePathRef.current;
+      const cum = routeCumRef.current;
+      const projection = projectPointOntoPath(path, cum, raw);
+      const sample = pointAtFraction(path, cum, projection.fraction);
 
       setGpsStatus("active");
       setLiveProgress(projection.fraction);
@@ -775,7 +870,92 @@ export default function PlanRoutePage() {
     startWatch({ enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [isNavigating, routePath, routeCum]);
+    // Deliberately NOT depending on routePath/routeCum: a reroute (traffic
+    // replan or off-route recalculation) produces a new array reference
+    // every time, which used to tear down and restart the GPS watch and
+    // flash the "GPS waiting" banner on every replan. onPosition reads the
+    // latest path/cum from refs instead, so tracking stays continuous
+    // across route changes and only actually restarts if navigation itself
+    // starts/stops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNavigating]);
+
+  // ── Keep navigating through background/lock, resume cleanly ─────
+  // Mobile browsers dim/lock the screen and heavily throttle timers, rAF,
+  // and geolocation watches once the tab is backgrounded — from the
+  // driver's side that reads as the app "hibernating" mid-trip. A Wake
+  // Lock keeps the screen (and therefore GPS updates) alive while a trip
+  // is active, and a visibilitychange listener grabs one fresh GPS fix
+  // the instant the driver comes back so the view snaps to their real
+  // position — right where they left off — instead of sitting frozen on
+  // stale data until the next throttled watchPosition tick fires.
+  // Typed `any`: the Screen Wake Lock API's TS lib types aren't guaranteed
+  // to be present in every tsconfig, and this project's isn't in scope here.
+  const wakeLockRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!isNavigating) {
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+
+    const acquireWakeLock = async () => {
+      if (!("wakeLock" in navigator)) return;
+      try {
+        const sentinel = await (navigator as any).wakeLock.request("screen");
+        if (cancelled) {
+          sentinel.release().catch(() => {});
+          return;
+        }
+        wakeLockRef.current = sentinel;
+      } catch {
+        // Refused (low battery, backgrounded tab, unsupported context, etc.)
+        // — non-fatal, the trip just won't hold the screen awake.
+      }
+    };
+
+    acquireWakeLock();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // Wake Lock is released automatically on hide and must be
+        // re-requested by hand once the page is visible again.
+        acquireWakeLock();
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setUserLocation([
+                position.coords.latitude,
+                position.coords.longitude,
+              ]);
+              setGpsAccuracyMeters(position.coords.accuracy ?? null);
+              setGpsStatus("active");
+            },
+            () => {
+              // Ignore — the regular watchPosition loop will keep trying.
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
+          );
+        }
+      } else {
+        wakeLockRef.current?.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+    };
+  }, [isNavigating]);
 
   const displayProgress = liveProgress ?? trip.progress;
   const displayHeading = liveProgress != null ? liveHeading : trip.heading;
@@ -894,7 +1074,7 @@ export default function PlanRoutePage() {
       setMapReady(true);
     };
 
-    const onFinalError = (error: GeolocationPositionError) => {
+    const onFinalError = async (error: GeolocationPositionError) => {
       let message = "Unable to retrieve your location";
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -909,6 +1089,13 @@ export default function PlanRoutePage() {
       }
       setLocationError(message);
       setMapReady(true);
+
+      // GPS didn't work — approximate from the network/IP address so the
+      // map still centers near the user instead of the sample data point.
+      const ipLocation = await getIpLocation();
+      if (ipLocation) {
+        setIpFallbackLocation([ipLocation.latitude, ipLocation.longitude]);
+      }
     };
 
     // Go straight for a high-accuracy fix instead of trying a cheap
@@ -952,7 +1139,7 @@ export default function PlanRoutePage() {
       );
     };
 
-    const onFinalError = (error: GeolocationPositionError) => {
+    const onFinalError = async (error: GeolocationPositionError) => {
       let message = "Unable to retrieve your location";
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -966,7 +1153,22 @@ export default function PlanRoutePage() {
           break;
       }
       setLocationError(message);
-      setIsGettingLocation(false);
+
+      // The user explicitly asked for their location and GPS couldn't
+      // deliver — fall back to an IP-based approximation rather than
+      // leaving them on the sample-data location, while still surfacing
+      // the error above so they know it isn't a precise GPS fix.
+      const ipLocation = await getIpLocation();
+      if (ipLocation) {
+        const loc: [number, number] = [
+          ipLocation.latitude,
+          ipLocation.longitude,
+        ];
+        setIpFallbackLocation(loc);
+        reverseGeocodeStartPoint(ipLocation.latitude, ipLocation.longitude);
+      } else {
+        setIsGettingLocation(false);
+      }
     };
 
     navigator.geolocation.getCurrentPosition(onSuccess, onFinalError, {
@@ -975,6 +1177,38 @@ export default function PlanRoutePage() {
       maximumAge: 0,
     });
   }, [reverseGeocodeStartPoint]);
+
+  // ── Arriving here from a place's "Directions" button ─────
+  // Fill in the destination that was picked back on the map/home screen,
+  // then get a real GPS fix for the start point (rather than leaving the
+  // user to type both in by hand) and kick the route plan off as soon as
+  // both are ready, so the route actually draws on this page's own map.
+  const hasAppliedIncomingDestinationRef = useRef(false);
+  useEffect(() => {
+    if (hasAppliedIncomingDestinationRef.current) return;
+    const incoming = incomingDestinationRef.current;
+    if (!incoming) return;
+    hasAppliedIncomingDestinationRef.current = true;
+
+    setDestination(
+      incoming.label || `${incoming.lat.toFixed(4)}, ${incoming.lng.toFixed(4)}`,
+    );
+    setDestinationCoords({ lat: incoming.lat, lng: incoming.lng });
+    handleUseMyLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!incomingDestinationRef.current) return;
+    if (!startPoint || !startCoords || !destinationCoords) return;
+
+    // Both points are ready — clear the pending marker first so this
+    // can't fire twice (e.g. if startPoint changes again later), then
+    // run the same planning path the manual "Scan route" button uses.
+    incomingDestinationRef.current = null;
+    handleScanRoute();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startPoint, startCoords, destinationCoords]);
 
   const handleRecenter = useCallback(() => {
     if (userLocation && mapInstance) {
@@ -1094,6 +1328,7 @@ export default function PlanRoutePage() {
     trip.reset();
     setLiveProgress(null);
     setRouteDeviationMeters(null);
+    setIsRerouting(false);
     setGpsStatus("waiting");
     setGpsErrorMessage(null);
     planRouteMutation.reset();
@@ -1333,21 +1568,60 @@ export default function PlanRoutePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingKmFloor]);
 
+  // Bumped to force the reroute effect below to re-evaluate after a failed
+  // recalculation attempt, even though `isOffRoute` itself hasn't changed
+  // (a ref flip alone doesn't trigger a re-render/effect run).
+  const [rerouteRetryTick, setRerouteRetryTick] = useState(0);
+
   useEffect(() => {
     if (!isNavigating) {
       announcedOffRouteRef.current = false;
       return;
     }
-    if (isOffRoute && !announcedOffRouteRef.current) {
+    if (isOffRoute && !announcedOffRouteRef.current && !isRerouting) {
       announcedOffRouteRef.current = true;
       voiceGuidance.speak("You've gone off route. Recalculating.", {
         interrupt: true,
       });
+
+      // Actually recalculate: replan from wherever the driver currently is
+      // back to the same destination. planRouteMutation's result feeds
+      // `routePlan` → `activeRoute` → `routePath`, so once this resolves
+      // the map, turn-by-turn list, and off-route check all pick up the
+      // new route automatically — same mechanism the periodic traffic
+      // replan below already relies on.
+      const loc = userLocationRef.current;
+      if (loc && destinationCoords) {
+        setIsRerouting(true);
+        planRouteMutation.mutate(
+          { origin: { lat: loc[0], lng: loc[1] }, destination: destinationCoords },
+          {
+            onSuccess: (data) => {
+              const updated = data.routes[selectedMode];
+              if (updated) {
+                lastTrafficDurationRef.current = updated.duration;
+              }
+            },
+            onError: () => {
+              // A failed recalculation used to be a dead end: the ref stayed
+              // "announced" so this effect never fired again while still
+              // off-route, leaving the driver stuck with turn-by-turn steps
+              // built from the route to the turn they already missed. Clear
+              // the flag and force a retry shortly instead.
+              window.setTimeout(() => {
+                announcedOffRouteRef.current = false;
+                setRerouteRetryTick((t) => t + 1);
+              }, 3000);
+            },
+            onSettled: () => setIsRerouting(false),
+          },
+        );
+      }
     } else if (!isOffRoute) {
       announcedOffRouteRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOffRoute, isNavigating]);
+  }, [isOffRoute, isNavigating, rerouteRetryTick]);
 
   useEffect(() => {
     if (hasArrived && !announcedArrivalRef.current) {
@@ -1480,8 +1754,9 @@ export default function PlanRoutePage() {
   });
 
   const mapCenter = useMemo<[number, number]>(
-    () => userLocation || [reports[0].lat, reports[0].lng],
-    [userLocation],
+    () =>
+      userLocation || ipFallbackLocation || [reports[0].lat, reports[0].lng],
+    [userLocation, ipFallbackLocation],
   );
 
   const mapMarkers = useMemo<MapMarkerSpec[]>(() => {
@@ -1604,7 +1879,7 @@ export default function PlanRoutePage() {
           <RouteMapView
             route={effectiveRoute}
             markers={mapMarkers}
-            zoom={isNavigating ? 17 : 15}
+            zoom={isNavigating ? 18 : 15}
             progress={isNavigating ? displayProgress : undefined}
             flowing={!isNavigating}
             heading={isNavigating ? displayHeading : manualHeading}
@@ -1616,6 +1891,8 @@ export default function PlanRoutePage() {
             showTraffic={showTraffic}
             onReady={setMapInstance}
             className="w-full h-full"
+            strokeWeight={isNavigating ? 11 : 8}
+            puckSize={isNavigating ? 46 : 32}
           />
         ) : (
           <LazyGoogleMap
@@ -1627,12 +1904,43 @@ export default function PlanRoutePage() {
             tilt={mapTilt}
             showTraffic={showTraffic}
             onReady={setMapInstance}
+            onMapClick={
+              pickingLocationFor && !isMapPickLoading
+                ? handleMapPickSelect
+                : undefined
+            }
           />
         )}
       </div>
 
+      {/* Pick-on-map banner */}
+      {pickingLocationFor && (
+        <div className="absolute left-0 right-0 z-[70] flex justify-center top-[calc(1rem+env(safe-area-inset-top))] px-4">
+          <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-lg rounded-2xl max-w-sm">
+            <MapPinned size={18} className="flex-shrink-0 text-purple-600" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-gray-900 sm:text-sm">
+                {isMapPickLoading
+                  ? "Getting address…"
+                  : `Tap the map to set your ${pickingLocationFor === "start" ? "start point" : "destination"}`}
+              </p>
+              {mapPickError && (
+                <p className="mt-0.5 text-[11px] text-red-500">{mapPickError}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={cancelMapPick}
+              className="shrink-0 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Map Controls */}
-      {!showPlanModal && !showScanResults && !showSOS && (
+      {!showPlanModal && !showScanResults && !showSOS && !pickingLocationFor && (
         <MapControls
           map={mapInstance}
           mapTypeId={mapTypeId}
@@ -2024,11 +2332,12 @@ export default function PlanRoutePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[9px] sm:text-[10px] text-red-400 font-medium uppercase tracking-wide">
-                    Off route
+                    {isRerouting ? "Rerouting…" : "Off route"}
                   </p>
                   <p className="text-xs font-medium text-red-900 truncate sm:text-sm">
-                    You've drifted {Math.round(routeDeviationMeters ?? 0)}m from
-                    the planned path
+                    {isRerouting
+                      ? "Finding a new route from where you are"
+                      : `You've drifted ${Math.round(routeDeviationMeters ?? 0)}m from the planned path`}
                   </p>
                 </div>
               </div>
@@ -2400,7 +2709,21 @@ export default function PlanRoutePage() {
                     placeholder="Search a place or Address"
                     className="flex-1 min-w-0"
                     inputClassName="w-full min-w-0 text-base text-gray-900 placeholder-gray-400 bg-transparent outline-none"
+                    biasLocation={
+                      userLocation
+                        ? { lat: userLocation[0], lng: userLocation[1] }
+                        : undefined
+                    }
                   />
+                  <button
+                    type="button"
+                    onClick={() => beginMapPick("start")}
+                    aria-label="Pick start on map"
+                    title="Pick on map"
+                    className="shrink-0 flex items-center justify-center w-7 h-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-full transition"
+                  >
+                    <MapPinned size={16} />
+                  </button>
                   <button
                     onClick={handleUseMyLocation}
                     disabled={isGettingLocation}
@@ -2441,7 +2764,7 @@ export default function PlanRoutePage() {
                     Point B — Destination
                   </span>
                 </div>
-                <div className="px-4 py-3 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-xl">
                   <AddressAutocompleteInput
                     value={destination}
                     onChange={setDestination}
@@ -2449,8 +2772,23 @@ export default function PlanRoutePage() {
                       setDestinationCoords({ lat: result.lat, lng: result.lng })
                     }
                     placeholder="Where to?"
+                    className="flex-1 min-w-0"
                     inputClassName="w-full text-base text-gray-900 placeholder-gray-400 bg-transparent outline-none"
+                    biasLocation={
+                      userLocation
+                        ? { lat: userLocation[0], lng: userLocation[1] }
+                        : undefined
+                    }
                   />
+                  <button
+                    type="button"
+                    onClick={() => beginMapPick("destination")}
+                    aria-label="Pick destination on map"
+                    title="Pick on map"
+                    className="shrink-0 flex items-center justify-center w-7 h-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-full transition"
+                  >
+                    <MapPinned size={16} />
+                  </button>
                 </div>
               </div>
 

@@ -147,7 +147,7 @@ function MapTypeControl({
         aria-label="Map layers"
         title="Map layers"
         className={`flex items-center justify-center w-11 h-11 rounded-2xl shadow-lg transition ${
-          open || trafficEnabled ? 'bg-purple-700 text-white' : 'bg-white text-gray-700'
+          open || trafficEnabled ? 'bg-[#6E43A3] text-white' : 'bg-white text-gray-700'
         }`}
       >
         <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -171,7 +171,7 @@ function MapTypeControl({
                   setOpen(false)
                 }}
                 className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium ${
-                  mapTypeId === opt.id ? 'bg-purple-50 text-purple-700' : 'text-gray-700 active:bg-gray-50'
+                  mapTypeId === opt.id ? 'bg-[#6E43A3]/10 text-[#6E43A3]' : 'text-gray-700 active:bg-gray-50'
                 }`}
               >
                 {opt.label}
@@ -194,7 +194,7 @@ function MapTypeControl({
               3D view
               <span
                 className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition ${
-                  tilt > 0 ? 'bg-purple-700' : 'bg-gray-200'
+                  tilt > 0 ? 'bg-[#6E43A3]' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -216,7 +216,7 @@ function MapTypeControl({
               Live traffic
               <span
                 className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition ${
-                  trafficEnabled ? 'bg-purple-700' : 'bg-gray-200'
+                  trafficEnabled ? 'bg-[#6E43A3]' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -335,7 +335,7 @@ function MyLocationButton({
       onClick={onClick}
       aria-label="Center on my location"
       title="My location"
-      className="flex items-center justify-center bg-white rounded-full shadow-lg w-11 h-11 text-purple-700 active:bg-gray-50"
+      className="flex items-center justify-center bg-white rounded-full shadow-lg w-11 h-11 text-[#6E43A3] active:bg-gray-50"
     >
       {isLocating ? (
         <div className="w-4 h-4 border-2 border-purple-600 rounded-full border-t-transparent animate-spin" />
