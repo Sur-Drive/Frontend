@@ -56,6 +56,8 @@ import {
 } from "../lib/placesSearch";
 import { PLACE_CATEGORIES } from "../types/places";
 import type { PlaceCategoryKey, PlaceResult } from "../types/places";
+import { getRecentPlaces } from "../lib/placeHistory";
+import type { PlaceHistoryEntry } from "../lib/placeHistory";
 
 const DEFAULT_COORDS: [number, number] = [6.5244, 3.3792];
 const FEED_RADIUS_KM = 10;
@@ -101,6 +103,14 @@ export default function HomePage() {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
   const [placesError, setPlacesError] = useState<string | null>(null);
+
+  // Recently-visited destinations (local device history, Google-Maps-style
+  // shortcuts row). Re-read on mount so it picks up a trip that was just
+  // completed and routed back here.
+  const [recentPlaces, setRecentPlaces] = useState<PlaceHistoryEntry[]>([]);
+  useEffect(() => {
+    setRecentPlaces(getRecentPlaces());
+  }, []);
 
   // Which category result the map is currently centered/highlighted on.
   // Auto-set to the first result after a category search, and updated
@@ -819,6 +829,46 @@ export default function HomePage() {
         {placesError && (
           <div className="px-3.5 py-2 mt-1 text-[12px] font-medium text-gray-600 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.15)] rounded-xl inline-block">
             {placesError}
+          </div>
+        )}
+
+        {/* Recent destinations — same idea as Google Maps' history
+            shortcuts under its search bar. Only shown when nothing else
+            (a category search or its results) is already occupying the
+            row underneath. Tapping one routes straight there, same as
+            "Get Directions" from a place's detail sheet. */}
+        {recentPlaces.length > 0 && !activeCategory && (
+          <div className="flex gap-2 mt-2 overflow-x-auto px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {recentPlaces.map((place) => (
+              <button
+                key={place.id}
+                onClick={() =>
+                  navigate("/plan-route", {
+                    state: {
+                      destinationCoords: { lat: place.lat, lng: place.lng },
+                      destinationLabel: place.label,
+                    },
+                  })
+                }
+                className="flex-shrink-0 flex items-center gap-1.5 h-9 pl-2.5 pr-3.5 rounded-full text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 shadow-[0_1px_4px_rgba(0,0,0,0.15)] hover:bg-gray-50 transition-colors"
+                title={place.address ?? place.label}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="15"
+                  height="15"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 3" />
+                </svg>
+                <span className="max-w-[140px] truncate">{place.label}</span>
+              </button>
+            ))}
           </div>
         )}
       </div>

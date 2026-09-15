@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { PLACE_CATEGORIES } from '../../types/places'
 import type { PlaceCategoryKey } from '../../types/places'
 
@@ -8,38 +9,120 @@ interface PlaceCategoryBarProps {
   className?: string
 }
 
+// Slow, non-stop drift (px/frame @ ~60fps) and how long it waits after
+// the user lets go before drifting again.
+const AUTO_SCROLL_SPEED = 0.25
+const RESUME_DELAY_MS = 1800
+
 export default function PlaceCategoryBar({
   activeCategory,
   onSelect,
   isLoading,
   className = '',
 }: PlaceCategoryBarProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const setWidthRef = useRef(0)
+  // el.scrollLeft is rounded to a whole pixel by the browser on every
+  // write, so accumulating sub-1px increments directly on it (0 + 0.25
+  // rounds straight back to 0) never moves at all. Track the precise
+  // position separately and only ever write the rounded result out.
+  const positionRef = useRef(0)
+  const pausedRef = useRef(false)
+  const rafRef = useRef<number | null>(null)
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Auto-drift the chip row to the right, non-stop. The list is rendered
+  // twice back to back below, so once we've scrolled exactly one copy's
+  // width we can jump back by that same width with nothing visibly
+  // changing — giving an endless loop instead of a snap back to the start.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches
+    if (prefersReducedMotion) return
+
+    setWidthRef.current = el.scrollWidth / 2
+    positionRef.current = el.scrollLeft
+
+    const tick = () => {
+      if (!pausedRef.current && el) {
+        positionRef.current += AUTO_SCROLL_SPEED
+        if (positionRef.current >= setWidthRef.current) {
+          positionRef.current -= setWidthRef.current
+        }
+        el.scrollLeft = positionRef.current
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current)
+    }
+  }, [])
+
+  const pauseAutoScroll = () => {
+    pausedRef.current = true
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current)
+  }
+
+  const scheduleResume = () => {
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current)
+    resumeTimerRef.current = setTimeout(() => {
+      // Re-sync to wherever the user actually left it (a manual scroll
+      // or swipe moves el.scrollLeft directly, bypassing positionRef)
+      // so resuming doesn't jump back to the old auto-scroll position.
+      if (scrollRef.current) {
+        positionRef.current = scrollRef.current.scrollLeft
+      }
+      pausedRef.current = false
+    }, RESUME_DELAY_MS)
+  }
+
+  const renderChip = (category: (typeof PLACE_CATEGORIES)[number], copy: number) => {
+    const isActive = activeCategory === category.key
+    return (
+      <button
+        key={`${category.key}-${copy}`}
+        onClick={() => onSelect(category.key)}
+        className={`flex-shrink-0 flex items-center gap-1.5 h-9 pl-2.5 pr-3.5 rounded-full text-[13px] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.15)] border transition-colors ${
+          isActive
+            ? 'text-white border-transparent'
+            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+        }`}
+        style={isActive ? { backgroundColor: category.color } : undefined}
+        aria-pressed={isActive}
+      >
+        <CategoryGlyph category={category.key} />
+        <span>{category.label}</span>
+        {isActive && isLoading && (
+          <span className="w-3 h-3 ml-0.5 border-2 rounded-full border-white/60 border-t-transparent animate-spin" />
+        )}
+      </button>
+    )
+  }
+
   return (
     <div
+      ref={scrollRef}
+      onPointerDown={pauseAutoScroll}
+      onPointerUp={scheduleResume}
+      onPointerCancel={scheduleResume}
+      onPointerLeave={scheduleResume}
+      onTouchStart={pauseAutoScroll}
+      onTouchEnd={scheduleResume}
+      onWheel={() => {
+        pauseAutoScroll()
+        scheduleResume()
+      }}
       className={`flex gap-2 overflow-x-auto px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
     >
-      {PLACE_CATEGORIES.map((category) => {
-        const isActive = activeCategory === category.key
-        return (
-          <button
-            key={category.key}
-            onClick={() => onSelect(category.key)}
-            className={`flex-shrink-0 flex items-center gap-1.5 h-9 pl-2.5 pr-3.5 rounded-full text-[13px] font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.15)] border transition-colors ${
-              isActive
-                ? 'text-white border-transparent'
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-            }`}
-            style={isActive ? { backgroundColor: category.color } : undefined}
-            aria-pressed={isActive}
-          >
-            <CategoryGlyph category={category.key} />
-            <span>{category.label}</span>
-            {isActive && isLoading && (
-              <span className="w-3 h-3 ml-0.5 border-2 rounded-full border-white/60 border-t-transparent animate-spin" />
-            )}
-          </button>
-        )
-      })}
+      {PLACE_CATEGORIES.map((category) => renderChip(category, 0))}
+      {PLACE_CATEGORIES.map((category) => renderChip(category, 1))}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { recordVisitedPlace } from "../lib/placeHistory";
 import { useQuery } from "@tanstack/react-query";
 import LazyGoogleMap from "../components/map/LazyGoogleMap";
 import RouteMapView from "../components/map/RouteMapView";
@@ -1297,6 +1298,14 @@ export default function PlanRoutePage() {
       selectedMode,
     });
 
+    if (destinationCoords) {
+      recordVisitedPlace({
+        label: destination || "Dropped pin",
+        lat: destinationCoords.lat,
+        lng: destinationCoords.lng,
+      });
+    }
+
     announcedArrivalRef.current = false;
     announcedOffRouteRef.current = false;
     lastMilestoneKmRef.current = null;
@@ -1335,6 +1344,7 @@ export default function PlanRoutePage() {
     lastTrafficDurationRef.current = null;
     setTrafficNotice(null);
     clearStoredActiveTrip();
+    navigate("/home");
   };
 
   const resumedActiveTripRef = useRef(false);
