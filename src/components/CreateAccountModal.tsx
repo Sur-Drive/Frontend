@@ -450,7 +450,8 @@ export default function CreateAccountModal({
 
           {/* Footer */}
           <motion.div
-            className="px-5 pt-4 pb-5 mt-4 text-center border-t border-gray-100 sm:px-8"
+            className="px-5 pt-4 mt-4 text-center border-t border-gray-100 sm:px-8"
+            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.45, duration: 0.35 }}

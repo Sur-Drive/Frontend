@@ -40,9 +40,14 @@ export default function Profile() {
   const isLoggedIn =
     typeof window !== "undefined" && !!localStorage.getItem("token");
 
-  const displayName = user ? `${user.firstName} ${user.lastName}` : "Loading…";
+  const firstName = user?.firstName ?? "";
+  const lastName = user?.lastName ?? "";
+  const displayName = user
+    ? `${firstName} ${lastName}`.trim() || "No name set"
+    : "Loading…";
   const initials = user
-    ? `${user.firstName[0]?.toUpperCase() ?? ""}${user.lastName[0]?.toUpperCase() ?? ""}`
+    ? `${firstName[0]?.toUpperCase() ?? ""}${lastName[0]?.toUpperCase() ?? ""}` ||
+      "--"
     : "--";
   const email =
     user?.driverProfile?.phoneNumber ?? user?.phoneNumber ?? "No contact info";
