@@ -25,8 +25,6 @@ import FleetRegistration from "./pages/Fleet/FleetRegistration";
 import KYC from "./pages/Fleet/KYC/KYC";
 import FleetDashboard from "./pages/Fleet/Dashboard/FleetDashboard";
 import DashSidebar from "./pages/Fleet/Dashboard/DashSidebar";
-import { Settings } from "lucide-react";
-
 import SubFleetManagement from "./pages/Fleet/SubFleets/SubFleetManagement";
 import FleetManagers from "./pages/Fleet/SubFleets/FleetManagers";
 import FleetDrivers from "./pages/Fleet/SubFleets/FleetDrivers";
@@ -47,6 +45,33 @@ import ManagerForgotPassword from "./pages/Fleet/Manager/ManagerForgotPassword";
 import ManagerVehicles from "./pages/Fleet/Manager/ManagerVehicles";
 import PrivacyPage from "./pages/PrivacyPage";
 import DeleteAccount from "./pages/DeleteAccount";
+
+// PASSENGER
+import PassengerLaunch from "./pages/Passenger/Auth/PassengerLaunch";
+import PassengerSignup from "./pages/Passenger/Auth/PassengerSignup";
+import PassengerOtp from "./pages/Passenger/Auth/PassengerOtp";
+import CompletePassengerProfile from "./pages/Passenger/Auth/CompletePassengerProfile";
+import PassengerLocation from "./pages/Passenger/Auth/PassengerLocation";
+import PassengerBiometric from "./pages/Passenger/Auth/PassengerBiometric";
+import PassengerHome from "./pages/Passenger/Home/PassengerHome"; 
+import BookRide from "./pages/Passenger/Ride/BookRide"; 
+import { PassengerRideProvider } from "./context/PassengerRideContext";
+import SelectRide from "./pages/Passenger/Ride/SelectRide";
+import ConfirmPickup from "./pages/Passenger/Ride/ConfirmPickup";
+import SearchingDriver from "./pages/Passenger/Ride/SearchingDriver";
+import DriverAssigned from "./pages/Passenger/Ride/DriverAssigned";
+import DriverEnRoute from "./pages/Passenger/Ride/DriverEnRoute";
+import DriverArrived from "./pages/Passenger/Ride/DriverArrived";
+import VerifyRide from "./pages/Passenger/Ride/VerifyRide";
+import ActiveTrip from "./pages/Passenger/Ride/ActiveTrip";
+import RideSafety from "./pages/Passenger/Ride/RideSafety";
+import TripComplete from "./pages/Passenger/Ride/TripComplete";
+import RateDriver from "./pages/Passenger/Ride/RateDriver";
+import DriverArriving from "./pages/Passenger/Ride/DriverArriving";
+import RideChat from "./pages/Passenger/Ride/RideChat";
+import EmergencyAlert from "./pages/Passenger/Ride/EmergencyAlert";
+
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,7 +102,7 @@ const NO_NAV_PAGES = [
   "/fleet/billing",
   "/payment/success",
   "/payment/cancel",
-  "/payment/* ",
+  "/payment/*",
   "/fleet/payment/pending",
   "/fleet/subscription/renew",
   "/fleet/kyc-pending",
@@ -112,7 +137,10 @@ function AppRoutes() {
     pathname === "/plan-route";
 
   // Check if current page should show BottomNav
-  const showNav = !NO_NAV_PAGES.includes(pathname);
+  // const showNav = !NO_NAV_PAGES.includes(pathname);
+  const isPassengerRoute = pathname.startsWith("/passenger");
+
+const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 
   const [showSplash, setShowSplash] = useState(isAppRoute);
   const [fadeOut, setFadeOut] = useState(false);
@@ -295,6 +323,118 @@ function AppRoutes() {
                         />  */}
           </Route>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+          {/* PASSENGER */}
+          {/* =========================================
+    PASSENGER
+========================================= */}
+          <Route
+  path="/passenger"
+  element={<Navigate to="/passenger/launch" replace />}
+/>
+
+<Route
+  path="/passenger/launch"
+  element={<PassengerLaunch />}
+/>
+
+<Route
+  path="/passenger/signup"
+  element={<PassengerSignup />}
+/>
+
+<Route
+  path="/passenger/otp"
+  element={<PassengerOtp />}
+/>
+<Route
+  path="/passenger/complete-profile"
+  element={<CompletePassengerProfile />}
+/>
+<Route
+  path="/passenger/location"
+  element={<PassengerLocation />}
+/>
+<Route
+  path="/passenger/biometric"
+  element={<PassengerBiometric />}
+/>
+<Route
+  path="/passenger/home"
+  element={<PassengerHome />}
+/>
+<Route
+  path="/passenger/book-ride"
+  element={<BookRide />}
+/>
+
+<Route
+  path="/passenger/ride/select"
+  element={<SelectRide />}
+/>
+
+<Route
+  path="/passenger/ride/confirm"
+  element={<ConfirmPickup />}
+/>
+
+<Route
+  path="/passenger/ride/searching"
+  element={<SearchingDriver />}
+/>
+
+<Route
+  path="/passenger/ride/driver-assigned"
+  element={<DriverAssigned />}
+/>
+
+<Route
+  path="/passenger/ride/driver-en-route"
+  element={<DriverEnRoute />}
+/>
+<Route
+  path="/passenger/ride/driver-arriving"
+  element={<DriverArriving />}
+/>
+<Route
+  path="/passenger/ride/driver-arrived"
+  element={<DriverArrived />}
+/>
+
+<Route
+  path="/passenger/ride/verify"
+  element={<VerifyRide />}
+/>
+
+<Route
+  path="/passenger/ride/trip"
+  element={<ActiveTrip />}
+/>
+
+<Route
+  path="/passenger/ride/safety"
+  element={<RideSafety />}
+/>
+
+<Route
+  path="/passenger/ride/arrived"
+  element={<TripComplete />}
+/>
+
+<Route
+  path="/passenger/ride/rate"
+  element={<RateDriver />}
+/>
+
+<Route
+  path="/passenger/ride/chat"
+  element={<RideChat />}
+/>
+
+<Route
+  path="/passenger/ride/emergency"
+  element={<EmergencyAlert />}
+/>
         </Routes>
       </div>
 
@@ -319,8 +459,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppRoutes />
+        <PassengerRideProvider>
+          <AppRoutes />
+        </PassengerRideProvider>
       </BrowserRouter>
+
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
