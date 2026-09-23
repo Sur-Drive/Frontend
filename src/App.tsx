@@ -73,7 +73,12 @@ import EmergencyAlert from "./pages/Passenger/Ride/EmergencyAlert";
 import PassengerActivity from "./pages/Passenger/Activity/PassengerActivity";
 import RideDetails from "./pages/Passenger/Activity/RideDetails";
 import PassengerAlerts from "./pages/Passenger/Alerts/PassengerAlerts";
-
+import { PassengerProfileProvider } from "./context/PassengerProfileContext";
+import PassengerAccount from "./pages/Passenger/Account/PassengerAccount";
+import PassengerProfile from "./pages/Passenger/Account/PassengerProfile";
+import ChangeEmail from "./pages/Passenger/Account/ChangeEmail";
+import ChangePhone from "./pages/Passenger/Account/ChangePhone";
+import ProfileOtpVerification from "./pages/Passenger/Account/ProfileOtpVerification";
 
 
 const queryClient = new QueryClient({
@@ -453,6 +458,31 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
   path="/passenger/alerts"
   element={<PassengerAlerts />}
 />
+
+<Route
+  path="/passenger/account"
+  element={<PassengerAccount />}
+/>
+
+<Route
+  path="/passenger/account/profile"
+  element={<PassengerProfile />}
+/>
+
+<Route
+  path="/passenger/account/profile/change-email"
+  element={<ChangeEmail />}
+/>
+
+<Route
+  path="/passenger/account/profile/change-phone"
+  element={<ChangePhone />}
+/>
+
+<Route
+  path="/passenger/account/profile/verify"
+  element={<ProfileOtpVerification />}
+/>
         </Routes>
       </div>
 
@@ -477,9 +507,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+      <PassengerProfileProvider>
         <PassengerRideProvider>
           <AppRoutes />
         </PassengerRideProvider>
+        </PassengerProfileProvider>
       </BrowserRouter>
 
       <ReactQueryDevtools initialIsOpen={false} />
