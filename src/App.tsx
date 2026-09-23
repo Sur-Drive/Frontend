@@ -79,6 +79,31 @@ import PassengerProfile from "./pages/Passenger/Account/PassengerProfile";
 import ChangeEmail from "./pages/Passenger/Account/ChangeEmail";
 import ChangePhone from "./pages/Passenger/Account/ChangePhone";
 import ProfileOtpVerification from "./pages/Passenger/Account/ProfileOtpVerification";
+import Legal from "./pages/Passenger/Account/Legal";
+import PrivacyPolicy from "./pages/Passenger/Account/PrivacyPolicy";
+import TermsConditions from "./pages/Passenger/Account/TermsConditions";
+import PaymentMethods from "./pages/Passenger/Account/PaymentMethods";
+import AddCard from "./pages/Passenger/Account/AddCard";
+import PromosRewards from "./pages/Passenger/Account/PromosRewards";
+import { PassengerSafetyProvider } from "./context/PassengerSafetyContext";
+import PassengerSafety from "./pages/Passenger/Account/Safety/PassengerSafety";
+import PickupCode from "./pages/Passenger/Account/Safety/PickupCode";
+import EmergencyContacts from "./pages/Passenger/Account/Safety/EmergencyContacts";
+import AddEmergencyContact from "./pages/Passenger/Account/Safety/AddEmergencyContact";
+import { PassengerSavedPlacesProvider } from "./context/PassengerSavedPlacesContext";
+import SavedPlaces from "./pages/Passenger/Account/SavedPlaces/SavedPlaces";
+import SavedPlaceLocation from "./pages/Passenger/Account/SavedPlaces/SavedPlaceLocation";
+import SavedPlaceMap from "./pages/Passenger/Account/SavedPlaces/SavedPlaceMap";
+import ConfirmSavedPlace from "./pages/Passenger/Account/SavedPlaces/ConfirmSavedPlace";
+import NameSavedPlace from "./pages/Passenger/Account/SavedPlaces/NameSavedPlace";
+import PassengerRateUs from "./pages/Passenger/Account/RateUs/PassengerRateUs";
+import PassengerSupport from "./pages/Passenger/Account/Support/PassengerSupport";
+import { PassengerSupportProvider } from "./context/PassengerSupportContext";
+import SupportArticles from "./pages/Passenger/Account/Support/SupportArticles";
+import Tickets from "./pages/Passenger/Account/Support/Tickets";
+import RaiseTicket from "./pages/Passenger/Account/Support/RaiseTicket";
+import TicketConversation from "./pages/Passenger/Account/Support/TicketConversation";
+import LiveSupportChat from "./pages/Passenger/Account/Support/LiveSupportChat";
 
 
 const queryClient = new QueryClient({
@@ -483,6 +508,121 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
   path="/passenger/account/profile/verify"
   element={<ProfileOtpVerification />}
 />
+
+<Route
+  path="/passenger/account/legal"
+  element={<Legal />}
+/>
+
+<Route
+  path="/passenger/account/legal/privacy"
+  element={<PrivacyPolicy />}
+/>
+
+<Route
+  path="/passenger/account/legal/terms"
+  element={<TermsConditions />}
+/>
+
+<Route
+  path="/passenger/account/payment-methods"
+  element={<PaymentMethods />}
+/>
+
+<Route
+  path="/passenger/account/payment-methods/add-card"
+  element={<AddCard />}
+/>
+
+<Route
+  path="/passenger/account/promos"
+  element={<PromosRewards />}
+/>
+
+<Route
+  path="/passenger/account/safety"
+  element={<PassengerSafety />}
+/>
+
+<Route
+  path="/passenger/account/safety/pickup-code"
+  element={<PickupCode />}
+/>
+
+<Route
+  path="/passenger/account/safety/emergency-contacts"
+  element={<EmergencyContacts />}
+/>
+
+<Route
+  path="/passenger/account/safety/emergency-contacts/add"
+  element={<AddEmergencyContact />}
+/>
+
+<Route
+  path="/passenger/account/saved-places"
+  element={<SavedPlaces />}
+/>
+
+<Route
+  path="/passenger/account/saved-places/location/:mode"
+  element={<SavedPlaceLocation />}
+/>
+
+<Route
+  path="/passenger/account/saved-places/location/edit/:id"
+  element={<SavedPlaceLocation />}
+/>
+
+<Route
+  path="/passenger/account/saved-places/map"
+  element={<SavedPlaceMap />}
+/>
+
+<Route
+  path="/passenger/account/saved-places/confirm"
+  element={<ConfirmSavedPlace />}
+/>
+
+<Route
+  path="/passenger/account/saved-places/name"
+  element={<NameSavedPlace />}
+/>
+
+<Route
+  path="/passenger/account/rate-us"
+  element={<PassengerRateUs />}
+/>
+
+<Route
+  path="/passenger/account/support"
+  element={<PassengerSupport />}
+/>
+
+<Route
+  path="/passenger/account/support/articles"
+  element={<SupportArticles />}
+/>
+
+<Route
+  path="/passenger/account/support/live-chat"
+  element={<LiveSupportChat />}
+/>
+
+<Route
+  path="/passenger/account/support/tickets"
+  element={<Tickets />}
+/>
+
+<Route
+  path="/passenger/account/support/tickets/new"
+  element={<RaiseTicket />}
+/>
+
+<Route
+  path="/passenger/account/support/tickets/:ticketId"
+  element={<TicketConversation />}
+/>
         </Routes>
       </div>
 
@@ -509,7 +649,13 @@ function App() {
       <BrowserRouter>
       <PassengerProfileProvider>
         <PassengerRideProvider>
+           <PassengerSafetyProvider>
+            <PassengerSavedPlacesProvider>
+               <PassengerSupportProvider>
           <AppRoutes />
+          </PassengerSupportProvider>
+          </PassengerSavedPlacesProvider>
+          </PassengerSafetyProvider>
         </PassengerRideProvider>
         </PassengerProfileProvider>
       </BrowserRouter>

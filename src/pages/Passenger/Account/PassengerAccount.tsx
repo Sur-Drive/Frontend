@@ -107,7 +107,7 @@ export default function PassengerAccount() {
             label="Saved Addresses"
             onClick={() =>
               navigate(
-                "/passenger/account/saved-addresses",
+                "/passenger/account/saved-places",
               )
             }
           />
@@ -165,6 +165,11 @@ export default function PassengerAccount() {
           <AccountMenuItem
             icon={Star}
             label="Rate us"
+            onClick={() =>
+            navigate(
+              "/passenger/account/rate-us",
+            )
+          }
           />
 
           <AccountMenuItem
