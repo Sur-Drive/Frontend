@@ -72,6 +72,7 @@ import RideChat from "./pages/Passenger/Ride/RideChat";
 import EmergencyAlert from "./pages/Passenger/Ride/EmergencyAlert";
 import PassengerActivity from "./pages/Passenger/Activity/PassengerActivity";
 import RideDetails from "./pages/Passenger/Activity/RideDetails";
+import PassengerAlerts from "./pages/Passenger/Alerts/PassengerAlerts";
 
 
 
@@ -446,6 +447,11 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 <Route
   path="/passenger/activity/:rideId"
   element={<RideDetails />}
+/>
+
+<Route
+  path="/passenger/alerts"
+  element={<PassengerAlerts />}
 />
         </Routes>
       </div>
