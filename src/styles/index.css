@@ -1,7 +1,9 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
 
 @theme {
   --font-archivo: "Archivo Black", sans-serif;
+  --font-outfit: "Outfit", sans-serif;
 
   --color-purple-900: #1a0033;
   --color-purple-800: #2d0057;
