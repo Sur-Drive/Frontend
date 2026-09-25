@@ -105,7 +105,11 @@ export default function ApplicationUnderReviewPage() {
       </div>
 
       <button
-        onClick={() => navigate("/welcome")}
+        onClick={() => {
+          // Force the splash screen to replay before landing on /welcome
+          sessionStorage.removeItem("splashShown");
+          navigate("/welcome");
+        }}
         className="mt-10 h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
       >
         Back to Welcome Screen

@@ -63,7 +63,7 @@ function ActionCard({ title, desc, icon, variant, onClick }: CardProps) {
 export default function WelcomePage() {
   const navigate = useNavigate();
   const bookRide = () => {
-    navigate("/signin");
+    navigate("/");
   };
 
   return (
@@ -111,7 +111,11 @@ export default function WelcomePage() {
             title="Open Navigation"
             desc="Get real-time directions and reach your destination with ease."
             icon="/images/Frame2.png"
-            onClick={() => navigate("/home")}
+            onClick={() => {
+              // Force the splash screen to replay before landing on /home
+              sessionStorage.removeItem("splashShown");
+              navigate("/home");
+            }}
           />
           <ActionCard
             variant="gold"
@@ -125,7 +129,7 @@ export default function WelcomePage() {
             title="Earn as a Driver"
             desc="Join our driver community and start earning today."
             icon="/images/Frame1.png"
-            onClick={() => navigate("/register")}
+            onClick={() => navigate("/signin")}
           />
         </div>
 
