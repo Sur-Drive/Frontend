@@ -8,12 +8,14 @@ import GenderPickerSheet, {
 import DateOfBirthPickerSheet, {
   type DateOfBirthValue,
 } from "../components/DateOfBirthPickerSheet";
+import { useSubmitRideDriverPersonalInfo } from "../hooks/useAuth";
 
 interface OnboardingState {
   identifier?: string;
   role?: string;
   phone?: string;
   city?: string;
+  userId?: string;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,7 +35,11 @@ export default function PersonalInformationPage() {
   const [showGenderSheet, setShowGenderSheet] = useState(false);
   const [showDobSheet, setShowDobSheet] = useState(false);
 
+  const { mutate: submitPersonalInfo, isPending: isSubmitting } =
+    useSubmitRideDriverPersonalInfo();
+
   const dobLabel = dob ? `${dob.year}/${pad(dob.month)}/${pad(dob.day)}` : "";
+  const dobIso = dob ? `${dob.year}-${pad(dob.month)}-${pad(dob.day)}` : "";
 
   const isValid =
     firstName.trim().length > 0 &&
@@ -43,6 +49,8 @@ export default function PersonalInformationPage() {
     ninNumber.trim().length === 11;
 
   const submit = () => {
+    if (isSubmitting) return;
+
     if (!firstName.trim() || !lastName.trim()) {
       setError("Enter your first and last name.");
       return;
@@ -59,18 +67,43 @@ export default function PersonalInformationPage() {
       setError("Enter your 11-digit NIN number.");
       return;
     }
+    if (!state.userId) {
+      setError("Your session has expired. Please register again.");
+      return;
+    }
     setError("");
 
-    navigate("/register/license", {
-      state: {
-        ...state,
+    submitPersonalInfo(
+      {
+        userId: state.userId,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         gender,
-        dateOfBirth: dobLabel,
-        ninNumber: ninNumber.trim(),
+        dateOfBirth: dobIso,
+        nin: ninNumber.trim(),
       },
-    });
+      {
+        onSuccess: () => {
+          navigate("/register/license", {
+            state: {
+              ...state,
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              gender,
+              dateOfBirth: dobLabel,
+              ninNumber: ninNumber.trim(),
+            },
+          });
+        },
+        onError: (err: unknown) => {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to save personal information.",
+          );
+        },
+      },
+    );
   };
 
   const labelClass = "text-sm font-medium text-gray-800";
@@ -178,10 +211,10 @@ export default function PersonalInformationPage() {
 
       <button
         onClick={submit}
-        disabled={!isValid}
+        disabled={!isValid || isSubmitting}
         className="mt-8 h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
       >
-        Continue
+        {isSubmitting ? "Please wait..." : "Continue"}
       </button>
 
       {showGenderSheet && (
