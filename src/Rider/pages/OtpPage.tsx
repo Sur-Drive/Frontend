@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, Delete } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useVerifyRideDriverOtp } from "../hooks/useAuth";
 
 const OTP_LENGTH = 5;
 const COUNTDOWN_SECONDS = 45;
@@ -8,6 +9,7 @@ const COUNTDOWN_SECONDS = 45;
 interface OtpLocationState {
   identifier?: string;
   role?: string;
+  userId?: string;
 }
 
 export default function OtpPage() {
@@ -17,20 +19,22 @@ export default function OtpPage() {
 
   const identifier = state.identifier ?? "";
   const role = state.role ?? "driver";
+  const userId = state.userId ?? "";
 
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(""));
   const [timer, setTimer] = useState(COUNTDOWN_SECONDS);
   const [canResend, setCanResend] = useState(false);
   const [error, setError] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const { mutate: verifyOtp, isPending: isVerifying } =
+    useVerifyRideDriverOtp();
 
   // No identifier to verify (e.g. page opened directly) — send back to register.
   useEffect(() => {
-    if (!identifier) {
+    if (!identifier || !userId) {
       navigate("/register", { replace: true });
     }
-  }, [identifier, navigate]);
+  }, [identifier, userId, navigate]);
 
   useEffect(() => {
     if (timer <= 0) {
@@ -53,16 +57,23 @@ export default function OtpPage() {
   const activeIndex = code.findIndex((d) => d === "");
   const currentIndex = activeIndex === -1 ? OTP_LENGTH - 1 : activeIndex;
 
-  // No API for now: any 5-digit code is treated as valid.
-  const submitCode = (_fullCode: string) => {
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      navigate("/register/personal-information", {
-        replace: true,
-        state: { identifier, role },
-      });
-    }, 700);
+  // Verify the OTP against the backend.
+  const submitCode = (fullCode: string) => {
+    verifyOtp(
+      { userId, otp: fullCode },
+      {
+        onSuccess: () => {
+          navigate("/register/personal-information", {
+            replace: true,
+            state: { identifier, role, userId },
+          });
+        },
+        onError: (err: unknown) => {
+          setError(err instanceof Error ? err.message : "Invalid OTP.");
+          setCode(new Array(OTP_LENGTH).fill(""));
+        },
+      },
+    );
   };
 
   const handleDigit = (digit: string) => {
