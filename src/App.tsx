@@ -168,14 +168,20 @@ function AppRoutes() {
   // Check if current page should show BottomNav
   const showNav = !NO_NAV_PAGES.includes(pathname);
 
-  // Splash plays once per app launch (session), not on every navigation
+  // /welcome should always replay the splash; other app routes only once per session
+  const ALWAYS_SPLASH_ROUTES = ["/welcome"];
+  const alwaysSplash = ALWAYS_SPLASH_ROUTES.includes(pathname);
+
   const [showSplash, setShowSplash] = useState(
-    isAppRoute && !sessionStorage.getItem("splashShown"),
+    isAppRoute && (alwaysSplash || !sessionStorage.getItem("splashShown")),
   );
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    if (!isAppRoute || sessionStorage.getItem("splashShown")) {
+    if (
+      !isAppRoute ||
+      (!alwaysSplash && sessionStorage.getItem("splashShown"))
+    ) {
       setShowSplash(false);
       return;
     }
@@ -193,7 +199,7 @@ function AppRoutes() {
       clearTimeout(fadeTimer);
       clearTimeout(removeTimer);
     };
-  }, [isAppRoute, pathname]);
+  }, [isAppRoute, pathname, alwaysSplash]);
 
   return (
     <>
