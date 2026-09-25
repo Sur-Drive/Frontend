@@ -63,7 +63,7 @@ function ActionCard({ title, desc, icon, variant, onClick }: CardProps) {
 export default function WelcomePage() {
   const navigate = useNavigate();
   const bookRide = () => {
-    navigate("/");
+    navigate("/signin");
   };
 
   return (
