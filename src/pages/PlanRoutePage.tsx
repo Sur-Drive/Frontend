@@ -55,7 +55,11 @@ import {
   haversineMeters,
   type LatLng,
 } from "../lib/geoPath";
-import { useVoiceGuidance } from "../hooks/useVoiceGuidance";
+import { useMultilingualVoiceGuidance } from "../hooks/useMultilingualVoiceGuidance";
+import {
+  resolveManeuverPhrase,
+  resolveHazardPhrase,
+} from "../lib/multilingualPhrases";
 import { useTurnByTurn } from "../hooks/useTurnByTurn";
 import { useWakeWord, useVoiceSearch } from "../hooks/useVoiceSearch";
 import { forwardGeocode } from "../api/geocoding";
@@ -1283,6 +1287,7 @@ export default function PlanRoutePage() {
   };
 
   const handleStartTrip = () => {
+    voiceGuidance.unlock();
     setShowScanResults(false);
     setIsNavigating(true);
     setNavPanelExpanded(true);
@@ -1316,10 +1321,28 @@ export default function PlanRoutePage() {
     const etaLabel = effectiveRoute
       ? `about ${Math.round(effectiveRoute.duration)} minutes`
       : "";
-    voiceGuidance.speak(
-      `Starting navigation${destination ? " to " + destination : ""}.${distanceLabel ? " " + distanceLabel : ""}${etaLabel ? ", " + etaLabel : ""}.`,
-      { interrupt: true },
-    );
+    void (async () => {
+      await voiceGuidance.speak(
+        "trip.starting",
+        { destination: destination || "your destination" },
+        {
+          interrupt: true,
+          fallbackText: `Starting navigation${destination ? " to " + destination : ""}.${distanceLabel ? " " + distanceLabel : ""}${etaLabel ? ", " + etaLabel : ""}.`,
+        },
+      );
+      if (effectiveRoute) {
+        await voiceGuidance.speak(
+          "trip.remaining_km",
+          { km: effectiveRoute.distance.toFixed(1) },
+          { fallbackText: distanceLabel },
+        );
+        await voiceGuidance.speak(
+          "trip.eta_minutes",
+          { minutes: String(Math.round(effectiveRoute.duration)) },
+          { fallbackText: etaLabel },
+        );
+      }
+    })();
 
     setTimeout(() => setShowUpcomingAlert(true), 2000);
     setTimeout(() => setShowUpcomingAlert(false), 9000);
@@ -1475,7 +1498,7 @@ export default function PlanRoutePage() {
       severity: warning.severity,
       at: Date.now(),
     };
-    voiceGuidance.speak(describeWarning(warning), {
+    voiceGuidance.speakText(describeWarning(warning), {
       interrupt: warning.severity === "high",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1556,7 +1579,7 @@ export default function PlanRoutePage() {
   const liveArrivalLabel = effectiveRoute ? formatClockTime(etaMinutes) : null;
 
   // ── Turn-by-turn voice guidance ──────────────────────
-  const voiceGuidance = useVoiceGuidance();
+  const voiceGuidance = useMultilingualVoiceGuidance();
   const announcedArrivalRef = useRef(false);
   const announcedOffRouteRef = useRef(false);
   const lastMilestoneKmRef = useRef<number | null>(null);
@@ -1572,9 +1595,22 @@ export default function PlanRoutePage() {
     const isFirstReading = lastMilestoneKmRef.current === null;
     lastMilestoneKmRef.current = remainingKmFloor;
     if (isFirstReading || remainingKmFloor <= 0) return;
-    voiceGuidance.speak(
-      `${remainingKmFloor} kilometer${remainingKmFloor === 1 ? "" : "s"} remaining. E.T.A. ${etaMinutes} minute${etaMinutes === 1 ? "" : "s"}.`,
-    );
+    void (async () => {
+      await voiceGuidance.speak(
+        "trip.remaining_km",
+        { km: String(remainingKmFloor) },
+        {
+          fallbackText: `${remainingKmFloor} kilometer${remainingKmFloor === 1 ? "" : "s"} remaining.`,
+        },
+      );
+      await voiceGuidance.speak(
+        "trip.eta_minutes",
+        { minutes: String(etaMinutes) },
+        {
+          fallbackText: `E.T.A. ${etaMinutes} minute${etaMinutes === 1 ? "" : "s"}.`,
+        },
+      );
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingKmFloor]);
 
@@ -1590,9 +1626,11 @@ export default function PlanRoutePage() {
     }
     if (isOffRoute && !announcedOffRouteRef.current && !isRerouting) {
       announcedOffRouteRef.current = true;
-      voiceGuidance.speak("You've gone off route. Recalculating.", {
-        interrupt: true,
-      });
+      voiceGuidance.speak(
+        "trip.off_route",
+        {},
+        { interrupt: true, fallbackText: "You've gone off route. Recalculating." },
+      );
 
       // Actually recalculate: replan from wherever the driver currently is
       // back to the same destination. planRouteMutation's result feeds
@@ -1636,9 +1674,11 @@ export default function PlanRoutePage() {
   useEffect(() => {
     if (hasArrived && !announcedArrivalRef.current) {
       announcedArrivalRef.current = true;
-      voiceGuidance.speak("You've arrived at your destination.", {
-        interrupt: true,
-      });
+      voiceGuidance.speak(
+        "trip.arrived",
+        {},
+        { interrupt: true, fallbackText: "You've arrived at your destination." },
+      );
     }
     if (!isNavigating) announcedArrivalRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1646,7 +1686,15 @@ export default function PlanRoutePage() {
 
   useEffect(() => {
     if (showUpcomingAlert && isNavigating && !hasArrived && upcomingHazard) {
-      voiceGuidance.speak(`Caution: ${upcomingHazard.label} ahead.`);
+      const hazardType = (effectiveRoute?.hazards as any[] | undefined)?.[0]
+        ?.type;
+      const { key, params } = resolveHazardPhrase(
+        hazardType,
+        upcomingHazard.label,
+      );
+      voiceGuidance.speak(key, params, {
+        fallbackText: `Caution: ${upcomingHazard.label} ahead.`,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showUpcomingAlert]);
@@ -1664,14 +1712,23 @@ export default function PlanRoutePage() {
 
     const distance = turnByTurn.distanceToNextManeuverMeters;
     const instruction = describeManeuver(step, turnByTurn.nextRoadName);
+    const { key: maneuverKey, params: maneuverParams } = resolveManeuverPhrase(
+      step,
+      turnByTurn.nextRoadName,
+    );
 
     if (
       distance <= MANEUVER_WARN_METERS &&
       announcedWarnRef.current !== step.id
     ) {
       announcedWarnRef.current = step.id;
-      voiceGuidance.speak(
-        `In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`,
+      voiceGuidance.speakManeuverWithDistance(
+        maneuverKey,
+        maneuverParams,
+        distance,
+        {
+          fallbackText: `In ${formatManeuverDistance(distance)}, ${instruction.charAt(0).toLowerCase()}${instruction.slice(1)}.`,
+        },
       );
     }
 
@@ -1680,7 +1737,22 @@ export default function PlanRoutePage() {
       announcedNowRef.current !== step.id
     ) {
       announcedNowRef.current = step.id;
-      voiceGuidance.speak(`${instruction} now.`, { interrupt: true });
+      // Only cut off whatever's currently speaking if the warn call-out for
+      // this same maneuver never got a chance to play (e.g. a very short
+      // segment). Otherwise let it finish naturally — this queues right
+      // behind it instead of chopping it off mid-sentence.
+      voiceGuidance.speak(maneuverKey, maneuverParams, {
+        interrupt: announcedWarnRef.current !== step.id,
+        fallbackText: `${instruction} now.`,
+      });
+    }
+
+    if (turnByTurn.nextStep) {
+      const next = resolveManeuverPhrase(
+        turnByTurn.nextStep,
+        turnByTurn.nextRoadName,
+      );
+      voiceGuidance.warm(next.key, next.params);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1720,10 +1792,11 @@ export default function PlanRoutePage() {
   >("idle");
 
   const captureDestinationByVoice = useCallback(() => {
+    voiceGuidance.unlock();
     setRouteError(null);
     setShowPlanModal(true);
     setVoiceCaptureStatus("listening");
-    voiceGuidance.speak("Where would you like to go?", { interrupt: true });
+    voiceGuidance.speakText("Where would you like to go?", { interrupt: true });
 
     window.setTimeout(() => {
       destinationVoiceSearch.start(async (transcript) => {
@@ -1737,16 +1810,16 @@ export default function PlanRoutePage() {
           ) {
             setDestination(result.address || transcript);
             setDestinationCoords({ lat: result.lat, lng: result.lng });
-            voiceGuidance.speak(
+            voiceGuidance.speakText(
               `Got it — ${result.address || transcript}. Tap Scan Route when you're ready.`,
             );
           } else {
-            voiceGuidance.speak(
+            voiceGuidance.speakText(
               "I couldn't find that place. Please pick it from the list.",
             );
           }
         } catch {
-          voiceGuidance.speak(
+          voiceGuidance.speakText(
             "I couldn't find that place. Please pick it from the list.",
           );
         } finally {
@@ -2220,6 +2293,9 @@ export default function PlanRoutePage() {
                   toggleMuted={voiceGuidance.toggleMuted}
                   volume={voiceGuidance.volume}
                   setVolume={voiceGuidance.setVolume}
+                  locale={voiceGuidance.locale}
+                  setLocale={voiceGuidance.setLocale}
+                  locales={voiceGuidance.locales}
                 />
               )}
               {collisionGuard.isSupported && (

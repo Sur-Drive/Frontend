@@ -62,7 +62,10 @@ export default function OtpPage() {
     verifyOtp(
       { userId, otp: fullCode },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          if (data.tempToken) {
+            localStorage.setItem("driverOnboardingToken", data.tempToken);
+          }
           navigate("/register/personal-information", {
             replace: true,
             state: { identifier, role, userId },
