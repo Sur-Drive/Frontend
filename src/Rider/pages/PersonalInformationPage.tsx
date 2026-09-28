@@ -71,11 +71,14 @@ export default function PersonalInformationPage() {
       setError("Your session has expired. Please register again.");
       return;
     }
+    if (!localStorage.getItem("driverOnboardingToken")) {
+      setError("Your session has expired. Please verify your OTP again.");
+      return;
+    }
     setError("");
 
     submitPersonalInfo(
       {
-        userId: state.userId,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         gender,
@@ -83,8 +86,11 @@ export default function PersonalInformationPage() {
         nin: ninNumber.trim(),
       },
       {
-        onSuccess: () => {
-          navigate("/register/license", {
+        onSuccess: (data) => {
+          if (data.tempToken) {
+            localStorage.setItem("driverOnboardingToken", data.tempToken);
+          }
+          navigate("/register/vehicle-information", {
             state: {
               ...state,
               firstName: firstName.trim(),
@@ -106,20 +112,23 @@ export default function PersonalInformationPage() {
     );
   };
 
-  const labelClass = "text-sm font-medium text-gray-800";
+  const labelClass =
+    "text-[clamp(11.5px,2.5dvh,14px)] font-medium text-gray-800";
   const fieldClass =
-    "mt-2 h-14 w-full rounded-2xl bg-[#f4f4f3] px-4 text-base text-gray-800 outline-none placeholder:text-gray-400";
+    "mt-[clamp(4px,1.2dvh,8px)] h-[clamp(42px,9.5dvh,52px)] w-full rounded-2xl bg-[#f4f4f3] px-[clamp(10px,2.6dvh,14px)] text-[clamp(12.5px,2.8dvh,15px)] text-gray-800 outline-none placeholder:text-gray-400";
 
   return (
-    <div className="font-outfit min-h-[100dvh] bg-white px-6 pb-8 pt-4">
+    <div className="font-outfit min-h-[100dvh] bg-white px-[clamp(16px,5vw,24px)] pb-[clamp(16px,4dvh,28px)] pt-[clamp(10px,2.6dvh,16px)]">
       <OnboardingProgress progress={40} />
 
-      <h1 className="mt-8 text-[28px] font-bold text-[#2b2b2b]">
+      <h1 className="mt-[clamp(14px,3.6dvh,22px)] text-[clamp(19px,4.4dvh,25px)] font-bold leading-tight text-[#2b2b2b]">
         Personal Information
       </h1>
-      <p className="mt-2 text-base text-gray-400">Fill in the details below</p>
+      <p className="mt-[clamp(2px,0.8dvh,6px)] text-[clamp(11.5px,2.5dvh,14px)] text-gray-400">
+        Fill in the details below
+      </p>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-[clamp(10px,2.6dvh,18px)] space-y-[clamp(10px,2.6dvh,18px)]">
         {/* First Name */}
         <div>
           <label className={labelClass}>
@@ -167,7 +176,7 @@ export default function PersonalInformationPage() {
             <span className={gender ? "text-gray-800" : "text-gray-400"}>
               {gender || "Select Gender"}
             </span>
-            <ChevronDown size={18} className="text-gray-400" />
+            <ChevronDown className="h-[clamp(14px,3.2dvh,18px)] w-[clamp(14px,3.2dvh,18px)] text-gray-400" />
           </button>
         </div>
 
@@ -184,7 +193,7 @@ export default function PersonalInformationPage() {
             <span className={dobLabel ? "text-gray-800" : "text-gray-400"}>
               {dobLabel || "YYYY/MM/DD"}
             </span>
-            <Calendar size={18} className="text-gray-400" />
+            <Calendar className="h-[clamp(14px,3.2dvh,18px)] w-[clamp(14px,3.2dvh,18px)] text-gray-400" />
           </button>
         </div>
 
@@ -206,13 +215,17 @@ export default function PersonalInformationPage() {
           />
         </div>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && (
+          <p className="text-[clamp(11.5px,2.5dvh,14px)] text-red-500">
+            {error}
+          </p>
+        )}
       </div>
 
       <button
         onClick={submit}
         disabled={!isValid || isSubmitting}
-        className="mt-8 h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
+        className="mt-[clamp(14px,3.6dvh,22px)] h-[clamp(44px,10dvh,56px)] w-full rounded-2xl bg-[#6E43A3] text-[clamp(14px,3.2dvh,18px)] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
       >
         {isSubmitting ? "Please wait..." : "Continue"}
       </button>

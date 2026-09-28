@@ -3,6 +3,7 @@ import {
   sendRideDriverOtp,
   verifyRideDriverOtp,
   submitRideDriverPersonalInfo,
+  loginRideDriver,
 } from "../api/auth";
 
 export function useSendRideDriverOtp() {
@@ -15,4 +16,8 @@ export function useVerifyRideDriverOtp() {
 
 export function useSubmitRideDriverPersonalInfo() {
   return useMutation({ mutationFn: submitRideDriverPersonalInfo });
+}
+
+export function useLoginRideDriver() {
+  return useMutation({ mutationFn: loginRideDriver });
 }

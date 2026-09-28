@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SwitchCamera, UserCircle2, X, Zap, ZapOff } from "lucide-react";
 import OnboardingProgress from "../components/OnboardingProgress";
+import { useUploadRideDriverProfilePicture } from "../hooks/useOnboarding";
 
 interface OnboardingState {
   identifier?: string;
@@ -11,6 +12,18 @@ interface OnboardingState {
 }
 
 type Mode = "idle" | "camera" | "review";
+
+function dataUrlToFile(dataUrl: string, filename: string): File {
+  const [header, base64] = dataUrl.split(",");
+  const mimeMatch = header.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new File([bytes], filename, { type: mime });
+}
 
 export default function FaceVerificationPage() {
   const navigate = useNavigate();
@@ -27,6 +40,9 @@ export default function FaceVerificationPage() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const { mutateAsync: uploadProfilePicture, isPending: isSubmitting } =
+    useUploadRideDriverProfilePicture();
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -101,9 +117,21 @@ export default function FaceVerificationPage() {
     setMode("camera");
   };
 
-  const finish = () => {
-    // Selfie captured — continue to password creation.
-    navigate("/register/password", { state });
+  const finish = async () => {
+    if (isSubmitting || !photo) return;
+    setError("");
+    try {
+      const facePhoto = dataUrlToFile(photo, "selfie.jpg");
+      const res = await uploadProfilePicture(facePhoto);
+      if (res.tempToken) {
+        localStorage.setItem("driverOnboardingToken", res.tempToken);
+      }
+      navigate("/register/password", { state });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to upload selfie.",
+      );
+    }
   };
 
   return (
@@ -147,13 +175,15 @@ export default function FaceVerificationPage() {
         <div className="fixed inset-x-6 bottom-8 space-y-3">
           <button
             onClick={finish}
-            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+            disabled={isSubmitting}
+            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-60"
           >
-            Upload Photo
+            {isSubmitting ? "Uploading..." : "Upload Photo"}
           </button>
           <button
             onClick={retake}
-            className="h-14 w-full rounded-2xl bg-[#f4f4f3] text-lg font-semibold text-red-500 transition active:scale-[0.99]"
+            disabled={isSubmitting}
+            className="h-14 w-full rounded-2xl bg-[#f4f4f3] text-lg font-semibold text-red-500 transition active:scale-[0.99] disabled:opacity-60"
           >
             Retake
           </button>

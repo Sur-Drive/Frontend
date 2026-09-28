@@ -16,6 +16,7 @@ import SignInPage from "./Rider/pages/SiginPage";
 import RegisterPage from "./Rider/pages/RegisterPage";
 import OtpPage from "./Rider/pages/OtpPage";
 import PersonalInformationPage from "./Rider/pages/PersonalInformationPage";
+import VehicleInformationPage from "./Rider/pages/VehicleInformationPage";
 import DriversLicensePage from "./Rider/pages/DriversLicensePage";
 import VehicleInspectionPage from "./Rider/pages/VehicleInspectionPage";
 import FaceVerificationPage from "./Rider/pages/FaceVerificationPage";
@@ -146,6 +147,7 @@ const NO_NAV_PAGES = [
   "/register",
   "/register/otp",
   "/register/personal-information",
+  "/register/vehicle-information",
   "/register/license",
   "/register/vehicle-inspection",
   "/register/face-verification",
@@ -280,6 +282,10 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
           <Route
             path="/register/personal-information"
             element={<PersonalInformationPage />}
+          />
+          <Route
+            path="/register/vehicle-information"
+            element={<VehicleInformationPage />}
           />
           <Route path="/register/license" element={<DriversLicensePage />} />
           <Route

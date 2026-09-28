@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Check, Eye, EyeOff, X } from "lucide-react";
 import OnboardingProgress from "../components/OnboardingProgress";
+import { useSetRideDriverPassword } from "../hooks/useOnboarding";
 
 interface OnboardingState {
   identifier?: string;
@@ -36,6 +37,10 @@ export default function CreatePasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  const { mutateAsync: setPassword_, isPending: isSubmitting } =
+    useSetRideDriverPassword();
 
   const metCount = useMemo(
     () => CRITERIA.filter((c) => c.test(password)).length,
@@ -63,10 +68,21 @@ export default function CreatePasswordPage() {
     return local.charAt(0).toUpperCase() + local.slice(1);
   })();
 
-  const submit = () => {
-    if (!canSubmit) return;
-    // No API for now: simulate submission and show the success modal.
-    setShowSuccess(true);
+  const submit = async () => {
+    if (!canSubmit || isSubmitting) return;
+    setError("");
+    try {
+      const res = await setPassword_({
+        password,
+        confirmPassword: confirm,
+      });
+      if (res.tempToken) {
+        localStorage.setItem("driverOnboardingToken", res.tempToken);
+      }
+      setShowSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set password.");
+    }
   };
 
   const inputClass =
@@ -171,12 +187,16 @@ export default function CreatePasswordPage() {
         </div>
       </div>
 
+      {error && (
+        <p className="mt-4 text-sm text-center text-red-600">{error}</p>
+      )}
+
       <button
         onClick={submit}
-        disabled={!canSubmit}
+        disabled={!canSubmit || isSubmitting}
         className="mt-8 h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
       >
-        Create Password
+        {isSubmitting ? "Please wait..." : "Create Password"}
       </button>
 
       {/* Success modal */}
