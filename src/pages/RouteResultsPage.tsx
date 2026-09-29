@@ -206,7 +206,12 @@ export default function RouteResultsPage() {
       announcedNowRef.current !== step.id
     ) {
       announcedNowRef.current = step.id;
-      voiceGuidance.speak(`${instruction} now.`, { interrupt: true });
+      // Only cut off whatever's currently speaking if the warn call-out for
+      // this same maneuver never got a chance to play. Otherwise let it
+      // finish naturally instead of chopping it off mid-sentence.
+      voiceGuidance.speak(`${instruction} now.`, {
+        interrupt: announcedWarnRef.current !== step.id,
+      });
     }
   }, [
     progress,
