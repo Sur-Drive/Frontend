@@ -1,16 +1,22 @@
-import { useState } from 'react'
-import { Volume2, VolumeX, ChevronUp, ChevronDown, Languages } from 'lucide-react'
-import type { VoiceLocale } from '../../api/multilingualVoice'
+import { useState } from "react";
+import {
+  Volume2,
+  VolumeX,
+  ChevronUp,
+  ChevronDown,
+  Languages,
+} from "lucide-react";
+import type { VoiceLocale } from "../../api/multilingualVoice";
 
 export interface VoiceGuidanceControlProps {
-  muted: boolean
-  toggleMuted: () => void
-  volume: number
-  setVolume: (v: number) => void
-  locale: VoiceLocale
-  setLocale: (l: VoiceLocale) => void
-  locales: { code: VoiceLocale; label: string }[]
-  className?: string
+  muted: boolean;
+  toggleMuted: () => void;
+  volume: number;
+  setVolume: (v: number) => void;
+  locale: VoiceLocale;
+  setLocale: (l: VoiceLocale) => void;
+  locales: { code: VoiceLocale; label: string }[];
+  className?: string;
 }
 
 /**
@@ -26,25 +32,25 @@ export default function VoiceGuidanceControl({
   locale,
   setLocale,
   locales,
-  className = '',
+  className = "",
 }: VoiceGuidanceControlProps) {
-  const [sliderOpen, setSliderOpen] = useState(false)
-  const [langOpen, setLangOpen] = useState(false)
+  const [sliderOpen, setSliderOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
 
   return (
     <div className={`relative flex flex-col items-center ${className}`}>
       <div className="flex items-center gap-0.5">
         <button
           onClick={toggleMuted}
-          aria-label={muted ? 'Unmute voice guidance' : 'Mute voice guidance'}
+          aria-label={muted ? "Unmute voice guidance" : "Mute voice guidance"}
           className="flex items-center justify-center flex-shrink-0 text-white w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20"
         >
           {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
         <button
           onClick={() => {
-            setLangOpen((v) => !v)
-            setSliderOpen(false)
+            setLangOpen((v) => !v);
+            setSliderOpen(false);
           }}
           aria-label="Choose voice guidance language"
           aria-expanded={langOpen}
@@ -57,10 +63,10 @@ export default function VoiceGuidanceControl({
         </button>
         <button
           onClick={() => {
-            setSliderOpen((v) => !v)
-            setLangOpen(false)
+            setSliderOpen((v) => !v);
+            setLangOpen(false);
           }}
-          aria-label={sliderOpen ? 'Hide volume slider' : 'Show volume slider'}
+          aria-label={sliderOpen ? "Hide volume slider" : "Show volume slider"}
           aria-expanded={sliderOpen}
           className="flex items-center justify-center flex-shrink-0 w-4 h-9 text-white/70"
         >
@@ -90,13 +96,13 @@ export default function VoiceGuidanceControl({
             <button
               key={l.code}
               onClick={() => {
-                setLocale(l.code)
-                setLangOpen(false)
+                setLocale(l.code);
+                setLangOpen(false);
               }}
               className={`px-2.5 py-1.5 text-left text-xs font-medium rounded-lg transition ${
                 l.code === locale
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? "bg-purple-100 text-purple-700"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               {l.label}
@@ -105,5 +111,5 @@ export default function VoiceGuidanceControl({
         </div>
       )}
     </div>
-  )
+  );
 }

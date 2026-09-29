@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import LazyGoogleMap from "../components/map/LazyGoogleMap";
@@ -699,7 +693,10 @@ export default function HomePage() {
   // logic needed here. Falls back to the user's own location when nothing
   // is being browsed.
   const mapCenter = useMemo<[number, number]>(
-    () => (browsedPlace ? [browsedPlace.lat, browsedPlace.lng] : userLocation || DEFAULT_COORDS),
+    () =>
+      browsedPlace
+        ? [browsedPlace.lat, browsedPlace.lng]
+        : userLocation || DEFAULT_COORDS,
     [browsedPlace, userLocation],
   );
 
@@ -818,7 +815,7 @@ export default function HomePage() {
           Google Maps shows under its search bar. Dropped below the
           location-error toast when that's showing so they never overlap. */}
       <div
-        className="absolute z-[480] left-0 right-0 lg:left-6 lg:right-auto lg:w-[420px] px-4"
+        className={`absolute ${isAnyModalOpen ? "z-[40]" : "z-[480]"} left-0 right-0 lg:left-6 lg:right-auto lg:w-[420px] px-4`}
         style={{ top: locationError ? "104px" : "16px" }}
       >
         <PlaceCategoryBar
@@ -876,7 +873,9 @@ export default function HomePage() {
       {/* Location error toast — includes a retry button so users aren't
           stuck on DEFAULT_COORDS with no way to re-trigger the lookup. */}
       {locationError && (
-        <div className="absolute z-[500] flex items-start gap-3 px-4 py-3 border border-yellow-200 top-4 left-4 right-4 sm:right-auto sm:w-80 lg:top-6 lg:left-6 bg-yellow-50 rounded-xl">
+        <div
+          className={`absolute ${isAnyModalOpen ? "z-[40]" : "z-[500]"} flex items-start gap-3 px-4 py-3 border border-yellow-200 top-4 left-4 right-4 sm:right-auto sm:w-80 lg:top-6 lg:left-6 bg-yellow-50 rounded-xl`}
+        >
           <div className="text-yellow-600 mt-0.5 text-sm">⚠️</div>
           <div className="flex-1">
             <p className="text-[12px] font-medium text-yellow-800">
@@ -901,7 +900,7 @@ export default function HomePage() {
           Explore bar's placesError toast below it. */}
       {(isResolvingPin || pinError) && (
         <div
-          className="absolute z-[480] left-4 right-4 sm:left-auto sm:right-4 sm:w-72 lg:right-6 px-3.5 py-2 text-[12px] font-medium bg-white shadow-[0_1px_4px_rgba(0,0,0,0.15)] rounded-xl"
+          className={`absolute ${isAnyModalOpen ? "z-[40]" : "z-[480]"} left-4 right-4 sm:left-auto sm:right-4 sm:w-72 lg:right-6 px-3.5 py-2 text-[12px] font-medium bg-white shadow-[0_1px_4px_rgba(0,0,0,0.15)] rounded-xl`}
           style={{ top: locationError ? "104px" : "16px" }}
         >
           {isResolvingPin ? (
