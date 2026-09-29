@@ -16,6 +16,7 @@ import SignInPage from "./Rider/pages/SiginPage";
 import RegisterPage from "./Rider/pages/RegisterPage";
 import OtpPage from "./Rider/pages/OtpPage";
 import PersonalInformationPage from "./Rider/pages/PersonalInformationPage";
+import VehicleInformationPage from "./Rider/pages/VehicleInformationPage";
 import DriversLicensePage from "./Rider/pages/DriversLicensePage";
 import VehicleInspectionPage from "./Rider/pages/VehicleInspectionPage";
 import FaceVerificationPage from "./Rider/pages/FaceVerificationPage";
@@ -146,6 +147,7 @@ const NO_NAV_PAGES = [
   "/register",
   "/register/otp",
   "/register/personal-information",
+  "/register/vehicle-information",
   "/register/license",
   "/register/vehicle-inspection",
   "/register/face-verification",
@@ -229,14 +231,20 @@ function AppRoutes() {
 
 const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 
-  // Splash plays once per app launch (session), not on every navigation
+  // /welcome should always replay the splash; other app routes only once per session
+  const ALWAYS_SPLASH_ROUTES = ["/welcome"];
+  const alwaysSplash = ALWAYS_SPLASH_ROUTES.includes(pathname);
+
   const [showSplash, setShowSplash] = useState(
-    isAppRoute && !sessionStorage.getItem("splashShown"),
+    isAppRoute && (alwaysSplash || !sessionStorage.getItem("splashShown")),
   );
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    if (!isAppRoute || sessionStorage.getItem("splashShown")) {
+    if (
+      !isAppRoute ||
+      (!alwaysSplash && sessionStorage.getItem("splashShown"))
+    ) {
       setShowSplash(false);
       return;
     }
@@ -254,7 +262,7 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
       clearTimeout(fadeTimer);
       clearTimeout(removeTimer);
     };
-  }, [isAppRoute, pathname]);
+  }, [isAppRoute, pathname, alwaysSplash]);
 
   return (
     <>
@@ -274,6 +282,10 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
           <Route
             path="/register/personal-information"
             element={<PersonalInformationPage />}
+          />
+          <Route
+            path="/register/vehicle-information"
+            element={<VehicleInformationPage />}
           />
           <Route path="/register/license" element={<DriversLicensePage />} />
           <Route

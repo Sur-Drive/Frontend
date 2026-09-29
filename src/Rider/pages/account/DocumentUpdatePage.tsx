@@ -14,13 +14,9 @@ type FileState = "empty" | "uploading" | "ready";
 
 function statusBadgeClasses(status: VehicleDocument["status"]) {
   switch (status) {
-    case "expiring":
-    case "warning":
-      return "bg-[#FCE4E4] text-[#E8542F]";
-    case "ok":
-    case "verified":
+    case "on-file":
       return "bg-[#DCF5E4] text-[#1E9E56]";
-    case "pending":
+    case "missing":
       return "bg-[#FDF1DC] text-[#E8A93E]";
     default:
       return "bg-gray-100 text-gray-600";
@@ -36,7 +32,7 @@ export default function DocumentUpdatePage({
   document: VehicleDocument;
   vehicleName: string;
   onBack: () => void;
-  onSubmitted: () => void;
+  onSubmitted: (fileName: string, previewUrl?: string) => void;
 }) {
   const [fileState, setFileState] = useState<FileState>("empty");
   const [progress, setProgress] = useState(0);
@@ -45,11 +41,13 @@ export default function DocumentUpdatePage({
   const [previewUrl, setPreviewUrl] = useState("");
   const [isImage, setIsImage] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  // Whether we're still showing the read-only "existing document on file"
+  // view (from the API) rather than the upload flow. Driven by whether the
+  // document actually has a file attached, not by an invented status.
+  const [viewingExisting, setViewingExisting] = useState(Boolean(doc.fileName));
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const alreadyPending = doc.status === "pending";
 
   useEffect(() => {
     return () => {
@@ -60,9 +58,12 @@ export default function DocumentUpdatePage({
   }, []);
 
   const startUpload = (file: File) => {
+    setViewingExisting(false);
     setFileName(file.name);
     setIsImage(file.type.startsWith("image/"));
-    setPreviewUrl(file.type.startsWith("image/") ? URL.createObjectURL(file) : "");
+    setPreviewUrl(
+      file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+    );
     setProgress(0);
     setPaused(false);
     setFileState("uploading");
@@ -108,6 +109,7 @@ export default function DocumentUpdatePage({
     setPaused(false);
     setFileName("");
     setPreviewUrl("");
+    setViewingExisting(Boolean(doc.fileName));
   };
 
   const secondsRemaining = Math.max(1, Math.ceil((100 - progress) / 10));
@@ -118,19 +120,19 @@ export default function DocumentUpdatePage({
 
   const finishDone = () => {
     setShowSuccess(false);
-    onSubmitted();
+    onSubmitted(fileName, previewUrl || undefined);
     onBack();
   };
 
   return (
-    <div className="font-outfit flex h-full min-h-0 w-full flex-col bg-white">
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-4">
-        <div className="mx-auto w-full max-w-xl">
+    <div className="flex flex-col w-full h-full min-h-0 bg-white font-outfit">
+      <div className="flex-1 min-h-0 px-6 pt-4 pb-10 overflow-y-auto">
+        <div className="w-full max-w-xl mx-auto">
           <div className="relative flex items-center justify-center">
             <button
               type="button"
               onClick={onBack}
-              className="absolute left-0 flex h-11 w-11 items-center justify-center rounded-full bg-gray-50 shadow-md"
+              className="absolute left-0 flex items-center justify-center rounded-full shadow-md h-11 w-11 bg-gray-50"
             >
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
@@ -140,50 +142,59 @@ export default function DocumentUpdatePage({
           </div>
 
           {/* document summary card */}
-          <div className="mt-6 rounded-2xl border border-gray-100 p-4 shadow-sm">
+          <div className="p-4 mt-6 border border-gray-100 shadow-sm rounded-2xl">
             <h2 className="text-xl font-bold text-[#2b2b2b]">{doc.label}</h2>
             <p className="mt-1 text-[15px] text-[#9AA5B8]">{vehicleName}</p>
             <div className="mt-2.5 flex items-center gap-2.5">
               <span
                 className={`rounded-full px-3 py-1 text-[13px] font-semibold ${statusBadgeClasses(
-                  alreadyPending ? "pending" : doc.status,
+                  doc.status,
                 )}`}
               >
-                {alreadyPending ? "Pending Review" : doc.badgeText}
+                {doc.badgeText}
               </span>
               <span className="text-[15px] text-[#9AA5B8]">
-                {alreadyPending ? "–" : doc.expiresLabel}
+                {doc.expiresLabel}
               </span>
             </div>
           </div>
 
-          {/* already submitted, awaiting review */}
-          {alreadyPending && (
-            <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              {previewUrl || doc.previewUrl ? (
-                <img
-                  src={previewUrl || doc.previewUrl}
-                  alt={fileName || doc.fileName}
-                  className="max-h-72 w-full object-cover"
-                />
-              ) : null}
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="truncate text-[15px] text-[#1F2937]">
-                  {fileName || doc.fileName || "Document"}
-                </span>
-                <span className="shrink-0 text-[13px] font-semibold text-[#E8A93E]">
-                  Submitted
-                </span>
+          {/* existing document already on file, from the API */}
+          {viewingExisting && (
+            <>
+              <div className="mt-6 overflow-hidden bg-white border border-gray-200 shadow-sm rounded-2xl">
+                {doc.previewUrl ? (
+                  <img
+                    src={doc.previewUrl}
+                    alt={doc.fileName}
+                    className="object-cover w-full max-h-72"
+                  />
+                ) : null}
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="truncate text-[15px] text-[#1F2937]">
+                    {doc.fileName || "Document"}
+                  </span>
+                  <span className="shrink-0 text-[13px] font-semibold text-[#1E9E56]">
+                    On file
+                  </span>
+                </div>
               </div>
-            </div>
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="mt-4 w-full rounded-2xl border border-gray-200 py-3 text-[15px] font-semibold text-[#6E43A3]"
+              >
+                Replace document
+              </button>
+            </>
           )}
 
           {/* upload flow */}
-          {!alreadyPending && fileState === "empty" && (
+          {!viewingExisting && fileState === "empty" && (
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="mt-6 flex h-64 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 bg-white px-6 text-center"
+              className="flex flex-col items-center justify-center w-full h-64 gap-3 px-6 mt-6 text-center bg-white border-2 border-gray-300 border-dashed rounded-2xl"
             >
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F1F2F5]">
                 <UploadCloud size={26} className="text-[#4B5768]" />
@@ -197,14 +208,14 @@ export default function DocumentUpdatePage({
             </button>
           )}
 
-          {!alreadyPending && fileState !== "empty" && (
-            <div className="mt-6 overflow-hidden rounded-2xl border-2 border-dashed border-gray-300 bg-white">
+          {!viewingExisting && fileState !== "empty" && (
+            <div className="mt-6 overflow-hidden bg-white border-2 border-gray-300 border-dashed rounded-2xl">
               <div className="relative">
                 {isImage && previewUrl ? (
                   <img
                     src={previewUrl}
                     alt={fileName}
-                    className="max-h-72 w-full object-cover"
+                    className="object-cover w-full max-h-72"
                   />
                 ) : (
                   <div className="flex h-40 w-full items-center justify-center bg-[#F1F2F5] text-[#9AA5B8]">
@@ -216,7 +227,7 @@ export default function DocumentUpdatePage({
                     type="button"
                     onClick={cancelUpload}
                     aria-label="Remove file"
-                    className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white"
+                    className="absolute flex items-center justify-center text-white rounded-full right-3 top-3 h-7 w-7 bg-black/60"
                   >
                     <X size={14} />
                   </button>
@@ -238,7 +249,7 @@ export default function DocumentUpdatePage({
                 </div>
 
                 {fileState === "uploading" && (
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     <span className="text-[13px] font-semibold text-[#3b7ec2]">
                       Uploading... {Math.min(progress, 99)}%
                     </span>
@@ -246,7 +257,7 @@ export default function DocumentUpdatePage({
                       type="button"
                       onClick={togglePause}
                       aria-label={paused ? "Resume upload" : "Pause upload"}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600"
+                      className="flex items-center justify-center w-8 h-8 text-gray-600 bg-gray-100 rounded-full"
                     >
                       {paused ? <Play size={14} /> : <Pause size={14} />}
                     </button>
@@ -254,7 +265,7 @@ export default function DocumentUpdatePage({
                       type="button"
                       onClick={cancelUpload}
                       aria-label="Cancel upload"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-red-500"
+                      className="flex items-center justify-center w-8 h-8 text-red-500 rounded-full"
                     >
                       <XCircle size={20} />
                     </button>
@@ -283,9 +294,9 @@ export default function DocumentUpdatePage({
         </div>
       </div>
 
-      {!alreadyPending && fileState === "ready" && (
+      {!viewingExisting && fileState === "ready" && (
         <div className="px-6 pb-8">
-          <div className="mx-auto w-full max-w-xl">
+          <div className="w-full max-w-xl mx-auto">
             <button
               onClick={submit}
               className="h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
@@ -298,10 +309,10 @@ export default function DocumentUpdatePage({
 
       {/* Success modal */}
       {showSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl bg-white px-6 py-8 text-center shadow-2xl">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm px-6 py-8 text-center bg-white shadow-2xl rounded-3xl">
+            <div className="flex items-center justify-center w-20 h-20 mx-auto rounded-full bg-emerald-50">
+              <div className="flex items-center justify-center rounded-full h-14 w-14 bg-emerald-500">
                 <Check size={28} className="text-white" strokeWidth={3} />
               </div>
             </div>
@@ -310,8 +321,8 @@ export default function DocumentUpdatePage({
               Document submitted successfully
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-gray-500">
-              Your document has been submitted successfully. We'll review it
-              and notify you once there's an update.
+              Your document has been submitted successfully. We'll review it and
+              notify you once there's an update.
             </p>
 
             <button

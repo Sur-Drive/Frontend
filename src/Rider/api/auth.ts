@@ -50,7 +50,13 @@ export interface RideDriverVerifyOtpPayload {
 }
 
 export interface RideDriverVerifyOtpResponse {
-  message: string;
+  message?: string;
+  tempToken?: string;
+  step?: string;
+  nextStep?: string;
+  completed?: boolean;
+  progress?: number;
+  totalSteps?: number;
   [key: string]: any;
 }
 
@@ -67,7 +73,6 @@ export async function verifyRideDriverOtp(
 }
 
 export interface RideDriverPersonalInfoPayload {
-  userId: string;
   firstName: string;
   lastName: string;
   gender: string;
@@ -76,18 +81,54 @@ export interface RideDriverPersonalInfoPayload {
 }
 
 export interface RideDriverPersonalInfoResponse {
-  message: string;
+  message?: string;
+  tempToken?: string;
+  step?: string;
+  nextStep?: string;
+  completed?: boolean;
+  progress?: number;
+  totalSteps?: number;
   [key: string]: any;
 }
 
 export async function submitRideDriverPersonalInfo(
   payload: RideDriverPersonalInfoPayload,
 ): Promise<RideDriverPersonalInfoResponse> {
+  const token = localStorage.getItem("driverOnboardingToken");
   const res = await fetch(`${API_BASE}/ride-drivers/personal`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
   });
 
   return parseResponse(res, "Failed to save personal information");
+}
+
+export interface RideDriverLoginPayload {
+  identifier: string; // email or phone number
+  password: string;
+}
+
+export interface RideDriverLoginResponse {
+  message: string;
+  token?: string;
+  accessToken?: string;
+  user?: any;
+  [key: string]: any;
+}
+
+export async function loginRideDriver(
+  payload: RideDriverLoginPayload,
+): Promise<RideDriverLoginResponse> {
+  const res = await fetch(`${API_BASE}/ride-drivers/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  return parseResponse(res, "Failed to sign in");
 }
