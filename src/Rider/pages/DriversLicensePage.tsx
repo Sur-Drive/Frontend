@@ -90,6 +90,13 @@ export default function DriversLicensePage() {
       if (res.tempToken) {
         localStorage.setItem("driverOnboardingToken", res.tempToken);
       }
+      // `step` is where the server now is; it must be "inspection" before we continue.
+      if (res.step !== "inspection") {
+        setError(
+          `License saved, but the server is still on step: ${res.step ?? "unknown"}. Please try again.`,
+        );
+        return;
+      }
       navigate("/register/vehicle-inspection", { state });
     } catch (err) {
       setError(
@@ -99,22 +106,24 @@ export default function DriversLicensePage() {
   };
 
   const labelClass =
-    "flex items-center gap-1.5 text-[clamp(11.5px,2.5dvh,14px)] font-medium text-gray-800";
+    "flex items-center gap-1.5 text-[clamp(10.5px,2.1dvh,12.5px)] font-medium text-gray-800";
   const fieldClass =
-    "mt-[clamp(4px,1.2dvh,8px)] h-[clamp(42px,9.5dvh,52px)] w-full rounded-2xl bg-[#f4f4f3] px-[clamp(10px,2.6dvh,14px)] text-[clamp(12.5px,2.8dvh,15px)] text-gray-800 outline-none placeholder:text-gray-400";
+    "mt-[clamp(3px,1dvh,6px)] h-[clamp(38px,8.2dvh,46px)] w-full rounded-xl bg-[#f4f4f3] px-[clamp(10px,2.4dvh,13px)] text-[clamp(11.5px,2.3dvh,13.5px)] text-gray-800 outline-none placeholder:text-gray-400";
+  const iconClass =
+    "h-[clamp(13px,2.7dvh,16px)] w-[clamp(13px,2.7dvh,16px)] shrink-0 text-gray-500 transition-transform";
 
   return (
     <div className="font-outfit min-h-[100dvh] bg-white px-[clamp(16px,5vw,24px)] pb-[clamp(16px,4dvh,28px)] pt-[clamp(10px,2.6dvh,16px)]">
       <OnboardingProgress progress={60} />
 
-      <h1 className="mt-[clamp(14px,3.6dvh,22px)] text-[clamp(19px,4.4dvh,25px)] font-bold leading-tight text-[#2b2b2b]">
+      <h1 className="mt-[clamp(12px,3dvh,18px)] text-[clamp(17px,3.6dvh,21px)] font-bold leading-tight text-[#2b2b2b]">
         Driver's License
       </h1>
-      <p className="mt-[clamp(2px,0.8dvh,6px)] text-[clamp(11.5px,2.5dvh,14px)] text-gray-400">
+      <p className="mt-[clamp(2px,0.6dvh,4px)] text-[clamp(10.5px,2.1dvh,12.5px)] text-gray-400">
         Provide your license details for verification
       </p>
 
-      <div className="mt-[clamp(10px,2.6dvh,18px)] space-y-[clamp(10px,2.6dvh,18px)]">
+      <div className="mt-[clamp(8px,2.2dvh,14px)] space-y-[clamp(8px,2.2dvh,14px)]">
         {/* License number */}
         <div>
           <label className={labelClass}>
@@ -122,7 +131,7 @@ export default function DriversLicensePage() {
           </label>
           <input
             type="text"
-            placeholder="Enter lincense number"
+            placeholder="Enter license number"
             value={licenseNumber}
             onChange={(e) => {
               setLicenseNumber(e.target.value);
@@ -165,14 +174,12 @@ export default function DriversLicensePage() {
               {country || "Select"}
             </span>
             <ChevronDown
-              className={`h-[clamp(14px,3.2dvh,18px)] w-[clamp(14px,3.2dvh,18px)] text-gray-500 transition-transform ${
-                countryOpen ? "rotate-180" : ""
-              }`}
+              className={`${iconClass} ${countryOpen ? "rotate-180" : ""}`}
             />
           </button>
 
           {countryOpen && (
-            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 max-h-64 overflow-y-auto rounded-2xl bg-white p-2 shadow-xl">
+            <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-56 overflow-y-auto rounded-xl bg-white p-1.5 shadow-xl">
               {COUNTRIES.map((c) => (
                 <button
                   key={c}
@@ -182,7 +189,7 @@ export default function DriversLicensePage() {
                     setCountryOpen(false);
                     setError("");
                   }}
-                  className={`block w-full rounded-xl px-[clamp(10px,2.6dvh,16px)] py-[clamp(8px,2dvh,12px)] text-left text-[clamp(12.5px,2.8dvh,15px)] transition ${
+                  className={`block w-full rounded-lg px-[clamp(10px,2.4dvh,14px)] py-[clamp(7px,1.7dvh,10px)] text-left text-[clamp(11.5px,2.3dvh,13.5px)] transition ${
                     country === c
                       ? "bg-[#ece4f5] font-semibold text-[#6E43A3]"
                       : "text-gray-700 hover:bg-gray-50"
@@ -199,13 +206,13 @@ export default function DriversLicensePage() {
         <div>
           <label className={labelClass}>
             Upload Driver's License <span className="text-red-500">*</span>
-            <HelpCircle className="h-[clamp(13px,2.9dvh,16px)] w-[clamp(13px,2.9dvh,16px)] text-[#3b7ec2]" />
+            <HelpCircle className="h-[clamp(12px,2.5dvh,14px)] w-[clamp(12px,2.5dvh,14px)] text-[#3b7ec2]" />
           </label>
-          <label className="mt-[clamp(4px,1.2dvh,8px)] flex h-[clamp(42px,9.5dvh,52px)] w-full cursor-pointer overflow-hidden rounded-2xl bg-[#f4f4f3]">
-            <span className="flex items-center justify-center border-r border-gray-300 px-[clamp(10px,2.6dvh,20px)] text-[clamp(10.5px,2.3dvh,13px)] text-gray-600">
+          <label className="mt-[clamp(3px,1dvh,6px)] flex h-[clamp(38px,8.2dvh,46px)] w-full cursor-pointer overflow-hidden rounded-xl bg-[#f4f4f3]">
+            <span className="flex items-center justify-center border-r border-gray-300 px-[clamp(9px,2.2dvh,16px)] text-[clamp(9.5px,2dvh,11.5px)] text-gray-600">
               Choose files
             </span>
-            <span className="flex flex-1 items-center truncate px-[clamp(8px,2dvh,16px)] text-[clamp(10.5px,2.3dvh,13px)] text-gray-400">
+            <span className="flex flex-1 items-center truncate px-[clamp(8px,1.8dvh,14px)] text-[clamp(9.5px,2dvh,11.5px)] text-gray-400">
               {file ? file.name : "No file chosen"}
             </span>
             <input
@@ -219,14 +226,14 @@ export default function DriversLicensePage() {
               }}
             />
           </label>
-          <p className="mt-[clamp(4px,1.2dvh,8px)] text-[clamp(9.5px,2dvh,12px)] text-gray-400">
+          <p className="mt-[clamp(3px,1dvh,6px)] text-[clamp(9px,1.8dvh,11px)] text-gray-400">
             DOC, PNG, JPG or PDF (MAX. 8MB).
           </p>
         </div>
       </div>
 
       {error && (
-        <p className="mt-[clamp(10px,2.6dvh,18px)] text-center text-[clamp(11.5px,2.5dvh,14px)] text-red-600">
+        <p className="mt-[clamp(8px,2.2dvh,14px)] text-center text-[clamp(10.5px,2.1dvh,12.5px)] text-red-600">
           {error}
         </p>
       )}
@@ -234,7 +241,7 @@ export default function DriversLicensePage() {
       <button
         onClick={submit}
         disabled={isSubmitting}
-        className="mt-[clamp(14px,3.6dvh,22px)] h-[clamp(44px,10dvh,56px)] w-full rounded-2xl bg-[#6E43A3] text-[clamp(14px,3.2dvh,18px)] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-60"
+        className="mt-[clamp(12px,3dvh,18px)] h-[clamp(42px,9dvh,50px)] w-full rounded-xl bg-[#6E43A3] text-[clamp(13px,2.7dvh,16px)] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-60"
       >
         {isSubmitting ? "Please wait..." : "Continue"}
       </button>

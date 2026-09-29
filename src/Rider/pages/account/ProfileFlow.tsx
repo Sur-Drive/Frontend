@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronDown,
@@ -12,6 +12,7 @@ import {
   CircleUserRound,
 } from "lucide-react";
 import DriverOtpEntry from "../../components/DriverOtpEntry";
+import { useRideDriverProfile } from "../../hooks/useProfile";
 
 type Step =
   | "profile"
@@ -22,18 +23,59 @@ type Step =
 
 const GENDERS = ["Male", "Female", "Prefer not to say"] as const;
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// "1990-12-29" or "1990-12-29T00:00:00.000Z" -> "December 29, 1990"
+function formatDob(raw: string): string {
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return raw;
+  const month = MONTHS[Number(m[2]) - 1];
+  return month ? `${month} ${Number(m[3])}, ${m[1]}` : raw;
+}
+
 export default function ProfileFlow({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState<Step>("profile");
-  const [name] = useState("Adeniji Abiodun");
-  const [phone, setPhone] = useState("+234 803 660 0027");
-  const [email, setEmail] = useState("Adenjiabiodun@gmail.com");
+  const {
+    data: profile,
+    isLoading,
+    error: profileError,
+  } = useRideDriverProfile();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [gender, setGender] = useState<(typeof GENDERS)[number]>("Male");
-  const [dob] = useState("December, 29");
+  const [dob, setDob] = useState("");
   const [genderOpen, setGenderOpen] = useState(false);
 
   const [pendingEmail, setPendingEmail] = useState("");
   const [pendingPhone, setPendingPhone] = useState("");
   const [toast, setToast] = useState(false);
+
+  // Fill the screen from GET /ride-drivers/profile.
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.fullName);
+    setPhone(profile.phone);
+    setEmail(profile.email);
+    setDob(profile.dateOfBirth ? formatDob(profile.dateOfBirth) : "");
+    const match = GENDERS.find(
+      (g) => g.toLowerCase() === profile.gender.toLowerCase(),
+    );
+    if (match) setGender(match);
+  }, [profile]);
 
   const showSavedToast = () => {
     setToast(true);
@@ -85,9 +127,9 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
         title="Change Phone Number"
         description={
           <>
-            Your current Phone number is {phone}. To verify your new
-            address, we'll send you a 4-digit code. Please enter the code to
-            complete verification
+            Your current Phone number is {phone}. To verify your new address,
+            we'll send you a 4-digit code. Please enter the code to complete
+            verification
           </>
         }
         icon={<Phone size={16} className="text-[#6E43A3]" />}
@@ -118,26 +160,36 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
 
   /* ---------------- Profile (root) ---------------- */
   return (
-    <div className="font-outfit relative flex h-full min-h-0 w-full flex-col bg-white">
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-4">
-        <div className="mx-auto w-full max-w-xl">
+    <div className="relative flex flex-col w-full h-full min-h-0 bg-white font-outfit">
+      <div className="flex-1 min-h-0 px-6 pt-4 pb-8 overflow-y-auto">
+        <div className="w-full max-w-xl mx-auto">
           <button
             type="button"
             onClick={onBack}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-50 shadow-md"
+            className="flex items-center justify-center rounded-full shadow-md h-11 w-11 bg-gray-50"
           >
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">
-            Profile
-          </h1>
+          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">Profile</h1>
           <p className="mt-1.5 text-[15px] text-[#9AA5B8]">
             Help our drivers identify you easily
           </p>
+          {isLoading && (
+            <p className="mt-3 text-sm text-[#9AA5B8]">
+              Loading your profile...
+            </p>
+          )}
+          {profileError && (
+            <p className="mt-3 text-sm text-red-600">
+              {profileError instanceof Error
+                ? profileError.message
+                : "Couldn't load your profile."}
+            </p>
+          )}
 
           {/* avatar */}
-          <div className="mt-8 flex justify-center">
+          <div className="flex justify-center mt-8">
             <div className="relative">
               <div className="flex h-32 w-32 items-center justify-center rounded-full bg-[#EFE6F7]">
                 <CircleUserRound size={72} className="text-[#D8C3EC]" />
@@ -158,12 +210,12 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
               <User size={16} className="text-[#6E43A3]" />
             </span>
             <span className="text-[15px] font-medium text-[#1F2937]">
-              {name}
+              {name || "—"}
             </span>
           </div>
 
           {/* phone */}
-          <div className="mb-2 mt-5 flex items-center justify-between">
+          <div className="flex items-center justify-between mt-5 mb-2">
             <span className="text-sm text-[#1F2937]">Phone Number</span>
             <button
               type="button"
@@ -178,12 +230,12 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
               <Phone size={15} className="text-[#6E43A3]" />
             </span>
             <span className="text-[15px] font-medium text-[#1F2937]">
-              {phone}
+              {phone || "—"}
             </span>
           </div>
 
           {/* email */}
-          <div className="mb-2 mt-5 flex items-center justify-between">
+          <div className="flex items-center justify-between mt-5 mb-2">
             <span className="text-sm text-[#1F2937]">Email</span>
             <button
               type="button"
@@ -198,7 +250,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
               <Mail size={15} className="text-[#6E43A3]" />
             </span>
             <span className="truncate text-[15px] font-medium text-[#1F2937]">
-              {email}
+              {email || "—"}
             </span>
           </div>
 
@@ -248,7 +300,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
               <Cake size={15} className="text-[#6E43A3]" />
             </span>
             <span className="text-[15px] font-medium text-[#1F2937]">
-              {dob}
+              {dob || "—"}
             </span>
           </div>
 
@@ -310,20 +362,18 @@ function ChangeContactStep({
   const [value, setValue] = useState("");
 
   return (
-    <div className="font-outfit flex h-full min-h-0 w-full flex-col bg-white">
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-4">
-        <div className="mx-auto w-full max-w-xl">
+    <div className="flex flex-col w-full h-full min-h-0 bg-white font-outfit">
+      <div className="flex-1 min-h-0 px-6 pt-4 pb-8 overflow-y-auto">
+        <div className="w-full max-w-xl mx-auto">
           <button
             type="button"
             onClick={onBack}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-50 shadow-md"
+            className="flex items-center justify-center rounded-full shadow-md h-11 w-11 bg-gray-50"
           >
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">
-            {title}
-          </h1>
+          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">{title}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-[#9AA5B8]">
             {description}
           </p>

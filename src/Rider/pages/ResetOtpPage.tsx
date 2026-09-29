@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { Check, ChevronLeft, Delete, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  useForgotRideDriverPassword,
+  useVerifyRideDriverForgotPasswordOtp,
+} from "../hooks/useAuth";
 
 const OTP_LENGTH = 5;
 const COUNTDOWN_SECONDS = 45;
 
 interface ResetOtpLocationState {
   identifier?: string;
-  sessionId?: string;
 }
 
 export default function ResetOtpPage() {
@@ -16,22 +19,24 @@ export default function ResetOtpPage() {
   const state = (location.state as ResetOtpLocationState) || {};
 
   const identifier = state.identifier ?? "";
-  const sessionId = state.sessionId ?? "";
 
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(""));
   const [timer, setTimer] = useState(COUNTDOWN_SECONDS);
   const [canResend, setCanResend] = useState(false);
   const [error, setError] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isResending, setIsResending] = useState(false);
+
+  const { mutate: verifyOtp, isPending: isVerifying } =
+    useVerifyRideDriverForgotPasswordOtp();
+  const { mutate: resendOtp, isPending: isResending } =
+    useForgotRideDriverPassword();
   const [showVerifiedToast, setShowVerifiedToast] = useState(false);
 
-  // No identifier / session to verify (e.g. page opened directly) — go back.
+  // No email to verify (e.g. page opened directly) — go back.
   useEffect(() => {
-    if (!identifier || !sessionId) {
+    if (!identifier) {
       navigate("/forgot-password", { replace: true });
     }
-  }, [identifier, sessionId, navigate]);
+  }, [identifier, navigate]);
 
   useEffect(() => {
     if (timer <= 0) {
@@ -54,19 +59,37 @@ export default function ResetOtpPage() {
   const activeIndex = code.findIndex((d) => d === "");
   const currentIndex = activeIndex === -1 ? OTP_LENGTH - 1 : activeIndex;
 
-  // No API for now: any 5-digit code is treated as valid.
-  const submitCode = (_fullCode: string) => {
-    setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      setShowVerifiedToast(true);
-      setTimeout(() => {
-        navigate("/forgot-password/reset", {
-          replace: true,
-          state: { identifier, sessionId },
-        });
-      }, 900);
-    }, 500);
+  const submitCode = (fullCode: string) => {
+    setError("");
+    verifyOtp(
+      { email: identifier, otp: fullCode },
+      {
+        onSuccess: (res) => {
+          setShowVerifiedToast(true);
+          setTimeout(() => {
+            navigate("/forgot-password/reset", {
+              replace: true,
+              state: {
+                identifier,
+                otp: fullCode,
+                // Whatever token the API hands back, for the final reset call.
+                resetToken: res.resetToken ?? res.tempToken ?? res.token,
+                // Kept so the reset page's "opened directly" guard still passes.
+                sessionId: fullCode,
+              },
+            });
+          }, 900);
+        },
+        onError: (err: unknown) => {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Invalid or expired code. Please try again.",
+          );
+          setCode(new Array(OTP_LENGTH).fill(""));
+        },
+      },
+    );
   };
 
   const handleDigit = (digit: string) => {
@@ -94,17 +117,26 @@ export default function ResetOtpPage() {
     setError("");
   };
 
-  // No API for now: just reset the timer and clear the boxes.
   const handleResend = () => {
-    if (!canResend) return;
-    setIsResending(true);
-    setTimeout(() => {
-      setIsResending(false);
-      setTimer(COUNTDOWN_SECONDS);
-      setCanResend(false);
-      setCode(new Array(OTP_LENGTH).fill(""));
-      setError("");
-    }, 400);
+    if (!canResend || isResending) return;
+    setError("");
+    resendOtp(
+      { email: identifier },
+      {
+        onSuccess: () => {
+          setTimer(COUNTDOWN_SECONDS);
+          setCanResend(false);
+          setCode(new Array(OTP_LENGTH).fill(""));
+        },
+        onError: (err: unknown) => {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Couldn't resend the code. Please try again.",
+          );
+        },
+      },
+    );
   };
 
   const keypadRows: Array<Array<string | null>> = [
@@ -226,7 +258,7 @@ export default function ResetOtpPage() {
 
           {showVerifiedToast && (
             <div className="mx-6 flex w-full max-w-sm items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.15)]">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full shrink-0 bg-emerald-500">
                 <Check size={14} className="text-white" strokeWidth={3} />
               </span>
               <span className="flex-1 text-sm font-medium text-gray-800">
