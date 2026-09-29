@@ -63,7 +63,7 @@ import {
 import { useTurnByTurn } from "../hooks/useTurnByTurn";
 import { useWakeWord, useVoiceSearch } from "../hooks/useVoiceSearch";
 import { forwardGeocode } from "../api/geocoding";
-import { Mic, MapPinned } from "lucide-react";
+import { MapPinned } from "lucide-react";
 import TurnByTurnCard, {
   describeManeuver,
 } from "../components/map/TurnByTurnCard";
@@ -519,7 +519,10 @@ export default function PlanRoutePage() {
   } | null>(
     (() => {
       const state = routerLocation.state as
-        | { destinationCoords?: { lat: number; lng: number }; destinationLabel?: string }
+        | {
+            destinationCoords?: { lat: number; lng: number };
+            destinationLabel?: string;
+          }
         | null
         | undefined;
       if (!state?.destinationCoords) return null;
@@ -635,7 +638,9 @@ export default function PlanRoutePage() {
         setPickingLocationFor(null);
         setShowPlanModal(true);
       } catch {
-        setMapPickError("Couldn't get an address for that spot. Try tapping again.");
+        setMapPickError(
+          "Couldn't get an address for that spot. Try tapping again.",
+        );
       } finally {
         setIsMapPickLoading(false);
       }
@@ -1196,7 +1201,8 @@ export default function PlanRoutePage() {
     hasAppliedIncomingDestinationRef.current = true;
 
     setDestination(
-      incoming.label || `${incoming.lat.toFixed(4)}, ${incoming.lng.toFixed(4)}`,
+      incoming.label ||
+        `${incoming.lat.toFixed(4)}, ${incoming.lng.toFixed(4)}`,
     );
     setDestinationCoords({ lat: incoming.lat, lng: incoming.lng });
     handleUseMyLocation();
@@ -1629,7 +1635,10 @@ export default function PlanRoutePage() {
       voiceGuidance.speak(
         "trip.off_route",
         {},
-        { interrupt: true, fallbackText: "You've gone off route. Recalculating." },
+        {
+          interrupt: true,
+          fallbackText: "You've gone off route. Recalculating.",
+        },
       );
 
       // Actually recalculate: replan from wherever the driver currently is
@@ -1642,7 +1651,10 @@ export default function PlanRoutePage() {
       if (loc && destinationCoords) {
         setIsRerouting(true);
         planRouteMutation.mutate(
-          { origin: { lat: loc[0], lng: loc[1] }, destination: destinationCoords },
+          {
+            origin: { lat: loc[0], lng: loc[1] },
+            destination: destinationCoords,
+          },
           {
             onSuccess: (data) => {
               const updated = data.routes[selectedMode];
@@ -1677,7 +1689,10 @@ export default function PlanRoutePage() {
       voiceGuidance.speak(
         "trip.arrived",
         {},
-        { interrupt: true, fallbackText: "You've arrived at your destination." },
+        {
+          interrupt: true,
+          fallbackText: "You've arrived at your destination.",
+        },
       );
     }
     if (!isNavigating) announcedArrivalRef.current = false;
@@ -1999,7 +2014,7 @@ export default function PlanRoutePage() {
       {/* Pick-on-map banner */}
       {pickingLocationFor && (
         <div className="absolute left-0 right-0 z-[70] flex justify-center top-[calc(1rem+env(safe-area-inset-top))] px-4">
-          <div className="flex items-center gap-3 px-4 py-3 bg-white shadow-lg rounded-2xl max-w-sm">
+          <div className="flex items-center max-w-sm gap-3 px-4 py-3 bg-white shadow-lg rounded-2xl">
             <MapPinned size={18} className="flex-shrink-0 text-purple-600" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-900 sm:text-sm">
@@ -2008,13 +2023,15 @@ export default function PlanRoutePage() {
                   : `Tap the map to set your ${pickingLocationFor === "start" ? "start point" : "destination"}`}
               </p>
               {mapPickError && (
-                <p className="mt-0.5 text-[11px] text-red-500">{mapPickError}</p>
+                <p className="mt-0.5 text-[11px] text-red-500">
+                  {mapPickError}
+                </p>
               )}
             </div>
             <button
               type="button"
               onClick={cancelMapPick}
-              className="shrink-0 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700"
+              className="text-xs font-medium text-gray-500 shrink-0 sm:text-sm hover:text-gray-700"
             >
               Cancel
             </button>
@@ -2023,30 +2040,34 @@ export default function PlanRoutePage() {
       )}
 
       {/* Map Controls */}
-      {!showPlanModal && !showScanResults && !showSOS && !pickingLocationFor && (
-        <MapControls
-          map={mapInstance}
-          mapTypeId={mapTypeId}
-          onMapTypeChange={setMapTypeId}
-          tilt={mapTilt}
-          onToggleTilt={() => setMapTilt((t) => (t > 0 ? 0 : 45))}
-          trafficEnabled={showTraffic}
-          onToggleTraffic={() => setShowTraffic((t) => !t)}
-          heading={isNavigating ? displayHeading : manualHeading}
-          onHeadingChange={setManualHeading}
-          rotatable={!isNavigating}
-          onRecenter={handleRecenter}
-          isLocating={isGettingLocation}
-          fullscreenTargetRef={pageContainerRef}
-          className={`transition-[bottom] ${
-            isNavigating
-              ? navPanelExpanded
-                ? "bottom-[21rem]"
-                : "bottom-[13rem]"
-              : "bottom-[15rem]"
-          }`}
-        />
-      )}
+      {isNavigating &&
+        !showPlanModal &&
+        !showScanResults &&
+        !showSOS &&
+        !pickingLocationFor && (
+          <MapControls
+            map={mapInstance}
+            mapTypeId={mapTypeId}
+            onMapTypeChange={setMapTypeId}
+            tilt={mapTilt}
+            onToggleTilt={() => setMapTilt((t) => (t > 0 ? 0 : 45))}
+            trafficEnabled={showTraffic}
+            onToggleTraffic={() => setShowTraffic((t) => !t)}
+            heading={isNavigating ? displayHeading : manualHeading}
+            onHeadingChange={setManualHeading}
+            rotatable={!isNavigating}
+            onRecenter={handleRecenter}
+            isLocating={isGettingLocation}
+            fullscreenTargetRef={pageContainerRef}
+            className={`transition-[bottom] ${
+              isNavigating
+                ? navPanelExpanded
+                  ? "bottom-[21rem]"
+                  : "bottom-[13rem]"
+                : "bottom-[15rem]"
+            }`}
+          />
+        )}
 
       {/* Location error toast */}
       {locationError && !showPlanModal && !showScanResults && !showSOS && (
@@ -2112,22 +2133,30 @@ export default function PlanRoutePage() {
                 </div>
               </button>
 
-              <button
-                onClick={handleNotificationsClick}
-                aria-label="Notifications"
-                className="relative flex items-center justify-center flex-shrink-0 bg-white shadow-sm w-11 h-11 sm:w-12 sm:h-12 rounded-2xl"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 text-gray-700 sm:w-6 sm:h-6"
-                  fill="currentColor"
-                >
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-                </svg>
-                {isLoggedIn && unreadCount > 0 && (
-                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
-                )}
-              </button>
+              <MapControls
+                inline
+                map={mapInstance}
+                mapTypeId={mapTypeId}
+                onMapTypeChange={setMapTypeId}
+                tilt={mapTilt}
+                onToggleTilt={() => setMapTilt((t) => (t > 0 ? 0 : 45))}
+                trafficEnabled={showTraffic}
+                onToggleTraffic={() => setShowTraffic((t) => !t)}
+                heading={manualHeading}
+                onHeadingChange={setManualHeading}
+                rotatable
+                onRecenter={handleRecenter}
+                isLocating={isGettingLocation}
+                fullscreenTargetRef={pageContainerRef}
+                onNotifications={handleNotificationsClick}
+                hasUnread={isLoggedIn && unreadCount > 0}
+                onVoiceSearch={
+                  destinationVoiceSearch.isSupported
+                    ? captureDestinationByVoice
+                    : undefined
+                }
+                voiceStatus={voiceCaptureStatus}
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -2158,20 +2187,6 @@ export default function PlanRoutePage() {
                       : "Where are you going?"}
                 </span>
               </button>
-
-              {destinationVoiceSearch.isSupported && (
-                <button
-                  onClick={captureDestinationByVoice}
-                  aria-label="Search by voice"
-                  className={`flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-2xl shadow-sm transition ${
-                    voiceCaptureStatus !== "idle"
-                      ? "bg-purple-600 text-white animate-pulse"
-                      : "bg-white text-purple-600"
-                  }`}
-                >
-                  <Mic size={18} />
-                </button>
-              )}
             </div>
 
             {wakeWord.isSupported && !wakeWord.permissionDenied && (
@@ -2806,7 +2821,7 @@ export default function PlanRoutePage() {
                     onClick={() => beginMapPick("start")}
                     aria-label="Pick start on map"
                     title="Pick on map"
-                    className="shrink-0 flex items-center justify-center w-7 h-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-full transition"
+                    className="flex items-center justify-center text-purple-600 transition rounded-full shrink-0 w-7 h-7 hover:text-purple-700 hover:bg-purple-50"
                   >
                     <MapPinned size={16} />
                   </button>
@@ -2871,7 +2886,7 @@ export default function PlanRoutePage() {
                     onClick={() => beginMapPick("destination")}
                     aria-label="Pick destination on map"
                     title="Pick on map"
-                    className="shrink-0 flex items-center justify-center w-7 h-7 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-full transition"
+                    className="flex items-center justify-center text-purple-600 transition rounded-full shrink-0 w-7 h-7 hover:text-purple-700 hover:bg-purple-50"
                   >
                     <MapPinned size={16} />
                   </button>
