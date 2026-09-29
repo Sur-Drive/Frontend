@@ -51,8 +51,7 @@ export default function ResetPasswordPage() {
     [password],
   );
 
-  const strength =
-    metCount <= 2 ? "weak" : metCount <= 4 ? "medium" : "strong";
+  const strength = metCount <= 2 ? "weak" : metCount <= 4 ? "medium" : "strong";
 
   const strengthMeta = {
     weak: { color: "bg-red-500", label: "Weak" },
@@ -113,7 +112,7 @@ export default function ResetPasswordPage() {
               type="button"
               onClick={() => setShowPassword((s) => !s)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute text-gray-400 -translate-y-1/2 right-4 top-1/2"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -168,7 +167,7 @@ export default function ResetPasswordPage() {
               type="button"
               onClick={() => setShowConfirm((s) => !s)}
               aria-label={showConfirm ? "Hide password" : "Show password"}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+              className="absolute text-gray-400 -translate-y-1/2 right-4 top-1/2"
             >
               {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -189,10 +188,10 @@ export default function ResetPasswordPage() {
 
       {/* Success modal */}
       {showSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl bg-white px-6 py-8 text-center shadow-2xl">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm px-6 py-8 text-center bg-white shadow-2xl rounded-3xl">
+            <div className="flex items-center justify-center w-20 h-20 mx-auto rounded-full bg-emerald-50">
+              <div className="flex items-center justify-center rounded-full h-14 w-14 bg-emerald-500">
                 <Check size={28} className="text-white" strokeWidth={3} />
               </div>
             </div>
@@ -201,8 +200,8 @@ export default function ResetPasswordPage() {
               Password Set Successfully
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-gray-500">
-              Your password has been set successfully. You can now use your
-              new password to log in to your account.
+              Your password has been set successfully. You can now use your new
+              password to log in to your account.
             </p>
 
             <button

@@ -113,22 +113,24 @@ export default function PersonalInformationPage() {
   };
 
   const labelClass =
-    "text-[clamp(11.5px,2.5dvh,14px)] font-medium text-gray-800";
+    "text-[clamp(10.5px,2.1dvh,12.5px)] font-medium text-gray-800";
   const fieldClass =
-    "mt-[clamp(4px,1.2dvh,8px)] h-[clamp(42px,9.5dvh,52px)] w-full rounded-2xl bg-[#f4f4f3] px-[clamp(10px,2.6dvh,14px)] text-[clamp(12.5px,2.8dvh,15px)] text-gray-800 outline-none placeholder:text-gray-400";
+    "mt-[clamp(3px,1dvh,6px)] h-[clamp(38px,8.2dvh,46px)] w-full rounded-xl bg-[#f4f4f3] px-[clamp(10px,2.4dvh,13px)] text-[clamp(11.5px,2.3dvh,13.5px)] text-gray-800 outline-none placeholder:text-gray-400";
+  const iconClass =
+    "h-[clamp(13px,2.7dvh,16px)] w-[clamp(13px,2.7dvh,16px)] text-gray-400";
 
   return (
     <div className="font-outfit min-h-[100dvh] bg-white px-[clamp(16px,5vw,24px)] pb-[clamp(16px,4dvh,28px)] pt-[clamp(10px,2.6dvh,16px)]">
       <OnboardingProgress progress={40} />
 
-      <h1 className="mt-[clamp(14px,3.6dvh,22px)] text-[clamp(19px,4.4dvh,25px)] font-bold leading-tight text-[#2b2b2b]">
+      <h1 className="mt-[clamp(12px,3dvh,18px)] text-[clamp(17px,3.6dvh,21px)] font-bold leading-tight text-[#2b2b2b]">
         Personal Information
       </h1>
-      <p className="mt-[clamp(2px,0.8dvh,6px)] text-[clamp(11.5px,2.5dvh,14px)] text-gray-400">
+      <p className="mt-[clamp(2px,0.6dvh,4px)] text-[clamp(10.5px,2.1dvh,12.5px)] text-gray-400">
         Fill in the details below
       </p>
 
-      <div className="mt-[clamp(10px,2.6dvh,18px)] space-y-[clamp(10px,2.6dvh,18px)]">
+      <div className="mt-[clamp(8px,2.2dvh,14px)] space-y-[clamp(8px,2.2dvh,14px)]">
         {/* First Name */}
         <div>
           <label className={labelClass}>
@@ -176,7 +178,7 @@ export default function PersonalInformationPage() {
             <span className={gender ? "text-gray-800" : "text-gray-400"}>
               {gender || "Select Gender"}
             </span>
-            <ChevronDown className="h-[clamp(14px,3.2dvh,18px)] w-[clamp(14px,3.2dvh,18px)] text-gray-400" />
+            <ChevronDown className={iconClass} />
           </button>
         </div>
 
@@ -193,7 +195,7 @@ export default function PersonalInformationPage() {
             <span className={dobLabel ? "text-gray-800" : "text-gray-400"}>
               {dobLabel || "YYYY/MM/DD"}
             </span>
-            <Calendar className="h-[clamp(14px,3.2dvh,18px)] w-[clamp(14px,3.2dvh,18px)] text-gray-400" />
+            <Calendar className={iconClass} />
           </button>
         </div>
 
@@ -216,7 +218,7 @@ export default function PersonalInformationPage() {
         </div>
 
         {error && (
-          <p className="text-[clamp(11.5px,2.5dvh,14px)] text-red-500">
+          <p className="text-[clamp(10.5px,2.1dvh,12.5px)] text-red-500">
             {error}
           </p>
         )}
@@ -225,7 +227,7 @@ export default function PersonalInformationPage() {
       <button
         onClick={submit}
         disabled={!isValid || isSubmitting}
-        className="mt-[clamp(14px,3.6dvh,22px)] h-[clamp(44px,10dvh,56px)] w-full rounded-2xl bg-[#6E43A3] text-[clamp(14px,3.2dvh,18px)] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
+        className="mt-[clamp(12px,3dvh,18px)] h-[clamp(42px,9dvh,50px)] w-full rounded-xl bg-[#6E43A3] text-[clamp(13px,2.7dvh,16px)] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
       >
         {isSubmitting ? "Please wait..." : "Continue"}
       </button>

@@ -285,7 +285,7 @@ export async function setRideDriverPassword(
   payload: RideDriverSetPasswordPayload,
 ): Promise<RideDriverStepResponse> {
   const res = await fetch(`${API_BASE}/ride-drivers/password`, {
-    method: "PATCH",
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",

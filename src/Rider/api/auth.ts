@@ -132,3 +132,61 @@ export async function loginRideDriver(
 
   return parseResponse(res, "Failed to sign in");
 }
+
+// ---------------------------------------------------------------------------
+// Forgot password
+// ---------------------------------------------------------------------------
+
+export interface RideDriverForgotPasswordPayload {
+  email: string;
+}
+
+export interface RideDriverForgotPasswordResponse {
+  message?: string;
+  [key: string]: any;
+}
+
+/** POST /ride-drivers/forgot-password — emails a 5-digit OTP to the driver. */
+export async function forgotRideDriverPassword(
+  payload: RideDriverForgotPasswordPayload,
+): Promise<RideDriverForgotPasswordResponse> {
+  const res = await fetch(`${API_BASE}/ride-drivers/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  return parseResponse(res, "Failed to send verification code");
+}
+
+export interface RideDriverForgotPasswordVerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface RideDriverForgotPasswordVerifyOtpResponse {
+  message?: string;
+  resetToken?: string;
+  tempToken?: string;
+  token?: string;
+  [key: string]: any;
+}
+
+/** POST /ride-drivers/forgot-password/verify-otp — checks the emailed OTP. */
+export async function verifyRideDriverForgotPasswordOtp(
+  payload: RideDriverForgotPasswordVerifyOtpPayload,
+): Promise<RideDriverForgotPasswordVerifyOtpResponse> {
+  const res = await fetch(
+    `${API_BASE}/ride-drivers/forgot-password/verify-otp`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  return parseResponse(res, "Failed to verify code");
+}
