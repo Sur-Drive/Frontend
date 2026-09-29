@@ -48,7 +48,7 @@ export default function RatePassengerPage() {
         <h1 className="text-base font-bold text-[#1F2937]">Rate Passenger</h1>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+      <div className="flex-1 min-h-0 px-5 pb-6 overflow-y-auto">
         {/* Avatar + name */}
         <div className="flex flex-col items-center pt-2">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6E43A3] text-lg font-bold text-white">
@@ -86,7 +86,7 @@ export default function RatePassengerPage() {
         </p>
 
         {/* Stars */}
-        <div className="mt-3 flex justify-center gap-2">
+        <div className="flex justify-center gap-2 mt-3">
           {[1, 2, 3, 4, 5].map((n) => (
             <button key={n} type="button" onClick={() => setRating(n)}>
               <Star
@@ -113,10 +113,8 @@ export default function RatePassengerPage() {
           className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-xs text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
         />
 
-        <p className="mt-3 text-[11px] text-[#9AA5B8]">
-          Or select feedback
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <p className="mt-3 text-[11px] text-[#9AA5B8]">Or select feedback</p>
+        <div className="flex flex-wrap gap-2 mt-2">
           {TAGS.map((tag) => {
             const isBad =
               tag === "Damaged the vehicle" ||
