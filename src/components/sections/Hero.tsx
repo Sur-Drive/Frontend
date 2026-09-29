@@ -198,7 +198,7 @@ export const Hero: React.FC<HeroProps> = ({ onModalOpen }) => {
                                         "0 20px 40px -10px rgba(99, 102, 241, 0.3)",
                                 }}
                                 whileTap={{ scale: 0.97 }}
-                                onClick={() => navigate("/home")}
+                                onClick={() => navigate("welcome")}
                                 className="group relative w-full bg-white rounded-2xl overflow-hidden shadow-lg border border-indigo-100 hover:border-indigo-300 transition-all duration-300"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
