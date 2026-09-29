@@ -232,17 +232,21 @@ export interface RideDriverDriversLicensePayload {
   file: File;
 }
 
-/** PATCH /ride-drivers/vehicle/drivers-license — multipart */
+/**
+ * PATCH /ride-drivers/license - multipart (completes the onboarding license step).
+ * Field names are the backend's: licenseNumber, licenseExpiry (MM/YYYY),
+ * licenseCountry, licenseDoc (file).
+ */
 export async function submitRideDriverDriversLicense(
   payload: RideDriverDriversLicensePayload,
 ): Promise<RideDriverVehicleStepResponse> {
   const formData = new FormData();
-  formData.append("expiryDate", payload.expiryDate);
   formData.append("licenseNumber", payload.licenseNumber);
-  formData.append("issuingCountry", payload.issuingCountry);
-  formData.append("file", payload.file);
+  formData.append("licenseExpiry", payload.expiryDate);
+  formData.append("licenseCountry", payload.issuingCountry);
+  formData.append("licenseDoc", payload.file);
 
-  const res = await fetch(`${API_BASE}/ride-drivers/vehicle/drivers-license`, {
+  const res = await fetch(`${API_BASE}/ride-drivers/license`, {
     method: "PATCH",
     headers: { Accept: "application/json", ...authHeaders() },
     body: formData,

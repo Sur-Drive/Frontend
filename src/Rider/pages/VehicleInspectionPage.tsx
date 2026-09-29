@@ -30,6 +30,43 @@ const SLOTS: Slot[] = [
   { key: "dashboard", label: "Dashboard" },
 ];
 
+/**
+ * Phone cameras produce 3-10 MB photos. Nine of them in one multipart
+ * request is 30-90 MB, which most servers/proxies (multer, nginx, Railway)
+ * reject or time out on. Downscale + re-encode to JPEG before upload.
+ */
+async function compressImage(
+  file: File,
+  maxDim = 1600,
+  quality = 0.8,
+): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  try {
+    const bitmap = await createImageBitmap(file, {
+      imageOrientation: "from-image",
+    });
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality),
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", {
+      type: "image/jpeg",
+    });
+  } catch {
+    return file;
+  }
+}
+
 export default function VehicleInspectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,12 +90,17 @@ export default function VehicleInspectionPage() {
 
   const closeModal = () => setActiveSlot(null);
 
-  const handleFile = (file: File | undefined) => {
+  const handleFile = async (file: File | undefined) => {
     if (!file || !activeSlot) return;
-    const url = URL.createObjectURL(file);
-    setFiles((prev) => ({ ...prev, [activeSlot]: file }));
-    setPreviews((prev) => ({ ...prev, [activeSlot]: url }));
+    const slot = activeSlot;
     closeModal();
+    const compressed = await compressImage(file);
+    const url = URL.createObjectURL(compressed);
+    setFiles((prev) => ({ ...prev, [slot]: compressed }));
+    setPreviews((prev) => {
+      if (prev[slot]) URL.revokeObjectURL(prev[slot]);
+      return { ...prev, [slot]: url };
+    });
   };
 
   const submit = async () => {
@@ -75,6 +117,14 @@ export default function VehicleInspectionPage() {
 
     // ADDED FOR DEBUGGING — log exactly what we're about to send
     console.log("INSPECTION SUBMIT — files being sent:", files);
+    console.log(
+      "INSPECTION SUBMIT — total upload size (MB):",
+      (
+        Object.values(files).reduce((n, f) => n + (f?.size ?? 0), 0) /
+        1024 /
+        1024
+      ).toFixed(2),
+    );
     console.log(
       "INSPECTION SUBMIT — token in use:",
       localStorage.getItem("driverOnboardingToken"),
@@ -113,23 +163,23 @@ export default function VehicleInspectionPage() {
   };
 
   return (
-    <div className="font-outfit min-h-[100dvh] bg-white px-6 pb-8 pt-4">
+    <div className="font-outfit min-h-[100dvh] bg-white px-[clamp(16px,5vw,24px)] pb-[clamp(16px,4dvh,28px)] pt-[clamp(10px,2.6dvh,16px)]">
       <OnboardingProgress progress={60} />
 
-      <h1 className="mt-8 text-[28px] font-bold text-[#2b2b2b]">
+      <h1 className="mt-[clamp(12px,3dvh,18px)] text-[clamp(17px,3.6dvh,21px)] font-bold leading-tight text-[#2b2b2b]">
         Vehicle Inspection
       </h1>
-      <p className="mt-2 text-base text-gray-400">
+      <p className="mt-[clamp(2px,0.6dvh,4px)] text-[clamp(10.5px,2.1dvh,12.5px)] text-gray-400">
         Upload clear photos of your vehicle to verify its condition
       </p>
 
-      <div className="grid grid-cols-3 gap-3 mt-8">
+      <div className="mt-[clamp(12px,3dvh,20px)] grid grid-cols-3 gap-[clamp(6px,1.6dvh,10px)]">
         {SLOTS.map((slot) => (
           <button
             key={slot.key}
             type="button"
             onClick={() => openSlot(slot.key)}
-            className="flex aspect-square flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl bg-[#f4f4f3] px-2 text-center"
+            className="flex aspect-square flex-col items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-[#f4f4f3] px-1.5 text-center"
           >
             {previews[slot.key] ? (
               <img
@@ -139,8 +189,8 @@ export default function VehicleInspectionPage() {
               />
             ) : (
               <>
-                <ImagePlus size={26} className="text-gray-400" />
-                <span className="text-xs text-gray-500 sm:text-sm">
+                <ImagePlus className="h-[clamp(18px,3.6dvh,22px)] w-[clamp(18px,3.6dvh,22px)] text-gray-400" />
+                <span className="text-[clamp(9.5px,1.9dvh,11px)] leading-tight text-gray-500">
                   {slot.label}
                 </span>
               </>
@@ -150,13 +200,15 @@ export default function VehicleInspectionPage() {
       </div>
 
       {error && (
-        <p className="mt-6 text-sm text-center text-red-600">{error}</p>
+        <p className="mt-[clamp(8px,2.2dvh,14px)] text-center text-[clamp(10.5px,2.1dvh,12.5px)] text-red-600">
+          {error}
+        </p>
       )}
 
       <button
         onClick={submit}
         disabled={isSubmitting}
-        className="mt-8 h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-60"
+        className="mt-[clamp(12px,3dvh,18px)] h-[clamp(42px,9dvh,50px)] w-full rounded-xl bg-[#6E43A3] text-[clamp(13px,2.7dvh,16px)] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-60"
       >
         {isSubmitting ? "Uploading..." : "Continue"}
       </button>
@@ -168,42 +220,50 @@ export default function VehicleInspectionPage() {
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
+        onChange={(e) => {
+          handleFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
       />
       <input
         ref={galleryInputRef}
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
+        onChange={(e) => {
+          handleFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
       />
 
       {/* Update Photo bottom sheet */}
       {activeSlot && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
-          <div className="relative w-full max-w-md rounded-t-[28px] bg-white px-5 pb-8 pt-5 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-[#2b2b2b]">Update Photo</h2>
+          <div className="relative w-full max-w-md px-5 pt-4 pb-6 bg-white shadow-2xl rounded-t-3xl">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h2 className="text-[clamp(14px,2.9dvh,17px)] font-bold text-[#2b2b2b]">
+                Update Photo
+              </h2>
               <button
                 onClick={closeModal}
                 aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#f4f4f3] text-gray-600"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f4f4f3] text-gray-600"
               >
-                <X size={16} />
+                <X size={14} />
               </button>
             </div>
 
-            <div className="mt-5 space-y-3">
+            <div className="mt-4 space-y-2.5">
               <button
                 onClick={() => cameraInputRef.current?.click()}
-                className="h-14 w-full rounded-2xl bg-[#6E43A3] text-base font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+                className="h-[clamp(40px,8.6dvh,48px)] w-full rounded-xl bg-[#6E43A3] text-[clamp(12.5px,2.5dvh,15px)] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
               >
                 Take a Photo
               </button>
               <button
                 onClick={() => galleryInputRef.current?.click()}
-                className="h-14 w-full rounded-2xl bg-[#f4f4f3] text-base font-semibold text-[#6E43A3] transition active:scale-[0.99]"
+                className="h-[clamp(40px,8.6dvh,48px)] w-full rounded-xl bg-[#f4f4f3] text-[clamp(12.5px,2.5dvh,15px)] font-semibold text-[#6E43A3] transition active:scale-[0.99]"
               >
                 Choose from Gallery
               </button>

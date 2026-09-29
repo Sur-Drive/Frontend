@@ -73,8 +73,8 @@ import PassengerOtp from "./pages/Passenger/Auth/PassengerOtp";
 import CompletePassengerProfile from "./pages/Passenger/Auth/CompletePassengerProfile";
 import PassengerLocation from "./pages/Passenger/Auth/PassengerLocation";
 import PassengerBiometric from "./pages/Passenger/Auth/PassengerBiometric";
-import PassengerHome from "./pages/Passenger/Home/PassengerHome"; 
-import BookRide from "./pages/Passenger/Ride/BookRide"; 
+import PassengerHome from "./pages/Passenger/Home/PassengerHome";
+import BookRide from "./pages/Passenger/Ride/BookRide";
 import { PassengerRideProvider } from "./context/PassengerRideContext";
 import SelectRide from "./pages/Passenger/Ride/SelectRide";
 import ConfirmPickup from "./pages/Passenger/Ride/ConfirmPickup";
@@ -124,7 +124,6 @@ import Tickets from "./pages/Passenger/Account/Support/Tickets";
 import RaiseTicket from "./pages/Passenger/Account/Support/RaiseTicket";
 import TicketConversation from "./pages/Passenger/Account/Support/TicketConversation";
 import LiveSupportChat from "./pages/Passenger/Account/Support/LiveSupportChat";
-
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -196,7 +195,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// In the installed PWA, "/" should open the app flow, not the marketing site.
 function RootEntry() {
   const isStandalone =
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -216,7 +214,6 @@ function AppRoutes() {
 
   const pathname = location.pathname;
 
-  // Check if current page is an app route (should show splash and nav)
   const isAppRoute =
     pathname === "/welcome" ||
     pathname === "/home" ||
@@ -225,13 +222,10 @@ function AppRoutes() {
     pathname === "/profile" ||
     pathname === "/plan-route";
 
-  // Check if current page should show BottomNav
-  // const showNav = !NO_NAV_PAGES.includes(pathname);
   const isPassengerRoute = pathname.startsWith("/passenger");
 
-const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
+  const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 
-  // /welcome should always replay the splash; other app routes only once per session
   const ALWAYS_SPLASH_ROUTES = ["/welcome"];
   const alwaysSplash = ALWAYS_SPLASH_ROUTES.includes(pathname);
 
@@ -437,267 +431,204 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
     PASSENGER
 ========================================= */}
           <Route
-  path="/passenger"
-  element={<Navigate to="/passenger/launch" replace />}
-/>
+            path="/passenger"
+            element={<Navigate to="/passenger/launch" replace />}
+          />
 
-<Route
-  path="/passenger/launch"
-  element={<PassengerLaunch />}
-/>
+          <Route path="/passenger/launch" element={<PassengerLaunch />} />
 
-<Route
-  path="/passenger/signup"
-  element={<PassengerSignup />}
-/>
+          <Route path="/passenger/signup" element={<PassengerSignup />} />
 
-<Route
-  path="/passenger/otp"
-  element={<PassengerOtp />}
-/>
-<Route
-  path="/passenger/complete-profile"
-  element={<CompletePassengerProfile />}
-/>
-<Route
-  path="/passenger/location"
-  element={<PassengerLocation />}
-/>
-<Route
-  path="/passenger/biometric"
-  element={<PassengerBiometric />}
-/>
-<Route
-  path="/passenger/home"
-  element={<PassengerHome />}
-/>
-<Route
-  path="/passenger/book-ride"
-  element={<BookRide />}
-/>
+          <Route path="/passenger/otp" element={<PassengerOtp />} />
+          <Route
+            path="/passenger/complete-profile"
+            element={<CompletePassengerProfile />}
+          />
+          <Route path="/passenger/location" element={<PassengerLocation />} />
+          <Route path="/passenger/biometric" element={<PassengerBiometric />} />
+          <Route path="/passenger/home" element={<PassengerHome />} />
+          <Route path="/passenger/book-ride" element={<BookRide />} />
 
-<Route
-  path="/passenger/ride/select"
-  element={<SelectRide />}
-/>
+          <Route path="/passenger/ride/select" element={<SelectRide />} />
 
-<Route
-  path="/passenger/ride/confirm"
-  element={<ConfirmPickup />}
-/>
+          <Route path="/passenger/ride/confirm" element={<ConfirmPickup />} />
 
-<Route
-  path="/passenger/ride/searching"
-  element={<SearchingDriver />}
-/>
+          <Route
+            path="/passenger/ride/searching"
+            element={<SearchingDriver />}
+          />
 
-<Route
-  path="/passenger/ride/driver-assigned"
-  element={<DriverAssigned />}
-/>
+          <Route
+            path="/passenger/ride/driver-assigned"
+            element={<DriverAssigned />}
+          />
 
-<Route
-  path="/passenger/ride/driver-en-route"
-  element={<DriverEnRoute />}
-/>
-<Route
-  path="/passenger/ride/driver-arriving"
-  element={<DriverArriving />}
-/>
-<Route
-  path="/passenger/ride/driver-arrived"
-  element={<DriverArrived />}
-/>
+          <Route
+            path="/passenger/ride/driver-en-route"
+            element={<DriverEnRoute />}
+          />
+          <Route
+            path="/passenger/ride/driver-arriving"
+            element={<DriverArriving />}
+          />
+          <Route
+            path="/passenger/ride/driver-arrived"
+            element={<DriverArrived />}
+          />
 
-<Route
-  path="/passenger/ride/verify"
-  element={<VerifyRide />}
-/>
+          <Route path="/passenger/ride/verify" element={<VerifyRide />} />
 
-<Route
-  path="/passenger/ride/trip"
-  element={<ActiveTrip />}
-/>
+          <Route path="/passenger/ride/trip" element={<ActiveTrip />} />
 
-<Route
-  path="/passenger/ride/safety"
-  element={<RideSafety />}
-/>
+          <Route path="/passenger/ride/safety" element={<RideSafety />} />
 
-<Route
-  path="/passenger/ride/arrived"
-  element={<TripComplete />}
-/>
+          <Route path="/passenger/ride/arrived" element={<TripComplete />} />
 
-<Route
-  path="/passenger/ride/rate"
-  element={<RateDriver />}
-/>
+          <Route path="/passenger/ride/rate" element={<RateDriver />} />
 
-<Route
-  path="/passenger/ride/chat"
-  element={<RideChat />}
-/>
+          <Route path="/passenger/ride/chat" element={<RideChat />} />
 
-<Route
-  path="/passenger/ride/emergency"
-  element={<EmergencyAlert />}
-/>
+          <Route
+            path="/passenger/ride/emergency"
+            element={<EmergencyAlert />}
+          />
 
-<Route
-  path="/passenger/activity"
-  element={<PassengerActivity />}
-/>
+          <Route path="/passenger/activity" element={<PassengerActivity />} />
 
-<Route
-  path="/passenger/activity/:rideId"
-  element={<RideDetails />}
-/>
+          <Route path="/passenger/activity/:rideId" element={<RideDetails />} />
 
-<Route
-  path="/passenger/alerts"
-  element={<PassengerAlerts />}
-/>
+          <Route path="/passenger/alerts" element={<PassengerAlerts />} />
 
-<Route
-  path="/passenger/account"
-  element={<PassengerAccount />}
-/>
+          <Route path="/passenger/account" element={<PassengerAccount />} />
 
-<Route
-  path="/passenger/account/profile"
-  element={<PassengerProfile />}
-/>
+          <Route
+            path="/passenger/account/profile"
+            element={<PassengerProfile />}
+          />
 
-<Route
-  path="/passenger/account/profile/change-email"
-  element={<ChangeEmail />}
-/>
+          <Route
+            path="/passenger/account/profile/change-email"
+            element={<ChangeEmail />}
+          />
 
-<Route
-  path="/passenger/account/profile/change-phone"
-  element={<ChangePhone />}
-/>
+          <Route
+            path="/passenger/account/profile/change-phone"
+            element={<ChangePhone />}
+          />
 
-<Route
-  path="/passenger/account/profile/verify"
-  element={<ProfileOtpVerification />}
-/>
+          <Route
+            path="/passenger/account/profile/verify"
+            element={<ProfileOtpVerification />}
+          />
 
-<Route
-  path="/passenger/account/legal"
-  element={<Legal />}
-/>
+          <Route path="/passenger/account/legal" element={<Legal />} />
 
-<Route
-  path="/passenger/account/legal/privacy"
-  element={<PrivacyPolicy />}
-/>
+          <Route
+            path="/passenger/account/legal/privacy"
+            element={<PrivacyPolicy />}
+          />
 
-<Route
-  path="/passenger/account/legal/terms"
-  element={<TermsConditions />}
-/>
+          <Route
+            path="/passenger/account/legal/terms"
+            element={<TermsConditions />}
+          />
 
-<Route
-  path="/passenger/account/payment-methods"
-  element={<PaymentMethods />}
-/>
+          <Route
+            path="/passenger/account/payment-methods"
+            element={<PaymentMethods />}
+          />
 
-<Route
-  path="/passenger/account/payment-methods/add-card"
-  element={<AddCard />}
-/>
+          <Route
+            path="/passenger/account/payment-methods/add-card"
+            element={<AddCard />}
+          />
 
-<Route
-  path="/passenger/account/promos"
-  element={<PromosRewards />}
-/>
+          <Route path="/passenger/account/promos" element={<PromosRewards />} />
 
-<Route
-  path="/passenger/account/safety"
-  element={<PassengerSafety />}
-/>
+          <Route
+            path="/passenger/account/safety"
+            element={<PassengerSafety />}
+          />
 
-<Route
-  path="/passenger/account/safety/pickup-code"
-  element={<PickupCode />}
-/>
+          <Route
+            path="/passenger/account/safety/pickup-code"
+            element={<PickupCode />}
+          />
 
-<Route
-  path="/passenger/account/safety/emergency-contacts"
-  element={<EmergencyContacts />}
-/>
+          <Route
+            path="/passenger/account/safety/emergency-contacts"
+            element={<EmergencyContacts />}
+          />
 
-<Route
-  path="/passenger/account/safety/emergency-contacts/add"
-  element={<AddEmergencyContact />}
-/>
+          <Route
+            path="/passenger/account/safety/emergency-contacts/add"
+            element={<AddEmergencyContact />}
+          />
 
-<Route
-  path="/passenger/account/saved-places"
-  element={<SavedPlaces />}
-/>
+          <Route
+            path="/passenger/account/saved-places"
+            element={<SavedPlaces />}
+          />
 
-<Route
-  path="/passenger/account/saved-places/location/:mode"
-  element={<SavedPlaceLocation />}
-/>
+          <Route
+            path="/passenger/account/saved-places/location/:mode"
+            element={<SavedPlaceLocation />}
+          />
 
-<Route
-  path="/passenger/account/saved-places/location/edit/:id"
-  element={<SavedPlaceLocation />}
-/>
+          <Route
+            path="/passenger/account/saved-places/location/edit/:id"
+            element={<SavedPlaceLocation />}
+          />
 
-<Route
-  path="/passenger/account/saved-places/map"
-  element={<SavedPlaceMap />}
-/>
+          <Route
+            path="/passenger/account/saved-places/map"
+            element={<SavedPlaceMap />}
+          />
 
-<Route
-  path="/passenger/account/saved-places/confirm"
-  element={<ConfirmSavedPlace />}
-/>
+          <Route
+            path="/passenger/account/saved-places/confirm"
+            element={<ConfirmSavedPlace />}
+          />
 
-<Route
-  path="/passenger/account/saved-places/name"
-  element={<NameSavedPlace />}
-/>
+          <Route
+            path="/passenger/account/saved-places/name"
+            element={<NameSavedPlace />}
+          />
 
-<Route
-  path="/passenger/account/rate-us"
-  element={<PassengerRateUs />}
-/>
+          <Route
+            path="/passenger/account/rate-us"
+            element={<PassengerRateUs />}
+          />
 
-<Route
-  path="/passenger/account/support"
-  element={<PassengerSupport />}
-/>
+          <Route
+            path="/passenger/account/support"
+            element={<PassengerSupport />}
+          />
 
-<Route
-  path="/passenger/account/support/articles"
-  element={<SupportArticles />}
-/>
+          <Route
+            path="/passenger/account/support/articles"
+            element={<SupportArticles />}
+          />
 
-<Route
-  path="/passenger/account/support/live-chat"
-  element={<LiveSupportChat />}
-/>
+          <Route
+            path="/passenger/account/support/live-chat"
+            element={<LiveSupportChat />}
+          />
 
-<Route
-  path="/passenger/account/support/tickets"
-  element={<Tickets />}
-/>
+          <Route
+            path="/passenger/account/support/tickets"
+            element={<Tickets />}
+          />
 
-<Route
-  path="/passenger/account/support/tickets/new"
-  element={<RaiseTicket />}
-/>
+          <Route
+            path="/passenger/account/support/tickets/new"
+            element={<RaiseTicket />}
+          />
 
-<Route
-  path="/passenger/account/support/tickets/:ticketId"
-  element={<TicketConversation />}
-/>
+          <Route
+            path="/passenger/account/support/tickets/:ticketId"
+            element={<TicketConversation />}
+          />
         </Routes>
       </div>
 
@@ -722,16 +653,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-      <PassengerProfileProvider>
-        <PassengerRideProvider>
-           <PassengerSafetyProvider>
-            <PassengerSavedPlacesProvider>
-               <PassengerSupportProvider>
-          <AppRoutes />
-          </PassengerSupportProvider>
-          </PassengerSavedPlacesProvider>
-          </PassengerSafetyProvider>
-        </PassengerRideProvider>
+        <PassengerProfileProvider>
+          <PassengerRideProvider>
+            <PassengerSafetyProvider>
+              <PassengerSavedPlacesProvider>
+                <PassengerSupportProvider>
+                  <AppRoutes />
+                </PassengerSupportProvider>
+              </PassengerSavedPlacesProvider>
+            </PassengerSafetyProvider>
+          </PassengerRideProvider>
         </PassengerProfileProvider>
       </BrowserRouter>
 

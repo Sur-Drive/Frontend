@@ -23,6 +23,7 @@ import PrivacySecurityPage from "./account/PrivacySecurityPage";
 import LegalPage from "./account/LegalPage";
 import VehicleInformationPage from "./account/VehicleInformationPage";
 import SupportPage from "./account/SupportPage";
+import { useRideDriverProfile } from "../hooks/useProfile";
 
 type View =
   | "home"
@@ -36,8 +37,6 @@ type View =
   | "support";
 
 const DRIVER = {
-  name: "Adeniji Abiodun",
-  phone: "+234 803 123 4567",
   rating: 4.9,
   balance: 2069.5,
   driveScore: 93,
@@ -85,6 +84,9 @@ function MenuRow({
 export default function AccountPage() {
   const navigate = useNavigate();
   const [view, setView] = useState<View>("home");
+  const { data: profile } = useRideDriverProfile();
+  const driverName = profile?.fullName ?? "";
+  const driverPhone = profile?.phone ?? "";
 
   if (view === "profile") {
     return (
@@ -153,13 +155,13 @@ export default function AccountPage() {
   return (
     <div className="font-outfit flex h-[100dvh] w-full flex-col overflow-hidden bg-white">
       <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F8FA] px-5 pb-4 pt-[calc(env(safe-area-inset-top,0px)+20px)]">
-        <div className="mx-auto w-full max-w-xl">
+        <div className="w-full max-w-xl mx-auto">
           <h1 className="mb-5 text-[26px] font-extrabold text-[#1F2937]">
             Account
           </h1>
 
           {/* profile + balance card */}
-          <div className="rounded-3xl bg-white p-2 shadow-sm">
+          <div className="p-2 bg-white shadow-sm rounded-3xl">
             <button
               type="button"
               onClick={() => setView("profile")}
@@ -168,7 +170,7 @@ export default function AccountPage() {
               <div className="relative shrink-0">
                 <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full ring-2 ring-[#6E43A3]">
                   <div className="flex h-full w-full items-center justify-center bg-[#EFE6F7] text-lg font-bold text-[#6E43A3]">
-                    {DRIVER.name
+                    {driverName
                       .split(" ")
                       .map((s) => s[0])
                       .slice(0, 2)
@@ -180,12 +182,12 @@ export default function AccountPage() {
                   {DRIVER.rating}
                 </span>
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="truncate text-[17px] font-bold text-[#1F2937]">
-                  {DRIVER.name}
+                  {driverName || "Your profile"}
                 </p>
                 <p className="mt-0.5 text-[13.5px] text-[#9AA5B8]">
-                  {DRIVER.phone}
+                  {driverPhone}
                 </p>
               </div>
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EFE6F7]">
@@ -193,7 +195,7 @@ export default function AccountPage() {
               </span>
             </button>
 
-            <div className="mx-3 h-px bg-gray-100" />
+            <div className="h-px mx-3 bg-gray-100" />
 
             <button
               type="button"
@@ -203,9 +205,10 @@ export default function AccountPage() {
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F1F2F5]">
                 <Wallet size={20} className="text-[#6E43A3]" />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-xl font-extrabold text-[#1F2937]">
-                  ${DRIVER.balance.toLocaleString("en-US", {
+                  $
+                  {DRIVER.balance.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                   })}
                 </p>
@@ -218,14 +221,14 @@ export default function AccountPage() {
           </div>
 
           {/* stats */}
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div className="px-4 py-4 bg-white shadow-sm rounded-2xl">
               <p className="text-[13.5px] text-[#9AA5B8]">Drive score</p>
               <p className="mt-1.5 text-2xl font-extrabold text-[#1E9E56]">
                 {DRIVER.driveScore}%
               </p>
             </div>
-            <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
+            <div className="px-4 py-4 bg-white shadow-sm rounded-2xl">
               <p className="text-[13.5px] text-[#9AA5B8]">Current Rating</p>
               <p className="mt-1.5 flex items-center gap-1.5 text-2xl font-extrabold text-[#1F2937]">
                 {DRIVER.rating}
@@ -235,7 +238,7 @@ export default function AccountPage() {
           </div>
 
           {/* menu */}
-          <div className="mt-3 divide-y divide-gray-100 rounded-3xl bg-white px-4 shadow-sm">
+          <div className="px-4 mt-3 bg-white divide-y divide-gray-100 shadow-sm rounded-3xl">
             <MenuRow
               icon={<Building2 size={18} className="text-[#4B5768]" />}
               label="My Fleet"
