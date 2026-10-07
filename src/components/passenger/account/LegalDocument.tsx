@@ -1,10 +1,16 @@
-import { motion } from "framer-motion";
+import type {
+  ReactNode,
+} from "react";
+
+import {
+  motion,
+} from "framer-motion";
 
 import RideHeader from "../ride/RideHeader";
 
 type LegalDocumentProps = {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export default function LegalDocument({
@@ -12,13 +18,26 @@ export default function LegalDocument({
   children,
 }: LegalDocumentProps) {
   return (
-    <div className="min-h-[100dvh] bg-white">
-      {/* FIXED HEADER */}
-      <div className="fixed inset-x-0 top-0 z-[900] bg-white">
+    <div className="min-h-[100dvh] bg-[#F8F7FA]">
+      {/* HEADER */}
+
+      <div
+        className="
+          fixed
+          inset-x-0
+          top-0
+          z-[900]
+          border-b
+          border-[#EEEAF1]
+          bg-white/95
+          backdrop-blur-xl
+        "
+      >
         <RideHeader title={title} />
       </div>
 
-      {/* DOCUMENT */}
+      {/* PAGE */}
+
       <motion.main
         initial={{
           opacity: 0,
@@ -30,13 +49,17 @@ export default function LegalDocument({
         }}
         transition={{
           duration: 0.35,
+          ease: "easeOut",
         }}
         className="
-          mx-auto w-full max-w-[680px]
-          px-5
+          mx-auto
+          w-full
+          max-w-[760px]
+          px-4
           pb-16
-          pt-[96px]
-          sm:px-7
+          pt-[92px]
+          sm:px-6
+          sm:pt-[104px]
         "
       >
         {children}
@@ -44,3 +67,4 @@ export default function LegalDocument({
     </div>
   );
 }
+

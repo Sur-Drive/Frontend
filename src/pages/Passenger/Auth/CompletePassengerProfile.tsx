@@ -1,7 +1,19 @@
 import {
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import type {
+  ChangeEvent,
+  ReactNode,
+} from "react";
+
+import {
   AnimatePresence,
   motion,
 } from "framer-motion";
+
 import {
   ArrowLeft,
   CalendarDays,
@@ -10,28 +22,61 @@ import {
   Pencil,
   Phone,
   User,
+  X,
 } from "lucide-react";
+
 import {
-  ChangeEvent,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import PassengerAuthShell from "../../../components/passenger/auth/PassengerAuthShell";
 
-type Gender = "Male" | "Female" | "Others" | "";
+import {
+  PassengerApiError,
+} from "../../../api/passenger/passengerClient";
 
-interface ProfileLocationState {
-  identifier?: string;
-  identifierType?: "phone" | "email";
-}
+import {
+  passengerSession,
+} from "../../../api/passenger/passengerSession";
+
+import {
+  useSetPassengerPersonalInfo,
+} from "../../../hooks/passenger/usePassengerAuth";
+import { toast } from "sonner";
+
+/* =========================================================
+   TYPES
+========================================================= */
+
+type IdentifierType =
+  | "phone"
+  | "email";
+
+type Gender =
+  | ""
+  | "Male"
+  | "Female"
+  | "Other";
 
 interface Birthday {
   month: string;
   day: number;
+  year: number;
 }
+
+interface ProfileLocationState {
+  identifier?: string;
+  identifierType?: IdentifierType;
+}
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const EMAIL_RE =
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const MONTHS = [
   "January",
@@ -46,117 +91,1309 @@ const MONTHS = [
   "October",
   "November",
   "December",
-];
+] as const;
 
-const DAYS = Array.from(
-  { length: 31 },
-  (_, index) => index + 1,
-);
-
-const genders: Exclude<Gender, "">[] = [
+const GENDERS: Gender[] = [
   "Male",
   "Female",
-  "Others",
+  "Other",
 ];
 
+const currentYear =
+  new Date().getFullYear();
+
+const YEARS =
+  Array.from(
+    {
+      length: 100,
+    },
+    (_, index) =>
+      currentYear -
+      16 -
+      index,
+  );
+
+const inputClass = `
+  h-full
+  w-full
+  bg-transparent
+  px-3
+  text-[16px]
+  text-[#25212A]
+  outline-none
+  placeholder:text-[#B8B4BC]
+`;
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function stripNigeriaPrefix(
+  value: string,
+) {
+  let cleaned =
+    value.replace(/\D/g, "");
+
+  if (
+    cleaned.startsWith("234")
+  ) {
+    cleaned =
+      cleaned.slice(3);
+  }
+
+  if (
+    cleaned.startsWith("0")
+  ) {
+    cleaned =
+      cleaned.slice(1);
+  }
+
+  return cleaned.slice(0, 10);
+}
+
+function splitFullName(
+  fullName: string,
+) {
+  const parts =
+    fullName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  const firstName =
+    parts[0] ?? "";
+
+  const lastName =
+    parts
+      .slice(1)
+      .join(" ");
+
+  return {
+    firstName,
+    lastName,
+  };
+}
+
+function getMonthNumber(
+  month: string,
+) {
+  const index =
+    MONTHS.findIndex(
+      (item) =>
+        item === month,
+    );
+
+  return index + 1;
+}
+
+function birthdayToApiDate(
+  birthday: Birthday,
+) {
+  const month =
+    getMonthNumber(
+      birthday.month,
+    );
+
+  const monthString =
+    String(month).padStart(
+      2,
+      "0",
+    );
+
+  const dayString =
+    String(
+      birthday.day,
+    ).padStart(
+      2,
+      "0",
+    );
+
+  return `${birthday.year}-${monthString}-${dayString}`;
+}
+
+function getDaysInMonth(
+  month: string,
+  year: number,
+) {
+  const monthNumber =
+    getMonthNumber(month);
+
+  if (!monthNumber) {
+    return 31;
+  }
+
+  return new Date(
+    year,
+    monthNumber,
+    0,
+  ).getDate();
+}
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+const fieldVariant = {
+  hidden: {
+    opacity: 0,
+    y: 12,
+  },
+
+  visible: {
+    opacity: 1,
+    y: 0,
+
+    transition: {
+      duration: 0.35,
+
+      ease: [
+        0.22,
+        1,
+        0.36,
+        1,
+      ],
+    },
+  },
+};
+
+/* =========================================================
+   SMALL COMPONENTS
+========================================================= */
+
+function ProfileField({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <motion.div
+      variants={fieldVariant}
+      className="
+        flex
+        h-[54px]
+        w-full
+        items-center
+        overflow-hidden
+        rounded-[10px]
+        bg-[#F6F6F7]
+        transition
+        focus-within:bg-[#F3F0F6]
+      "
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function FieldIcon({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="
+        ml-3
+        flex
+        h-[30px]
+        w-[30px]
+        shrink-0
+        items-center
+        justify-center
+        rounded-full
+        bg-[#ECE4F6]
+        text-[#7442AD]
+      "
+    >
+      {children}
+    </div>
+  );
+}
+
+/* =========================================================
+   GENDER SHEET
+========================================================= */
+
+function GenderSheet({
+  value,
+  onClose,
+  onSelect,
+}: {
+  value: Gender;
+
+  onClose: () => void;
+
+  onSelect: (
+    value: Gender,
+  ) => void;
+}) {
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+      }}
+      animate={{
+        opacity: 1,
+      }}
+      exit={{
+        opacity: 0,
+      }}
+      className="
+        fixed
+        inset-0
+        z-[200]
+        flex
+        items-end
+        justify-center
+        bg-black/35
+        px-0
+        backdrop-blur-[2px]
+        sm:px-4
+      "
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{
+          y: "100%",
+        }}
+        animate={{
+          y: 0,
+        }}
+        exit={{
+          y: "100%",
+        }}
+        transition={{
+          type: "spring",
+          damping: 28,
+          stiffness: 300,
+        }}
+        onClick={(
+          event,
+        ) =>
+          event.stopPropagation()
+        }
+        className="
+          w-full
+          max-w-[430px]
+          rounded-t-[28px]
+          bg-white
+          px-5
+          pb-[max(2rem,env(safe-area-inset-bottom))]
+          pt-4
+          shadow-2xl
+          sm:mb-5
+          sm:rounded-[28px]
+        "
+      >
+        <div
+          className="
+            mx-auto
+            mb-5
+            h-1
+            w-10
+            rounded-full
+            bg-[#DDD8E2]
+          "
+        />
+
+        <div
+          className="flex items-center justify-between "
+        >
+          <div>
+            <h2
+              className="
+                text-[20px]
+                font-semibold
+                tracking-[-0.02em]
+                text-[#25212A]
+              "
+            >
+              Select Gender
+            </h2>
+
+            <p
+              className="
+                mt-1
+                text-[14px]
+                text-[#9D98A2]
+              "
+            >
+              Choose the option
+              that best describes
+              you.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-full
+              bg-[#F6F6F7]
+              text-[#625D67]
+            "
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div
+          className="mt-6 space-y-2 "
+        >
+          {GENDERS.map(
+            (gender) => {
+              const selected =
+                value === gender;
+
+              return (
+                <motion.button
+                  key={gender}
+                  type="button"
+                  whileTap={{
+                    scale: 0.98,
+                  }}
+                  onClick={() =>
+                    onSelect(
+                      gender,
+                    )
+                  }
+                  className={`
+                    flex
+                    h-[54px]
+                    w-full
+                    items-center
+                    justify-between
+                    rounded-[12px]
+                    px-4
+                    text-left
+                    text-[16px]
+                    font-medium
+                    transition
+
+                    ${
+                      selected
+                        ? `
+                          bg-[#F0E8F9]
+                          text-[#7442AD]
+                        `
+                        : `
+                          bg-[#F7F7F8]
+                          text-[#353039]
+                        `
+                    }
+                  `}
+                >
+                  <span>
+                    {gender}
+                  </span>
+
+                  <span
+                    className={`
+                      flex
+                      h-5
+                      w-5
+                      items-center
+                      justify-center
+                      rounded-full
+                      border-2
+
+                      ${
+                        selected
+                          ? `
+                            border-[#7442AD]
+                          `
+                          : `
+                            border-[#D6D1DA]
+                          `
+                      }
+                    `}
+                  >
+                    {selected && (
+                      <span
+                        className="
+                          h-2.5
+                          w-2.5
+                          rounded-full
+                          bg-[#7442AD]
+                        "
+                      />
+                    )}
+                  </span>
+                </motion.button>
+              );
+            },
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* =========================================================
+   BIRTHDAY SHEET
+========================================================= */
+
+function BirthdaySheet({
+  value,
+  onClose,
+  onSelect,
+}: {
+  value: Birthday | null;
+
+  onClose: () => void;
+
+  onSelect: (
+    value: Birthday,
+  ) => void;
+}) {
+  const defaultYear =
+    currentYear - 25;
+
+  const [
+    month,
+    setMonth,
+  ] = useState(
+    value?.month ??
+      "January",
+  );
+
+  const [
+    day,
+    setDay,
+  ] = useState(
+    value?.day ?? 1,
+  );
+
+  const [
+    year,
+    setYear,
+  ] = useState(
+    value?.year ??
+      defaultYear,
+  );
+
+  const daysInMonth =
+    getDaysInMonth(
+      month,
+      year,
+    );
+
+  const days =
+    Array.from(
+      {
+        length:
+          daysInMonth,
+      },
+      (_, index) =>
+        index + 1,
+    );
+
+  const safeDay =
+    Math.min(
+      day,
+      daysInMonth,
+    );
+
+  const selectClass = `
+    h-[52px]
+    w-full
+    rounded-[10px]
+    border-0
+    bg-[#F6F6F7]
+    px-3
+    text-[16px]
+    text-[#25212A]
+    outline-none
+  `;
+
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+      }}
+      animate={{
+        opacity: 1,
+      }}
+      exit={{
+        opacity: 0,
+      }}
+      className="
+        fixed
+        inset-0
+        z-[200]
+        flex
+        items-end
+        justify-center
+        bg-black/35
+        backdrop-blur-[2px]
+        sm:px-4
+      "
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{
+          y: "100%",
+        }}
+        animate={{
+          y: 0,
+        }}
+        exit={{
+          y: "100%",
+        }}
+        transition={{
+          type: "spring",
+          damping: 28,
+          stiffness: 300,
+        }}
+        onClick={(
+          event,
+        ) =>
+          event.stopPropagation()
+        }
+        className="
+          w-full
+          max-w-[430px]
+          rounded-t-[28px]
+          bg-white
+          px-5
+          pb-[max(2rem,env(safe-area-inset-bottom))]
+          pt-4
+          shadow-2xl
+          sm:mb-5
+          sm:rounded-[28px]
+        "
+      >
+        <div
+          className="
+            mx-auto
+            mb-5
+            h-1
+            w-10
+            rounded-full
+            bg-[#DDD8E2]
+          "
+        />
+
+        <div
+          className="flex items-center justify-between "
+        >
+          <div>
+            <h2
+              className="
+                text-[20px]
+                font-semibold
+                text-[#25212A]
+              "
+            >
+              Date of Birth
+            </h2>
+
+            <p
+              className="
+                mt-1
+                text-[14px]
+                text-[#9D98A2]
+              "
+            >
+              Select your
+              birthday.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-full
+              bg-[#F6F6F7]
+              text-[#625D67]
+            "
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div
+          className="
+            mt-6
+            grid
+            grid-cols-[1.35fr_0.75fr_0.9fr]
+            gap-2
+          "
+        >
+          <select
+            value={month}
+            onChange={(
+              event,
+            ) => {
+              const nextMonth =
+                event.target
+                  .value;
+
+              setMonth(
+                nextMonth,
+              );
+
+              const nextDays =
+                getDaysInMonth(
+                  nextMonth,
+                  year,
+                );
+
+              if (
+                day >
+                nextDays
+              ) {
+                setDay(
+                  nextDays,
+                );
+              }
+            }}
+            className={
+              selectClass
+            }
+          >
+            {MONTHS.map(
+              (item) => (
+                <option
+                  key={item}
+                  value={item}
+                >
+                  {item}
+                </option>
+              ),
+            )}
+          </select>
+
+          <select
+            value={safeDay}
+            onChange={(
+              event,
+            ) =>
+              setDay(
+                Number(
+                  event.target
+                    .value,
+                ),
+              )
+            }
+            className={
+              selectClass
+            }
+          >
+            {days.map(
+              (item) => (
+                <option
+                  key={item}
+                  value={item}
+                >
+                  {item}
+                </option>
+              ),
+            )}
+          </select>
+
+          <select
+            value={year}
+            onChange={(
+              event,
+            ) => {
+              const nextYear =
+                Number(
+                  event.target
+                    .value,
+                );
+
+              setYear(
+                nextYear,
+              );
+
+              const nextDays =
+                getDaysInMonth(
+                  month,
+                  nextYear,
+                );
+
+              if (
+                day >
+                nextDays
+              ) {
+                setDay(
+                  nextDays,
+                );
+              }
+            }}
+            className={
+              selectClass
+            }
+          >
+            {YEARS.map(
+              (item) => (
+                <option
+                  key={item}
+                  value={item}
+                >
+                  {item}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
+
+        <motion.button
+          type="button"
+          whileTap={{
+            scale: 0.98,
+          }}
+          onClick={() =>
+            onSelect({
+              month,
+              day: safeDay,
+              year,
+            })
+          }
+          className="
+            mt-6
+            flex
+            h-[54px]
+            w-full
+            items-center
+            justify-center
+            rounded-[10px]
+            bg-[#7442AD]
+            text-[16px]
+            font-semibold
+            text-white
+            shadow-[0_8px_22px_rgba(116,66,173,0.25)]
+          "
+        >
+          Confirm Birthday
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function CompletePassengerProfile() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
+
+  const fileInputRef =
+    useRef<HTMLInputElement>(
+      null,
+    );
 
   const state =
-    (location.state ?? {}) as ProfileLocationState;
+    (location.state ??
+      {}) as ProfileLocationState;
 
-  const identifier = state.identifier ?? "";
-  const identifierType =
-    state.identifierType ?? "phone";
+  /*
+   * Prefer route state, but fall back to the identifier saved
+   * during send-otp/verify-otp.
+   *
+   * This prevents a page refresh from losing the identifier.
+   */
+  const identifier =
+    state.identifier ??
+    passengerSession.getIdentifier() ??
+    "";
 
-  const [fullName, setFullName] = useState("");
+  const identifierType:
+    IdentifierType =
+    state.identifierType ??
+    (identifier.includes("@")
+      ? "email"
+      : "phone");
 
-  const [phone, setPhone] = useState(
-    identifierType === "phone"
-      ? identifier.replace("+234", "")
+  /* =======================================================
+     FORM STATE
+  ======================================================= */
+
+  const [
+    fullName,
+    setFullName,
+  ] = useState("");
+
+  const [
+    phone,
+    setPhone,
+  ] = useState(
+    identifierType ===
+      "phone"
+      ? stripNigeriaPrefix(
+          identifier,
+        )
       : "",
   );
 
-  const [email, setEmail] = useState(
-    identifierType === "email"
+  const [
+    email,
+    setEmail,
+  ] = useState(
+    identifierType ===
+      "email"
       ? identifier
       : "",
   );
 
-  const [gender, setGender] =
+  const [
+    gender,
+    setGender,
+  ] =
     useState<Gender>("");
 
-  const [birthday, setBirthday] =
-    useState<Birthday | null>(null);
-
-  const [profileImage, setProfileImage] =
-    useState<string | null>(null);
-
-  const [showGenderSheet, setShowGenderSheet] =
-    useState(false);
-
-  const [showBirthdaySheet, setShowBirthdaySheet] =
-    useState(false);
-
-  const isComplete = useMemo(() => {
-    return (
-      fullName.trim().length >= 2 &&
-      phone.replace(/\D/g, "").length >= 10 &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email.trim(),
-      ) &&
-      gender !== "" &&
-      birthday !== null
-    );
-  }, [
-    fullName,
-    phone,
-    email,
-    gender,
+  const [
     birthday,
-  ]);
+    setBirthday,
+  ] =
+    useState<Birthday | null>(
+      null,
+    );
+
+  const [
+    profileImage,
+    setProfileImage,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
+    showGenderSheet,
+    setShowGenderSheet,
+  ] = useState(false);
+
+  const [
+    showBirthdaySheet,
+    setShowBirthdaySheet,
+  ] = useState(false);
+
+  const [
+    formError,
+    setFormError,
+  ] = useState("");
+
+  /* =======================================================
+     API
+  ======================================================= */
+
+  const {
+    mutate:
+      setPersonalInfo,
+
+    isPending:
+      isSaving,
+  } =
+    useSetPassengerPersonalInfo();
+
+  /* =======================================================
+     VALIDATION
+  ======================================================= */
+
+  const nameParts =
+    useMemo(
+      () =>
+        fullName
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean),
+      [fullName],
+    );
+
+  const hasValidName =
+    nameParts.length >= 2;
+
+  const hasValidPhone =
+    stripNigeriaPrefix(
+      phone,
+    ).length === 10;
+
+  const hasValidEmail =
+    EMAIL_RE.test(
+      email
+        .trim()
+        .toLowerCase(),
+    );
+
+  const isComplete =
+    useMemo(() => {
+      return (
+        hasValidName &&
+        hasValidPhone &&
+        hasValidEmail &&
+        gender !== "" &&
+        birthday !== null
+      );
+    }, [
+      hasValidName,
+      hasValidPhone,
+      hasValidEmail,
+      gender,
+      birthday,
+    ]);
+
+  /* =======================================================
+     IMAGE
+  ======================================================= */
 
   const handleImageChange = (
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0];
+    const file =
+      event.target
+        .files?.[0];
 
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
-    if (!file.type.startsWith("image/")) return;
+    if (
+      !file.type.startsWith(
+        "image/",
+      )
+    ) {
+      setFormError(
+        "Please choose a valid image.",
+      );
 
-    const reader = new FileReader();
+      event.target.value =
+        "";
+
+      return;
+    }
+
+    if (
+      file.size >
+      5 * 1024 * 1024
+    ) {
+      setFormError(
+        "Profile image must be smaller than 5MB.",
+      );
+
+      event.target.value =
+        "";
+
+      return;
+    }
+
+    const reader =
+      new FileReader();
 
     reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setProfileImage(reader.result);
+      if (
+        typeof reader.result ===
+        "string"
+      ) {
+        setProfileImage(
+          reader.result,
+        );
+
+        setFormError("");
       }
     };
 
-    reader.readAsDataURL(file);
+    reader.onerror = () => {
+      setFormError(
+        "Unable to load that image. Please try another one.",
+      );
+    };
+
+    reader.readAsDataURL(
+      file,
+    );
   };
+
+  /* =======================================================
+     FIELD CHANGES
+  ======================================================= */
+
+  const handlePhoneChange = (
+    value: string,
+  ) => {
+    setPhone(
+      stripNigeriaPrefix(
+        value,
+      ),
+    );
+
+    if (formError) {
+      setFormError("");
+    }
+  };
+
+  const handleEmailChange = (
+    value: string,
+  ) => {
+    setEmail(value);
+
+    if (formError) {
+      setFormError("");
+    }
+  };
+
+  const handleNameChange = (
+    value: string,
+  ) => {
+    setFullName(value);
+
+    if (formError) {
+      setFormError("");
+    }
+  };
+
+  /* =======================================================
+     CONTINUE
+  ======================================================= */
 
   const handleContinue = () => {
-    if (!isComplete) return;
+    if (isSaving) {
+      return;
+    }
 
-    /*
-      Later:
-      connect this to the passenger profile endpoint.
-    */
+    setFormError("");
 
-    navigate("/passenger/location", {
-      state: {
-        fullName: fullName.trim(),
-        phone,
-        email: email.trim().toLowerCase(),
-        gender,
+    if (!hasValidName) {
+      setFormError(
+        "Please enter your first and last name.",
+      );
+
+      return;
+    }
+
+    if (!hasValidPhone) {
+      setFormError(
+        "Please enter a valid Nigerian phone number.",
+      );
+
+      return;
+    }
+
+    if (!hasValidEmail) {
+      setFormError(
+        "Please enter a valid email address.",
+      );
+
+      return;
+    }
+
+    if (!gender) {
+      setFormError(
+        "Please select your gender.",
+      );
+
+      return;
+    }
+
+    if (!birthday) {
+      setFormError(
+        "Please select your date of birth.",
+      );
+
+      return;
+    }
+
+    const {
+      firstName,
+      lastName,
+    } = splitFullName(
+      fullName,
+    );
+
+    if (
+      !firstName ||
+      !lastName
+    ) {
+      setFormError(
+        "Please enter your first and last name.",
+      );
+
+      return;
+    }
+
+    const dateOfBirth =
+      birthdayToApiDate(
         birthday,
-        profileImage,
+      );
+
+    setPersonalInfo(
+      {
+        firstName,
+        lastName,
+        gender,
+        dateOfBirth,
       },
-    });
+      {
+        onSuccess: (
+          response,
+        ) => {
+          console.log(
+            "[Passenger] Personal info saved:",
+            response,
+          );
+          
+          toast.success(
+        "Profile completed!",
+        {
+          description:
+            "Your personal information has been saved.",
+        },
+      );
+
+          /*
+           * Phone/email are deliberately NOT sent to
+           * /riders/personal-info because the documented
+           * payload for this endpoint is:
+           *
+           * firstName
+           * lastName
+           * gender
+           * dateOfBirth
+           *
+           * They remain in this screen because the current
+           * UI asks the passenger to complete them.
+           */
+
+          navigate(
+            "/passenger/location",
+            {
+              replace: true,
+
+              state: {
+                identifier,
+
+                identifierType,
+
+                profile: {
+                  fullName:
+                    fullName.trim(),
+
+                  firstName,
+
+                  lastName,
+
+                  phone:
+                    `+234${stripNigeriaPrefix(
+                      phone,
+                    )}`,
+
+                  email:
+                    email
+                      .trim()
+                      .toLowerCase(),
+
+                  gender,
+
+                  dateOfBirth,
+
+                  profileImage,
+                },
+              },
+            },
+          );
+        },
+
+        onError: (
+          error,
+        ) => {
+          console.error(
+            "[Passenger] Personal info error:",
+            error,
+          );
+
+          if (
+            error instanceof
+            PassengerApiError
+          ) {
+            if (
+              error.status ===
+              401
+            ) {
+              toast.error(
+          "Verification expired",
+          {
+            description:
+              "Please verify your account again.",
+          },
+        );
+              setFormError(
+                "Your verification session has expired. Please verify your account again.",
+              );
+
+              return;
+            }
+
+            setFormError(
+              error.message,
+            );
+
+            return;
+          }
+
+          toast.error(
+        "Unable to save profile",
+        {
+          description:
+            error instanceof Error
+              ? error.message
+              : "Please try again.",
+        },
+      );
+      
+          setFormError(
+            error instanceof
+              Error
+              ? error.message
+              : "Unable to save your profile. Please try again.",
+          );
+        },
+      },
+    );
   };
+
+  /* =======================================================
+     ROUTE PROTECTION
+  ======================================================= */
+
+  /*
+   * We now allow refreshes because identifier is also stored
+   * in passengerSession.
+   *
+   * However, this page should only be available after OTP
+   * verification because personal-info needs the onboarding
+   * token.
+   */
+  if (
+    !identifier ||
+    !passengerSession.getTempToken()
+  ) {
+    return (
+      <Navigate
+        to="/passenger/signup"
+        replace
+      />
+    );
+  }
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <PassengerAuthShell>
@@ -169,8 +1406,12 @@ export default function CompletePassengerProfile() {
         "
       >
         <motion.main
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{
+            opacity: 0,
+          }}
+          animate={{
+            opacity: 1,
+          }}
           className="
             mx-auto
             flex
@@ -179,7 +1420,7 @@ export default function CompletePassengerProfile() {
             max-w-[430px]
             flex-col
             px-5
-            pb-8
+            pb-[max(2rem,env(safe-area-inset-bottom))]
             pt-5
 
             sm:px-6
@@ -190,18 +1431,26 @@ export default function CompletePassengerProfile() {
             lg:pt-10
           "
         >
-          {/* Back */}
+          {/* ============================================
+              BACK
+          ============================================= */}
 
           <motion.button
             type="button"
             aria-label="Go back"
-            onClick={() => navigate(-1)}
-            whileHover={{ x: -2 }}
-            whileTap={{ scale: 0.9 }}
+            onClick={() =>
+              navigate(-1)
+            }
+            whileHover={{
+              x: -2,
+            }}
+            whileTap={{
+              scale: 0.9,
+            }}
             className="
               flex
-              h-8
-              w-8
+              h-9
+              w-9
               items-center
               justify-center
               rounded-full
@@ -211,12 +1460,16 @@ export default function CompletePassengerProfile() {
             "
           >
             <ArrowLeft
-              size={15}
-              strokeWidth={1.8}
+              size={17}
+              strokeWidth={
+                1.8
+              }
             />
           </motion.button>
 
-          {/* Heading */}
+          {/* ============================================
+              HEADING
+          ============================================= */}
 
           <motion.header
             initial={{
@@ -229,7 +1482,13 @@ export default function CompletePassengerProfile() {
             }}
             transition={{
               duration: 0.45,
-              ease: [0.22, 1, 0.36, 1],
+
+              ease: [
+                0.22,
+                1,
+                0.36,
+                1,
+              ],
             }}
             className="mt-5"
           >
@@ -241,24 +1500,27 @@ export default function CompletePassengerProfile() {
                 text-[#25212A]
               "
             >
-              Complete Your Profile
+              Complete Your
+              Profile
             </h1>
 
             <p
               className="
-                mt-1
-                text-[14px]
-                leading-4
+                mt-1.5
+                text-[15px]
+                leading-5
                 text-[#AAA6AE]
-
-                sm:text-[14px]
               "
             >
-              Help our premium drivers identify you easily
+              Help our premium
+              drivers identify
+              you easily
             </p>
           </motion.header>
 
-          {/* Profile photo */}
+          {/* ============================================
+              PROFILE PHOTO
+          ============================================= */}
 
           <motion.div
             initial={{
@@ -279,8 +1541,8 @@ export default function CompletePassengerProfile() {
               relative
               mx-auto
               mt-7
-              h-[82px]
-              w-[82px]
+              h-[90px]
+              w-[90px]
             "
           >
             <div
@@ -293,23 +1555,25 @@ export default function CompletePassengerProfile() {
                 overflow-hidden
                 rounded-full
                 bg-[#F1E9FF]
+                ring-4
+                ring-[#F8F5FC]
               "
             >
               {profileImage ? (
                 <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="
-                    h-full
-                    w-full
-                    object-cover
-                  "
+                  src={
+                    profileImage
+                  }
+                  alt="Passenger profile preview"
+                  className="object-cover w-full h-full "
                 />
               ) : (
                 <User
-                  size={32}
-                  strokeWidth={1.4}
-                  className="text-[#E0D0FA]"
+                  size={36}
+                  strokeWidth={
+                    1.4
+                  }
+                  className="text-[#D7C2F3]"
                 />
               )}
             </div>
@@ -324,14 +1588,16 @@ export default function CompletePassengerProfile() {
                 scale: 1.08,
                 rotate: -5,
               }}
-              whileTap={{ scale: 0.9 }}
+              whileTap={{
+                scale: 0.9,
+              }}
               className="
                 absolute
                 bottom-0
                 right-[-2px]
                 flex
-                h-[28px]
-                w-[28px]
+                h-[30px]
+                w-[30px]
                 items-center
                 justify-center
                 rounded-full
@@ -343,54 +1609,77 @@ export default function CompletePassengerProfile() {
               "
             >
               <Pencil
-                size={12}
+                size={13}
                 strokeWidth={2}
               />
             </motion.button>
 
             <input
-              ref={fileInputRef}
+              ref={
+                fileInputRef
+              }
               type="file"
               accept="image/*"
-              onChange={handleImageChange}
+              onChange={
+                handleImageChange
+              }
               className="hidden"
             />
           </motion.div>
 
-          {/* Form */}
+          {/* ============================================
+              FORM
+          ============================================= */}
 
           <motion.div
             initial="hidden"
             animate="visible"
             variants={{
               hidden: {},
+
               visible: {
                 transition: {
-                  delayChildren: 0.15,
-                  staggerChildren: 0.07,
+                  delayChildren:
+                    0.15,
+
+                  staggerChildren:
+                    0.07,
                 },
               },
             }}
-            className="mt-7 space-y-3"
+            className="space-y-3 mt-7"
           >
+            {/* FULL NAME */}
+
             <ProfileField>
               <FieldIcon>
-                <User size={13} />
+                <User
+                  size={14}
+                />
               </FieldIcon>
 
               <input
                 type="text"
-                value={fullName}
-                onChange={(event) =>
-                  setFullName(event.target.value)
+                value={
+                  fullName
+                }
+                onChange={(
+                  event,
+                ) =>
+                  handleNameChange(
+                    event.target
+                      .value,
+                  )
                 }
                 placeholder="Full Name"
                 autoComplete="name"
-                className={inputClass}
+                className={
+                  inputClass
+                }
               />
             </ProfileField>
 
-            {/* Phone */}
+            {/* PHONE */}
 
             <ProfileField>
               <div
@@ -405,7 +1694,7 @@ export default function CompletePassengerProfile() {
                   px-3
                 "
               >
-                <span className="text-[14px]">
+                <span className="text-[16px]">
                   🇳🇬
                 </span>
 
@@ -421,87 +1710,117 @@ export default function CompletePassengerProfile() {
               </div>
 
               <Phone
-                size={13}
+                size={15}
+                strokeWidth={
+                  1.8
+                }
                 className="
                   ml-3
                   shrink-0
-                  text-[#7442AD]/60
+                  text-[#7442AD]/70
                 "
               />
 
               <input
                 type="tel"
                 inputMode="numeric"
+                autoComplete="tel-national"
                 value={phone}
-                onChange={(event) =>
-                  setPhone(
-                    event.target.value
-                      .replace(/\D/g, "")
-                      .slice(0, 11),
+                onChange={(
+                  event,
+                ) =>
+                  handlePhoneChange(
+                    event.target
+                      .value,
                   )
                 }
                 placeholder="803 660 0027"
-                className={inputClass}
+                className={
+                  inputClass
+                }
               />
             </ProfileField>
 
-            {/* Email */}
+            {/* EMAIL */}
 
             <ProfileField>
               <FieldIcon>
-                <Mail size={13} />
+                <Mail
+                  size={14}
+                />
               </FieldIcon>
 
               <input
                 type="email"
                 value={email}
-                onChange={(event) =>
-                  setEmail(event.target.value)
+                onChange={(
+                  event,
+                ) =>
+                  handleEmailChange(
+                    event.target
+                      .value,
+                  )
                 }
                 placeholder="Email Address"
                 autoComplete="email"
-                className={inputClass}
+                className={
+                  inputClass
+                }
               />
             </ProfileField>
 
-            {/* Gender */}
+            {/* GENDER */}
 
             <motion.button
-              variants={fieldVariant}
-              type="button"
-              onClick={() =>
-                setShowGenderSheet(true)
+              variants={
+                fieldVariant
               }
+              type="button"
+              onClick={() => {
+                setFormError(
+                  "",
+                );
+
+                setShowGenderSheet(
+                  true,
+                );
+              }}
               className="
                 flex
-                h-[50px]
+                h-[54px]
                 w-full
                 items-center
                 rounded-[10px]
                 bg-[#F6F6F7]
                 text-left
+                transition
+                hover:bg-[#F3F0F6]
               "
             >
               <FieldIcon>
-                <User size={13} />
+                <User
+                  size={14}
+                />
               </FieldIcon>
 
               <span
                 className={`
                   flex-1
-                  text-[14px]
+                  text-[16px]
+
                   ${
                     gender
                       ? "text-[#25212A]"
-                      : "text-[#C5C1C8]"
+                      : "text-[#B8B4BC]"
                   }
                 `}
               >
-                {gender || "Select Gender"}
+                {gender ||
+                  "Select Gender"}
               </span>
 
               <ChevronDown
-                size={15}
+                size={17}
                 className="
                   mr-4
                   text-[#9B969F]
@@ -509,81 +1828,166 @@ export default function CompletePassengerProfile() {
               />
             </motion.button>
 
-            {/* Birthday */}
+            {/* BIRTHDAY */}
 
             <motion.button
-              variants={fieldVariant}
-              type="button"
-              onClick={() =>
-                setShowBirthdaySheet(true)
+              variants={
+                fieldVariant
               }
+              type="button"
+              onClick={() => {
+                setFormError(
+                  "",
+                );
+
+                setShowBirthdaySheet(
+                  true,
+                );
+              }}
               className="
                 flex
-                h-[50px]
+                h-[54px]
                 w-full
                 items-center
                 rounded-[10px]
                 bg-[#F6F6F7]
                 text-left
+                transition
+                hover:bg-[#F3F0F6]
               "
             >
               <FieldIcon>
-                <CalendarDays size={13} />
+                <CalendarDays
+                  size={14}
+                />
               </FieldIcon>
 
               <span
                 className={`
                   flex-1
-                  text-[14px]
+                  text-[16px]
+
                   ${
                     birthday
                       ? "text-[#25212A]"
-                      : "text-[#C5C1C8]"
+                      : "text-[#B8B4BC]"
                   }
                 `}
               >
                 {birthday
-                  ? `${birthday.month}, ${birthday.day}`
-                  : "Birthday"}
+                  ? `${birthday.month} ${birthday.day}, ${birthday.year}`
+                  : "Date of Birth"}
               </span>
+
+              <ChevronDown
+                size={17}
+                className="
+                  mr-4
+                  text-[#9B969F]
+                "
+              />
             </motion.button>
           </motion.div>
 
-          {/* Continue */}
+          {/* ============================================
+              ERROR
+          ============================================= */}
+
+          <AnimatePresence>
+            {formError && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: -6,
+                  height: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  height:
+                    "auto",
+                }}
+                exit={{
+                  opacity: 0,
+                  y: -6,
+                  height: 0,
+                }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="
+                    mt-4
+                    rounded-[10px]
+                    bg-red-50
+                    px-4
+                    py-3
+                  "
+                >
+                  <p
+                    className="
+                      text-[14px]
+                      font-medium
+                      leading-5
+                      text-red-600
+                    "
+                  >
+                    {formError}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ============================================
+              CONTINUE
+          ============================================= */}
 
           <motion.button
             type="button"
-            disabled={!isComplete}
-            onClick={handleContinue}
+            disabled={
+              !isComplete ||
+              isSaving
+            }
+            onClick={
+              handleContinue
+            }
             whileHover={
-              isComplete
-                ? { y: -1 }
+              isComplete &&
+              !isSaving
+                ? {
+                    y: -2,
+                  }
                 : undefined
             }
             whileTap={
-              isComplete
-                ? { scale: 0.98 }
+              isComplete &&
+              !isSaving
+                ? {
+                    scale:
+                      0.98,
+                  }
                 : undefined
             }
             className={`
               mt-5
               flex
-              h-[50px]
+              h-[54px]
               w-full
               items-center
               justify-center
-              rounded-[8px]
-              text-[14px]
+              rounded-[9px]
+              text-[16px]
               font-semibold
               text-white
               transition-all
               duration-300
 
               ${
-                isComplete
+                isComplete &&
+                !isSaving
                   ? `
                     bg-[#7442AD]
-                    shadow-[0_7px_18px_rgba(116,66,173,0.25)]
+                    shadow-[0_8px_22px_rgba(116,66,173,0.25)]
                   `
                   : `
                     cursor-not-allowed
@@ -592,39 +1996,123 @@ export default function CompletePassengerProfile() {
               }
             `}
           >
-            Continue
+            {isSaving ? (
+              <span
+                className="
+                  flex
+                  items-center
+                  gap-2.5
+                "
+              >
+                <motion.span
+                  animate={{
+                    rotate:
+                      360,
+                  }}
+                  transition={{
+                    duration:
+                      0.8,
+
+                    repeat:
+                      Infinity,
+
+                    ease:
+                      "linear",
+                  }}
+                  className="
+                    h-[18px]
+                    w-[18px]
+                    rounded-full
+                    border-2
+                    border-white/40
+                    border-t-white
+                  "
+                />
+
+                Saving
+                profile...
+              </span>
+            ) : (
+              "Continue"
+            )}
           </motion.button>
+
+          <p
+            className="
+              mt-3
+              text-center
+              text-[13px]
+              leading-5
+              text-[#AAA6AE]
+            "
+          >
+            Your details help
+            us personalize your
+            SUR-DRIVE experience.
+          </p>
         </motion.main>
 
-        {/* Gender sheet */}
+        {/* ============================================
+            GENDER SHEET
+        ============================================= */}
 
         <AnimatePresence>
           {showGenderSheet && (
             <GenderSheet
               value={gender}
               onClose={() =>
-                setShowGenderSheet(false)
+                setShowGenderSheet(
+                  false,
+                )
               }
-              onSelect={(value) => {
-                setGender(value);
-                setShowGenderSheet(false);
+              onSelect={(
+                value,
+              ) => {
+                setGender(
+                  value,
+                );
+
+                setFormError(
+                  "",
+                );
+
+                setShowGenderSheet(
+                  false,
+                );
               }}
             />
           )}
         </AnimatePresence>
 
-        {/* Birthday sheet */}
+        {/* ============================================
+            BIRTHDAY SHEET
+        ============================================= */}
 
         <AnimatePresence>
           {showBirthdaySheet && (
             <BirthdaySheet
-              value={birthday}
-              onClose={() =>
-                setShowBirthdaySheet(false)
+              value={
+                birthday
               }
-              onSelect={(value) => {
-                setBirthday(value);
-                setShowBirthdaySheet(false);
+              onClose={() =>
+                setShowBirthdaySheet(
+                  false,
+                )
+              }
+              onSelect={(
+                value,
+              ) => {
+                setBirthday(
+                  value,
+                );
+
+                setFormError(
+                  "",
+                );
+
+                setShowBirthdaySheet(
+                  false,
+                );
               }}
             />
           )}
@@ -634,490 +2122,3 @@ export default function CompletePassengerProfile() {
   );
 }
 
-/* ----------------------------------
-   Profile field
------------------------------------ */
-
-function ProfileField({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <motion.div
-      variants={fieldVariant}
-      className="
-        flex
-        h-[50px]
-        w-full
-        items-center
-        overflow-hidden
-        rounded-[10px]
-        bg-[#F6F6F7]
-      "
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function FieldIcon({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className="
-        ml-3
-        mr-3
-        flex
-        h-6
-        w-6
-        shrink-0
-        items-center
-        justify-center
-        rounded-full
-        bg-[#EFE7F8]
-        text-[#7442AD]
-      "
-    >
-      {children}
-    </span>
-  );
-}
-
-const inputClass = `
-  h-full
-  min-w-0
-  flex-1
-  bg-transparent
-  pr-4
-  text-[14px]
-  text-[#25212A]
-  outline-none
-  placeholder:text-[#C5C1C8]
-`;
-
-const fieldVariant = {
-  hidden: {
-    opacity: 0,
-    y: 10,
-  },
-
-  visible: {
-    opacity: 1,
-    y: 0,
-
-    transition: {
-      duration: 0.32,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
-  },
-};
-
-/* ----------------------------------
-   Gender sheet
------------------------------------ */
-
-function GenderSheet({
-  value,
-  onClose,
-  onSelect,
-}: {
-  value: Gender;
-  onClose: () => void;
-  onSelect: (
-    gender: Exclude<Gender, "">,
-  ) => void;
-}) {
-  const [selected, setSelected] =
-    useState<Exclude<Gender, "">>(
-      value || "Female",
-    );
-
-  return (
-    <BottomSheetOverlay onClose={onClose}>
-      <motion.div
-        initial={{
-          y: "100%",
-        }}
-        animate={{
-          y: 0,
-        }}
-        exit={{
-          y: "100%",
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 320,
-          damping: 30,
-        }}
-        onClick={(event) =>
-          event.stopPropagation()
-        }
-        className="
-          absolute
-          bottom-0
-          left-1/2
-          w-full
-          max-w-[430px]
-          -translate-x-1/2
-          rounded-t-[30px]
-          bg-white
-          px-6
-          pb-[max(1.5rem,env(safe-area-inset-bottom))]
-          pt-3
-          shadow-[0_-20px_60px_rgba(0,0,0,0.10)]
-        "
-      >
-        <SheetHandle />
-
-        <h2
-          className="
-            mt-4
-            text-center
-            text-[15px]
-            font-medium
-            text-[#60719B]
-          "
-        >
-          Select gender
-        </h2>
-
-        <div className="mt-3 flex flex-col items-center">
-          {genders.map((item) => {
-            const active =
-              selected === item;
-
-            return (
-              <motion.button
-                key={item}
-                type="button"
-                onClick={() =>
-                  setSelected(item)
-                }
-                animate={{
-                  scale: active ? 1.08 : 1,
-                }}
-                className={`
-                  py-1
-                  text-center
-                  transition-colors
-
-                  ${
-                    active
-                      ? `
-                        text-[18px]
-                        font-bold
-                        text-[#071B54]
-                      `
-                      : `
-                        text-[12px]
-                        font-medium
-                        text-[#98A1BA]
-                      `
-                  }
-                `}
-              >
-                {item}
-              </motion.button>
-            );
-          })}
-        </div>
-
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.98 }}
-          onClick={() =>
-            onSelect(selected)
-          }
-          className="
-            mt-6
-            h-[50px]
-            w-full
-            rounded-[8px]
-            bg-[#7442AD]
-            text-[12px]
-            font-semibold
-            text-white
-            shadow-[0_7px_18px_rgba(116,66,173,0.25)]
-          "
-        >
-          Select
-        </motion.button>
-      </motion.div>
-    </BottomSheetOverlay>
-  );
-}
-
-/* ----------------------------------
-   Birthday sheet
------------------------------------ */
-
-function BirthdaySheet({
-  value,
-  onClose,
-  onSelect,
-}: {
-  value: Birthday | null;
-  onClose: () => void;
-  onSelect: (
-    birthday: Birthday,
-  ) => void;
-}) {
-  const [month, setMonth] = useState(
-    value?.month ?? "April",
-  );
-
-  const [day, setDay] = useState(
-    value?.day ?? 4,
-  );
-
-  return (
-    <BottomSheetOverlay onClose={onClose}>
-      <motion.div
-        initial={{
-          y: "100%",
-        }}
-        animate={{
-          y: 0,
-        }}
-        exit={{
-          y: "100%",
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 320,
-          damping: 30,
-        }}
-        onClick={(event) =>
-          event.stopPropagation()
-        }
-        className="
-          absolute
-          bottom-0
-          left-1/2
-          w-full
-          max-w-[430px]
-          -translate-x-1/2
-          rounded-t-[30px]
-          bg-white
-          px-6
-          pb-[max(1.5rem,env(safe-area-inset-bottom))]
-          pt-3
-        "
-      >
-        <SheetHandle />
-
-        <h2
-          className="
-            mt-4
-            text-center
-            text-[15px]
-            font-medium
-            text-[#60719B]
-          "
-        >
-          Birthday
-        </h2>
-
-        <div
-          className="
-            mx-auto
-            mt-4
-            grid
-            max-w-[220px]
-            grid-cols-2
-            gap-8
-          "
-        >
-          <WheelPicker
-            values={MONTHS}
-            value={month}
-            onChange={setMonth}
-          />
-
-          <WheelPicker
-            values={DAYS}
-            value={day}
-            onChange={setDay}
-          />
-        </div>
-
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.98 }}
-          onClick={() =>
-            onSelect({
-              month,
-              day,
-            })
-          }
-          className="
-            mt-6
-            h-[50px]
-            w-full
-            rounded-[8px]
-            bg-[#7442AD]
-            text-[12px]
-            font-semibold
-            text-white
-            shadow-[0_7px_18px_rgba(116,66,173,0.25)]
-          "
-        >
-          Select
-        </motion.button>
-      </motion.div>
-    </BottomSheetOverlay>
-  );
-}
-
-/* ----------------------------------
-   Wheel picker
------------------------------------ */
-
-function WheelPicker<T extends string | number>({
-  values,
-  value,
-  onChange,
-}: {
-  values: T[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  const currentIndex = values.indexOf(value);
-
-  const visible = [
-    values[
-      Math.max(0, currentIndex - 2)
-    ],
-    values[
-      Math.max(0, currentIndex - 1)
-    ],
-    value,
-    values[
-      Math.min(
-        values.length - 1,
-        currentIndex + 1,
-      )
-    ],
-    values[
-      Math.min(
-        values.length - 1,
-        currentIndex + 2,
-      )
-    ],
-  ];
-
-  const move = (direction: number) => {
-    const nextIndex = Math.min(
-      values.length - 1,
-      Math.max(
-        0,
-        currentIndex + direction,
-      ),
-    );
-
-    onChange(values[nextIndex]);
-  };
-
-  return (
-    <div
-      className="
-        relative
-        flex
-        flex-col
-        items-center
-      "
-      onWheel={(event) => {
-        event.preventDefault();
-
-        move(
-          event.deltaY > 0 ? 1 : -1,
-        );
-      }}
-    >
-      {visible.map((item, index) => {
-        const active = index === 2;
-
-        return (
-          <button
-            key={`${String(item)}-${index}`}
-            type="button"
-            onClick={() => {
-              if (index < 2) move(-1);
-              if (index > 2) move(1);
-            }}
-            className={`
-              h-6
-              whitespace-nowrap
-              transition-all
-
-              ${
-                active
-                  ? `
-                    scale-110
-                    text-[17px]
-                    font-bold
-                    text-[#071B54]
-                  `
-                  : `
-                    text-[14px]
-                    font-medium
-                    text-[#9BA6C2]
-                  `
-              }
-            `}
-          >
-            {item}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ----------------------------------
-   Shared sheet overlay
------------------------------------ */
-
-function BottomSheetOverlay({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      className="
-        fixed
-        inset-0
-        z-[1000]
-        bg-black/70
-        backdrop-blur-[1px]
-      "
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function SheetHandle() {
-  return (
-    <div
-      className="
-        mx-auto
-        h-[3px]
-        w-10
-        rounded-full
-        bg-[#C7CEDD]
-      "
-    />
-  );
-}

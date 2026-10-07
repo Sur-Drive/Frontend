@@ -1,131 +1,453 @@
-import { motion } from "framer-motion";
 import {
-  BadgePercent,
+  useEffect,
+} from "react";
+
+import {
   BriefcaseBusiness,
   Crosshair,
   Home,
+  LoaderCircle,
   MapPin,
   Plus,
+  RefreshCw,
   Search,
-  ShieldCheck,
   Siren,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import {
-  useEffect,
-  useState,
-} from "react";
 
-import PassengerMap from "../../../components/passenger/ride/PassengerMap";
+import {
+  motion,
+} from "framer-motion";
+
+import {
+  useNavigate,
+} from "react-router-dom";
+
+import {
+  toast,
+} from "sonner";
 
 import PassengerBottomNav from "../../../components/passenger/PassengerBottomNav";
 
+import PassengerMap from "../../../components/passenger/ride/PassengerMap";
+
+import {
+  passengerLocationApi,
+} from "../../../api/passenger/location";
+
+import {
+  usePassengerProfile,
+  usePassengerRecentDestinations,
+  usePassengerSavedPlaces,
+} from "../../../hooks/passenger/usePassengerHome";
+
+import type {
+  PassengerRecentDestination,
+  PassengerSavedPlace,
+} from "../../../types/passengerHome";
+
+/* =====================================
+   TYPES
+===================================== */
+
 type HomeBanner =
-  | "identity"
-  | "emergency"
-  | "promotion";
+  | "emergency";
 
-interface RecentDestination {
-  id: number;
-  name: string;
-  address: string;
-  type: "home" | "location";
-}
-
-/*
- * TEMPORARY UI DATA.
- *
- * Once the passenger APIs are connected:
- * - recentDestinations comes from passenger trip history
- * - banner is derived from passenger profile/state
- * - saved locations come from backend
- */
-const recentDestinations: RecentDestination[] = [
-  {
-    id: 1,
-    name: "14 Admiralty Way",
-    address: "Lekki Phase 1, Lagos",
-    type: "home",
-  },
-  {
-    id: 2,
-    name: "25 Marina Street",
-    address: "Lagos Island, Lagos",
-    type: "location",
-  },
-  {
-    id: 3,
-    name: "14 Admiralty Way",
-    address: "Lekki Phase 1, Lagos",
-    type: "location",
-  },
-];
+/* =====================================
+   HOME
+===================================== */
 
 export default function PassengerHome() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
+
+  /* -------------------------------------
+     SERVER DATA
+  ------------------------------------- */
+
+  const profileQuery =
+    usePassengerProfile();
+
+  const savedPlacesQuery =
+    usePassengerSavedPlaces();
+
+  const recentDestinationsQuery =
+    usePassengerRecentDestinations();
+
+  const profile =
+    profileQuery.data;
+
+  const savedPlaces =
+    savedPlacesQuery.data ?? [];
+
+  const recentDestinations =
+    recentDestinationsQuery.data ?? [];
+
+  /* -------------------------------------
+     DERIVED DATA
+  ------------------------------------- */
+
+  const homePlace =
+    savedPlaces.find(
+      (place) =>
+        place.type === "home",
+    );
+
+  const workPlace =
+    savedPlaces.find(
+      (place) =>
+        place.type === "work",
+    );
+
+  const hasRecentDestinations =
+    recentDestinations.length > 0;
+
+  const hasUsableLocation =
+    profile?.locationEnabled === true &&
+    profile.currentLat !== null &&
+    profile.currentLng !== null;
+
+  const userLocation =
+    hasUsableLocation
+      ? {
+          lat: profile.currentLat!,
+          lng: profile.currentLng!,
+        }
+      : null;
 
   /*
-   * Change to "identity" to see the empty-state
-   * design from the first Figma screen.
+   * We currently only have a real backend
+   * condition for the emergency-contact
+   * banner.
+   *
+   * Do not display fake promotions.
    */
-  const banner: HomeBanner = "promotion";
+  const banner: HomeBanner | null =
+    profile &&
+    profile.emergencyContactsCount === 0
+      ? "emergency"
+      : null;
+
+  const isInitialLoading =
+    profileQuery.isLoading ||
+    savedPlacesQuery.isLoading ||
+    recentDestinationsQuery.isLoading;
 
   /*
-   * Set false to reproduce the first Figma screen.
+   * Profile is essential to the Home page.
+   * Saved places/recent destinations can
+   * gracefully fall back to empty arrays.
    */
-  const hasRecentDestinations = true;
+  const hasInitialError =
+    profileQuery.isError;
+
+  /* -------------------------------------
+     LOCATION ONBOARDING GUARD
+  ------------------------------------- */
+
+  useEffect(() => {
+    if (
+      profile &&
+      !hasUsableLocation
+    ) {
+      navigate(
+        "/passenger/location",
+        {
+          replace: true,
+        },
+      );
+    }
+  }, [
+    profile,
+    hasUsableLocation,
+    navigate,
+  ]);
+
+  /* -------------------------------------
+     NAVIGATION
+  ------------------------------------- */
 
   const handleWhereTo = () => {
-    navigate("/passenger/book-ride");
+    navigate(
+      "/passenger/book-ride",
+    );
   };
 
-  const DEFAULT_LOCATION = {
-  lat: 6.5244,
-  lng: 3.3792,
-};
+  const handleSavedPlace = (
+    place: PassengerSavedPlace,
+  ) => {
+    navigate(
+      "/passenger/book-ride",
+      {
+        state: {
+          destination: {
+            id: place.id,
+            name: place.name,
+            address: place.address,
+            lat: place.lat,
+            lng: place.lng,
+            savedPlaceId: place.id,
+            type: place.type,
+          },
+        },
+      },
+    );
+  };
 
-const [userLocation, setUserLocation] =
-  useState(DEFAULT_LOCATION);
+  const handleAddSavedPlace = (
+  type?: "home" | "work",
+) => {
+  if (type) {
+    navigate(
+      `/passenger/account/saved-places/location/${type}`,
+    );
 
-useEffect(() => {
-  if (!navigator.geolocation) {
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      setUserLocation({
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-      });
-    },
-    () => {
-      // Existing Lagos fallback remains.
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 0,
-    },
+  navigate(
+    "/passenger/account/saved-places/location/new",
   );
-}, []);
+};
+
+  const handleRecentDestination = (
+    destination:
+      PassengerRecentDestination,
+  ) => {
+    navigate(
+      "/passenger/book-ride",
+      {
+        state: {
+          destination,
+        },
+      },
+    );
+  };
+
+  const handleBannerClick = () => {
+    if (
+      banner === "emergency"
+    ) {
+      navigate(
+        "/passenger/account/safety/emergency-contacts/add",
+      );
+    }
+  };
+
+  /* -------------------------------------
+     MANUAL LOCATION REFRESH
+  ------------------------------------- */
+
+  const handleRefreshLocation = () => {
+    /*
+     * Do not request browser GPS
+     * automatically on page mount.
+     *
+     * GPS is requested here because the
+     * passenger explicitly pressed the
+     * Location button.
+     */
+    if (
+      !navigator.geolocation
+    ) {
+      toast.error(
+        "Location unavailable",
+        {
+          description:
+            "Location services are not supported by this browser.",
+        },
+      );
+
+      return;
+    }
+
+    const toastId =
+      toast.loading(
+        "Updating your location...",
+      );
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const {
+            latitude,
+            longitude,
+            accuracy,
+            heading,
+            speed,
+          } = position.coords;
+
+          await passengerLocationApi.updateLocation({
+            lat: latitude,
+            lng: longitude,
+            accuracy,
+
+            ...(heading !== null
+              ? {
+                  heading,
+                }
+              : {}),
+
+            ...(speed !== null
+              ? {
+                  speed,
+                }
+              : {}),
+          });
+
+          /*
+           * Profile is the Home page's
+           * authoritative location summary.
+           */
+          await profileQuery.refetch();
+
+          toast.success(
+            "Location updated",
+            {
+              id: toastId,
+              description:
+                "Your current location has been refreshed.",
+            },
+          );
+        } catch (error) {
+          console.error(
+            "[Passenger Home] Failed to update location:",
+            error,
+          );
+
+          toast.error(
+            "Couldn't update location",
+            {
+              id: toastId,
+              description:
+                "Please try again.",
+            },
+          );
+        }
+      },
+
+      (error) => {
+        console.error(
+          "[Passenger Home] Browser location error:",
+          error,
+        );
+
+        let message =
+          "We couldn't access your location.";
+
+        if (
+          error.code ===
+          error.PERMISSION_DENIED
+        ) {
+          message =
+            "Location permission is disabled. Enable it in your browser settings and try again.";
+        } else if (
+          error.code ===
+          error.POSITION_UNAVAILABLE
+        ) {
+          message =
+            "Your current location is unavailable. Please try again.";
+        } else if (
+          error.code ===
+          error.TIMEOUT
+        ) {
+          message =
+            "Getting your location took too long. Please try again.";
+        }
+
+        toast.error(
+          "Location unavailable",
+          {
+            id: toastId,
+            description: message,
+          },
+        );
+      },
+
+      {
+        enableHighAccuracy: true,
+        timeout: 12_000,
+        maximumAge: 0,
+      },
+    );
+  };
+
+  /* =====================================
+     LOCATION REDIRECT
+  ===================================== */
+
+  if (
+    profile &&
+    !hasUsableLocation
+  ) {
+    return (
+      <HomeLoadingState
+        message="Setting up your location..."
+      />
+    );
+  }
+
+  /* =====================================
+     LOADING
+  ===================================== */
+
+  if (isInitialLoading) {
+    return (
+      <HomeLoadingState
+        message="Getting things ready..."
+      />
+    );
+  }
+
+  /* =====================================
+     ERROR
+  ===================================== */
+
+  if (
+    hasInitialError ||
+    !profile
+  ) {
+    return (
+      <HomeErrorState
+        onRetry={() => {
+          void profileQuery.refetch();
+          void savedPlacesQuery.refetch();
+          void recentDestinationsQuery.refetch();
+        }}
+      />
+    );
+  }
+
+  /*
+   * TypeScript now knows this exists
+   * because of the guards above.
+   */
+  if (!userLocation) {
+    return null;
+  }
+
+  /* =====================================
+     PAGE
+  ===================================== */
 
   return (
     <div
       className="
-        relative min-h-[100dvh]
-        w-full bg-[#F8F8FA]
+        relative
+        min-h-[100dvh]
+        w-full
+        bg-[#F8F8FA]
         text-[#25212A]
       "
     >
-      {/* ==============================
+      {/* =================================
           MAP
-      =============================== */}
+      ================================= */}
 
       <section
         className="
           fixed inset-x-0 top-0
-          h-[42dvh] min-h-[300px]
+          h-[42dvh]
+          min-h-[300px]
           overflow-hidden
           bg-[#F3F3F3]
 
@@ -133,32 +455,56 @@ useEffect(() => {
         "
       >
         <PassengerMap
-  center={userLocation}
-  userLocation={userLocation}
-  zoom={15}
-/>
+          center={userLocation}
+          userLocation={
+            userLocation
+          }
+          zoom={15}
+        />
+
+        {/* Location refresh */}
 
         <motion.button
           type="button"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.95 }}
+          onClick={
+            handleRefreshLocation
+          }
+          whileHover={{
+            scale: 1.03,
+          }}
+          whileTap={{
+            scale: 0.95,
+          }}
           className="
-            absolute right-5 top-6
-            flex h-[46px] items-center
-            gap-2 rounded-full
-            bg-white px-4
-            text-[14px] font-semibold
+            absolute
+            right-5 top-6
+
+            flex h-[46px]
+            items-center
+            gap-2
+
+            rounded-full
+            bg-white
+            px-4
+
+            text-[14px]
+            font-semibold
             text-[#25212A]
+
             shadow-[0_6px_24px_rgba(0,0,0,0.10)]
 
             sm:right-7
-            lg:right-8 lg:top-8
+
+            lg:right-8
+            lg:top-8
           "
         >
           <span
             className="
-              flex h-7 w-7 items-center
-              justify-center rounded-full
+              flex h-7 w-7
+              items-center
+              justify-center
+              rounded-full
               bg-[#F5F2F8]
             "
           >
@@ -171,7 +517,8 @@ useEffect(() => {
           Location
         </motion.button>
 
-        {/* Current location */}
+        {/* Current location marker overlay */}
+
         <motion.div
           initial={{
             opacity: 0,
@@ -190,7 +537,9 @@ useEffect(() => {
             damping: 15,
           }}
           className="
-            absolute left-1/2
+            pointer-events-none
+            absolute
+            left-1/2
             top-[68%]
             -translate-x-1/2
             -translate-y-1/2
@@ -198,17 +547,25 @@ useEffect(() => {
         >
           <motion.div
             animate={{
-              scale: [1, 1.7],
-              opacity: [0.2, 0],
+              scale: [
+                1,
+                1.7,
+              ],
+              opacity: [
+                0.2,
+                0,
+              ],
             }}
             transition={{
               duration: 2,
-              repeat: Infinity,
+              repeat:
+                Infinity,
               ease: "easeOut",
             }}
             className="
               absolute inset-0
-              rounded-full bg-[#7442AD]
+              rounded-full
+              bg-[#7442AD]
             "
           />
 
@@ -224,9 +581,9 @@ useEffect(() => {
         </motion.div>
       </section>
 
-      {/* ==============================
-          MOBILE CONTENT PANEL
-      =============================== */}
+      {/* =================================
+          CONTENT PANEL
+      ================================= */}
 
       <motion.main
         initial={{
@@ -239,15 +596,24 @@ useEffect(() => {
         }}
         transition={{
           duration: 0.55,
-          ease: [0.22, 1, 0.36, 1],
+          ease: [
+            0.22,
+            1,
+            0.36,
+            1,
+          ],
         }}
         className="
-          absolute left-0 right-0
+          absolute
+          left-0 right-0
           top-[34dvh]
           z-20
+
           min-h-[66dvh]
+
           rounded-t-[32px]
           bg-white
+
           px-5
           pb-[110px]
           pt-3
@@ -273,40 +639,70 @@ useEffect(() => {
 
         <div
           className="
-            mx-auto mb-5
-            h-[4px] w-12
+            mx-auto
+            mb-5
+            h-[4px]
+            w-12
             rounded-full
             bg-[#C8C4D2]
           "
         />
 
-        <HomeStatusBanner type={banner} />
+        {/* Status banner */}
+
+        {banner && (
+          <HomeStatusBanner
+            type={banner}
+            onClick={
+              handleBannerClick
+            }
+          />
+        )}
 
         {/* Search */}
 
         <motion.button
           type="button"
-          onClick={handleWhereTo}
+          onClick={
+            handleWhereTo
+          }
           whileHover={{
-            borderColor: "#CDB8E5",
+            borderColor:
+              "#CDB8E5",
           }}
-          whileTap={{ scale: 0.99 }}
-          className="
-            mt-5
+          whileTap={{
+            scale: 0.99,
+          }}
+          className={`
+            ${
+              banner
+                ? "mt-5"
+                : "mt-1"
+            }
+
             flex h-[54px]
-            w-full items-center
-            gap-3 rounded-[12px]
-            border border-transparent
+            w-full
+            items-center
+            gap-3
+
+            rounded-[12px]
+            border
+            border-transparent
             bg-[#F5F5F6]
+
             px-4
             text-left
+
             transition-colors
-          "
+          `}
         >
           <Search
             size={21}
             strokeWidth={1.8}
-            className="shrink-0 text-[#1F315D]"
+            className="
+              shrink-0
+              text-[#1F315D]
+            "
           />
 
           <span
@@ -319,49 +715,93 @@ useEffect(() => {
           </span>
         </motion.button>
 
-        {/* Saved locations */}
+        {/* Saved places */}
 
         <div
           className="
-            mt-5 flex
-            flex-wrap items-center
+            mt-5
+            flex flex-wrap
+            items-center
             gap-2.5
           "
         >
           <SavedPlaceButton
             icon={Home}
             label={
-              hasRecentDestinations
+              homePlace
                 ? "Home"
                 : "Add Home"
             }
+            onClick={() => {
+              if (
+                homePlace
+              ) {
+                handleSavedPlace(
+                  homePlace,
+                );
+
+                return;
+              }
+
+              handleAddSavedPlace(
+                "home",
+              );
+            }}
           />
 
           <SavedPlaceButton
-            icon={BriefcaseBusiness}
+            icon={
+              BriefcaseBusiness
+            }
             label={
-              hasRecentDestinations
+              workPlace
                 ? "Work"
                 : "Add Work"
             }
+            onClick={() => {
+              if (
+                workPlace
+              ) {
+                handleSavedPlace(
+                  workPlace,
+                );
+
+                return;
+              }
+
+              handleAddSavedPlace(
+                "work",
+              );
+            }}
           />
 
           <SavedPlaceButton
             icon={Plus}
             label="Add"
             dashed
+            onClick={() =>
+              handleAddSavedPlace()
+            }
           />
         </div>
 
         {/* Recent destinations */}
 
         <div className="mt-6">
-          {hasRecentDestinations ? (
+          {recentDestinationsQuery.isError ? (
+            <RecentDestinationsError
+              onRetry={() => {
+                void recentDestinationsQuery.refetch();
+              }}
+            />
+          ) : hasRecentDestinations ? (
             <RecentDestinations
               destinations={
                 recentDestinations
               }
-              onSelect={handleWhereTo}
+              onSelect={
+                handleRecentDestination
+              }
             />
           ) : (
             <EmptyRecentDestinations />
@@ -380,48 +820,39 @@ useEffect(() => {
 
 function HomeStatusBanner({
   type,
+  onClick,
 }: {
   type: HomeBanner;
+  onClick?: () => void;
 }) {
   const content = {
-    identity: {
-      icon: ShieldCheck,
-      title: "Verify your identity",
-      description:
-        "This helps keep rides safe",
-      wrapper:
-        "bg-[#E4F8E9] text-[#276A42]",
-      iconBackground: "bg-[#C6F0D2]",
-      iconColor: "text-[#35B76C]",
-    },
-
     emergency: {
       icon: Siren,
-      title: "Emergency Contact",
+
+      title:
+        "Emergency Contact",
+
       description:
-        "Set emergency contact we can call in case of emergency",
+        "Set an emergency contact we can call in case of emergency",
+
       wrapper:
         "bg-[#FCE8E3] text-[#413337]",
-      iconBackground: "bg-[#FFD7CE]",
-      iconColor: "text-[#FF654D]",
-    },
 
-    promotion: {
-      icon: BadgePercent,
-      title: "10% off your next 5 rides",
-      description: "View details",
-      wrapper:
-        "bg-[#F0E7FA] text-[#392C4C]",
-      iconBackground: "bg-[#E1D0F5]",
-      iconColor: "text-[#7442AD]",
+      iconBackground:
+        "bg-[#FFD7CE]",
+
+      iconColor:
+        "text-[#FF654D]",
     },
   }[type];
 
-  const Icon = content.icon;
+  const Icon =
+    content.icon;
 
   return (
     <motion.button
       type="button"
+      onClick={onClick}
       initial={{
         opacity: 0,
         x: 25,
@@ -437,19 +868,31 @@ function HomeStatusBanner({
         scale: 0.99,
       }}
       className={`
-        flex min-h-[62px]
-        w-full items-center
-        gap-3 rounded-[12px]
-        px-3.5 py-3
+        flex
+        min-h-[62px]
+        w-full
+        items-center
+        gap-3
+
+        rounded-[12px]
+
+        px-3.5
+        py-3
+
         text-left
+
         ${content.wrapper}
       `}
     >
       <span
         className={`
-          flex h-9 w-9
-          shrink-0 items-center
-          justify-center rounded-full
+          flex
+          h-9 w-9
+          shrink-0
+          items-center
+          justify-center
+          rounded-full
+
           ${content.iconBackground}
           ${content.iconColor}
         `}
@@ -463,7 +906,8 @@ function HomeStatusBanner({
       <span className="min-w-0">
         <span
           className="
-            block text-[16px]
+            block
+            text-[16px]
             font-semibold
           "
         >
@@ -472,7 +916,8 @@ function HomeStatusBanner({
 
         <span
           className="
-            mt-0.5 block
+            mt-0.5
+            block
             text-[13px]
             leading-[1.35]
             opacity-70
@@ -486,34 +931,42 @@ function HomeStatusBanner({
 }
 
 /* =====================================
-   SAVED PLACE
+   SAVED PLACE BUTTON
 ===================================== */
 
 function SavedPlaceButton({
   icon: Icon,
   label,
   dashed = false,
+  onClick,
 }: {
   icon: typeof Home;
   label: string;
   dashed?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <motion.button
       type="button"
+      onClick={onClick}
       whileHover={{
         y: -2,
-        backgroundColor: "#FAF7FD",
+        backgroundColor:
+          "#FAF7FD",
       }}
       whileTap={{
         scale: 0.95,
       }}
       className={`
         flex h-[42px]
-        items-center gap-2
+        items-center
+        gap-2
+
         rounded-[11px]
         border
+
         px-3.5
+
         text-[14px]
         font-medium
         text-[#5E367F]
@@ -543,8 +996,13 @@ function RecentDestinations({
   destinations,
   onSelect,
 }: {
-  destinations: RecentDestination[];
-  onSelect: () => void;
+  destinations:
+    PassengerRecentDestination[];
+
+  onSelect: (
+    destination:
+      PassengerRecentDestination,
+  ) => void;
 }) {
   return (
     <motion.section
@@ -562,7 +1020,8 @@ function RecentDestinations({
     >
       <h2
         className="
-          mb-4 text-[18px]
+          mb-4
+          text-[18px]
           font-semibold
           text-[#302B34]
         "
@@ -576,85 +1035,104 @@ function RecentDestinations({
           rounded-[20px]
           bg-white
           px-4
+
           shadow-[0_6px_30px_rgba(28,20,38,0.05)]
         "
       >
         {destinations.map(
-          (destination, index) => (
-            <motion.button
-              key={destination.id}
-              type="button"
-              onClick={onSelect}
-              whileHover={{
-                x: 3,
-              }}
-              whileTap={{
-                scale: 0.99,
-              }}
-              className={`
-                flex w-full
-                items-center
-                gap-3 py-3.5
-                text-left
+          (
+            destination,
+            index,
+          ) => {
+            const title =
+              destination.name?.trim() ||
+              destination.address;
 
-                ${
-                  index !==
-                  destinations.length - 1
-                    ? "border-b border-[#D9DFEA]"
-                    : ""
+            return (
+              <motion.button
+                key={
+                  destination.id
                 }
-              `}
-            >
-              <span
-                className="
-                  flex h-8 w-8
-                  shrink-0
+                type="button"
+                onClick={() =>
+                  onSelect(
+                    destination,
+                  )
+                }
+                whileHover={{
+                  x: 3,
+                }}
+                whileTap={{
+                  scale: 0.99,
+                }}
+                className={`
+                  flex w-full
                   items-center
-                  justify-center
-                  text-[#7C90BD]
-                "
+                  gap-3
+                  py-3.5
+                  text-left
+
+                  ${
+                    index !==
+                    destinations.length -
+                      1
+                      ? "border-b border-[#D9DFEA]"
+                      : ""
+                  }
+                `}
               >
-                {destination.type ===
-                "home" ? (
-                  <Home
-                    size={21}
-                    fill="currentColor"
-                    strokeWidth={1.5}
-                  />
-                ) : (
+                <span
+                  className="
+                    flex h-8 w-8
+                    shrink-0
+                    items-center
+                    justify-center
+                    text-[#7C90BD]
+                  "
+                >
                   <MapPin
                     size={21}
                     fill="currentColor"
-                    strokeWidth={1.5}
+                    strokeWidth={
+                      1.5
+                    }
                   />
-                )}
-              </span>
-
-              <span className="min-w-0">
-                <span
-                  className="
-                    block truncate
-                    text-[16px]
-                    font-medium
-                    text-[#302B34]
-                  "
-                >
-                  {destination.name}
                 </span>
 
-                <span
-                  className="
-                    mt-0.5
-                    block truncate
-                    text-[13px]
-                    text-[#7487B3]
-                  "
-                >
-                  {destination.address}
+                <span className="min-w-0">
+                  <span
+                    className="
+                      block
+                      truncate
+                      text-[16px]
+                      font-medium
+                      text-[#302B34]
+                    "
+                  >
+                    {title}
+                  </span>
+
+                  {destination.name &&
+                    destination.name.trim() !==
+                      destination.address && (
+                      <span
+                        className="
+                          mt-0.5
+                          block
+                          truncate
+                          text-[13px]
+                          text-[#7487B3]
+                        "
+                      >
+                        {
+                          destination.address
+                        }
+                      </span>
+                    )}
                 </span>
-              </span>
-            </motion.button>
-          ),
+              </motion.button>
+            );
+          },
         )}
       </div>
     </motion.section>
@@ -662,7 +1140,7 @@ function RecentDestinations({
 }
 
 /* =====================================
-   EMPTY STATE
+   EMPTY RECENT DESTINATIONS
 ===================================== */
 
 function EmptyRecentDestinations() {
@@ -679,18 +1157,15 @@ function EmptyRecentDestinations() {
       transition={{
         delay: 0.2,
       }}
-      className="
-        flex flex-col
-        items-center
-        px-4
-        pb-8
-        pt-5
-        text-center
-      "
+      className="flex flex-col items-center px-4 pt-5 pb-8 text-center "
     >
       <motion.div
         animate={{
-          y: [0, -5, 0],
+          y: [
+            0,
+            -5,
+            0,
+          ],
         }}
         transition={{
           duration: 2.6,
@@ -698,12 +1173,15 @@ function EmptyRecentDestinations() {
           ease: "easeInOut",
         }}
         className="
-          flex h-[72px]
+          flex
+          h-[72px]
           w-[72px]
           items-center
           justify-center
+
           rounded-full
           bg-[#F0E8F8]
+
           ring-[10px]
           ring-[#F8F4FC]
         "
@@ -735,9 +1213,246 @@ function EmptyRecentDestinations() {
           text-[#9B969F]
         "
       >
-        Your recent trips will appear here.
-        Start by searching for a destination.
+        Your recent trips will
+        appear here. Start by
+        searching for a
+        destination.
       </p>
     </motion.div>
   );
 }
+
+/* =====================================
+   RECENT DESTINATIONS ERROR
+===================================== */
+
+function RecentDestinationsError({
+  onRetry,
+}: {
+  onRetry: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 10,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      className="
+        rounded-[16px]
+        bg-[#FAF8FC]
+        px-5
+        py-6
+        text-center
+      "
+    >
+      <MapPin
+        size={28}
+        className="
+          mx-auto
+          text-[#7442AD]
+        "
+      />
+
+      <h2
+        className="
+          mt-3
+          text-[17px]
+          font-semibold
+          text-[#302B34]
+        "
+      >
+        Couldn't load recent destinations
+      </h2>
+
+      <button
+        type="button"
+        onClick={onRetry}
+        className="
+          mt-3
+          inline-flex
+          items-center
+          gap-2
+
+          text-[14px]
+          font-semibold
+          text-[#7442AD]
+        "
+      >
+        <RefreshCw
+          size={15}
+        />
+
+        Try again
+      </button>
+    </motion.div>
+  );
+}
+
+/* =====================================
+   LOADING STATE
+===================================== */
+
+function HomeLoadingState({
+  message,
+}: {
+  message: string;
+}) {
+  return (
+    <div
+      className="
+        flex
+        min-h-[100dvh]
+        items-center
+        justify-center
+        bg-white
+      "
+    >
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: 8,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        className="flex flex-col items-center gap-3 "
+      >
+        <LoaderCircle
+          size={30}
+          className="
+            animate-spin
+            text-[#7442AD]
+          "
+        />
+
+        <p
+          className="
+            text-[15px]
+            text-[#77717D]
+          "
+        >
+          {message}
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
+/* =====================================
+   ERROR STATE
+===================================== */
+
+function HomeErrorState({
+  onRetry,
+}: {
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      className="
+        flex
+        min-h-[100dvh]
+        items-center
+        justify-center
+        bg-white
+        px-6
+      "
+    >
+      <motion.div
+        initial={{
+          opacity: 0,
+          y: 10,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        className="
+          w-full
+          max-w-[360px]
+          text-center
+        "
+      >
+        <div
+          className="
+            mx-auto
+            flex h-[62px]
+            w-[62px]
+            items-center
+            justify-center
+            rounded-full
+            bg-[#F3ECFA]
+          "
+        >
+          <RefreshCw
+            size={27}
+            className="
+              text-[#7442AD]
+            "
+          />
+        </div>
+
+        <h1
+          className="
+            mt-5
+            text-[20px]
+            font-semibold
+            text-[#25212A]
+          "
+        >
+          Couldn't load your account
+        </h1>
+
+        <p
+          className="
+            mt-2
+            text-[15px]
+            leading-[1.5]
+            text-[#8D8891]
+          "
+        >
+          Check your connection
+          and try again.
+        </p>
+
+        <motion.button
+          type="button"
+          onClick={onRetry}
+          whileTap={{
+            scale: 0.98,
+          }}
+          className="
+            mt-5
+            inline-flex
+            h-[48px]
+            items-center
+            justify-center
+            gap-2
+
+            rounded-[10px]
+            bg-[#7442AD]
+
+            px-5
+
+            text-[16px]
+            font-semibold
+            text-white
+          "
+        >
+          <RefreshCw
+            size={18}
+          />
+
+          Try Again
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+}
+
+

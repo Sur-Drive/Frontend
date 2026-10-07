@@ -6,6 +6,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+import { Toaster } from "sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import HomePage from "./pages/HomePage";
@@ -114,7 +115,6 @@ import { PassengerSavedPlacesProvider } from "./context/PassengerSavedPlacesCont
 import SavedPlaces from "./pages/Passenger/Account/SavedPlaces/SavedPlaces";
 import SavedPlaceLocation from "./pages/Passenger/Account/SavedPlaces/SavedPlaceLocation";
 import SavedPlaceMap from "./pages/Passenger/Account/SavedPlaces/SavedPlaceMap";
-import ConfirmSavedPlace from "./pages/Passenger/Account/SavedPlaces/ConfirmSavedPlace";
 import NameSavedPlace from "./pages/Passenger/Account/SavedPlaces/NameSavedPlace";
 import PassengerRateUs from "./pages/Passenger/Account/RateUs/PassengerRateUs";
 import PassengerSupport from "./pages/Passenger/Account/Support/PassengerSupport";
@@ -124,6 +124,9 @@ import Tickets from "./pages/Passenger/Account/Support/Tickets";
 import RaiseTicket from "./pages/Passenger/Account/Support/RaiseTicket";
 import TicketConversation from "./pages/Passenger/Account/Support/TicketConversation";
 import LiveSupportChat from "./pages/Passenger/Account/Support/LiveSupportChat";
+import PassengerProtectedRoute from "./components/passenger/PassengerProtectedRoute";
+import InTrip from "./pages/Passenger/Ride/InTrip";
+import LiveChatConversation from "./pages/Passenger/Account/Support/LiveChatConversation";
 
 
 const queryClient = new QueryClient({
@@ -266,6 +269,18 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 
   return (
     <>
+    <Toaster
+    position="top-center"
+    richColors
+    closeButton
+    duration={3500}
+    toastOptions={{
+      style: {
+        borderRadius: "14px",
+        fontSize: "14px",
+      },
+    }}
+  />
       <div className={`min-h-screen bg-gray-50 ${showNav ? "" : ""}`}>
         <Routes>
           <Route path="/" element={<RootEntry />} />
@@ -451,6 +466,7 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
   element={<PassengerSignup />}
 />
 
+
 <Route
   path="/passenger/otp"
   element={<PassengerOtp />}
@@ -467,6 +483,8 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
   path="/passenger/biometric"
   element={<PassengerBiometric />}
 />
+
+<Route element={<PassengerProtectedRoute />}>
 <Route
   path="/passenger/home"
   element={<PassengerHome />}
@@ -504,9 +522,25 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
   path="/passenger/ride/driver-arriving"
   element={<DriverArriving />}
 />
+
 <Route
   path="/passenger/ride/driver-arrived"
   element={<DriverArrived />}
+/>
+
+<Route
+  path="/passenger/ride/in-trip"
+  element={<InTrip />}
+/>
+
+<Route
+  path="/passenger/ride/trip"
+  element={
+    <Navigate
+      to="/passenger/ride/in-trip"
+      replace
+    />
+  }
 />
 
 <Route
@@ -515,19 +549,21 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 />
 
 <Route
-  path="/passenger/ride/trip"
-  element={<ActiveTrip />}
-/>
-
-<Route
-  path="/passenger/ride/safety"
-  element={<RideSafety />}
+  path="/passenger/ride/complete"
+  element={<TripComplete />}
 />
 
 <Route
   path="/passenger/ride/arrived"
   element={<TripComplete />}
 />
+
+
+<Route
+  path="/passenger/ride/safety"
+  element={<RideSafety />}
+/>
+
 
 <Route
   path="/passenger/ride/rate"
@@ -655,11 +691,6 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 />
 
 <Route
-  path="/passenger/account/saved-places/confirm"
-  element={<ConfirmSavedPlace />}
-/>
-
-<Route
   path="/passenger/account/saved-places/name"
   element={<NameSavedPlace />}
 />
@@ -685,6 +716,13 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
 />
 
 <Route
+  path="/passenger/account/support/live-chat/:conversationId"
+  element={
+    <LiveChatConversation />
+  }
+/>
+
+<Route
   path="/passenger/account/support/tickets"
   element={<Tickets />}
 />
@@ -698,6 +736,7 @@ const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
   path="/passenger/account/support/tickets/:ticketId"
   element={<TicketConversation />}
 />
+</Route>
         </Routes>
       </div>
 
