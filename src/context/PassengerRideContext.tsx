@@ -70,6 +70,8 @@ interface PassengerRideContextValue {
 }
 
 const initialRideState: PassengerRideState = {
+  rideId: null,
+
   status: "idle",
 
   pickup: null,
@@ -78,11 +80,9 @@ const initialRideState: PassengerRideState = {
   stops: [],
 
   selectedRide: null,
-
   paymentMethod: defaultPaymentMethod,
 
   promoCode: null,
-
   driver: null,
 
   estimatedFare: null,
