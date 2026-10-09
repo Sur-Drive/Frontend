@@ -31,7 +31,7 @@ export default function CallOptionsSheet({
           type="button"
           {...tapMotion}
           onClick={onInApp}
-          className="h-[60px] w-full rounded-full bg-[#6E43A3] text-[16px] font-semibold text-white"
+          className="h-[60px] w-full rounded-full bg-[#6E43A3] text-base font-semibold text-white"
         >
           Call in-app
         </motion.button>
@@ -40,7 +40,7 @@ export default function CallOptionsSheet({
           whileTap={phoneAvailable ? tapMotion.whileTap : undefined}
           onClick={onPhone}
           disabled={!phoneAvailable}
-          className="mt-[11px] h-[60px] w-full rounded-full border border-[#E6E6EA] bg-white text-[16px] font-semibold text-[#5B4A72] shadow-[0_22px_30px_-8px_rgba(110,67,163,0.30)] disabled:opacity-50"
+          className="mt-[11px] h-[60px] w-full rounded-full border border-[#E6E6EA] bg-white text-base font-semibold text-[#5B4A72] shadow-[0_22px_30px_-8px_rgba(110,67,163,0.30)] disabled:opacity-50"
         >
           Call phone
         </motion.button>

@@ -70,7 +70,7 @@ export default function AddContactPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Add contact
           </h1>
 
@@ -88,7 +88,7 @@ export default function AddContactPage({
                   setError("");
                 }}
                 placeholder="Full Name"
-                className="w-full min-w-0 flex-1 bg-transparent text-[13px] sm:text-[15px] font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
+                className="w-full min-w-0 flex-1 bg-transparent text-base font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
               />
             </div>
 
@@ -96,7 +96,7 @@ export default function AddContactPage({
             <div className="flex items-center gap-3">
               <div className="flex h-[60px] shrink-0 items-center gap-2 rounded-2xl bg-[#F5F5F7] px-4">
                 <span className="text-sm sm:text-base leading-none">🇳🇬</span>
-                <span className="text-[13px] sm:text-[15px] font-semibold text-[#1F2937]">
+                <span className="text-sm sm:text-base font-semibold text-[#1F2937]">
                   +234
                 </span>
               </div>
@@ -109,7 +109,7 @@ export default function AddContactPage({
                     setPhone(e.target.value.replace(/[^\d\s]/g, ""))
                   }
                   placeholder="803 660 0027"
-                  className="w-full min-w-0 flex-1 bg-transparent text-[13px] sm:text-[15px] font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
+                  className="w-full min-w-0 flex-1 bg-transparent text-base font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
                 />
               </div>
             </div>
@@ -124,7 +124,7 @@ export default function AddContactPage({
                 <UserPlus2 size={16} className="text-[#6E43A3]" />
               </span>
               <span
-                className={`flex-1 truncate text-[13px] sm:text-[15px] ${
+                className={`flex-1 truncate text-sm sm:text-base ${
                   relationship
                     ? "font-semibold text-[#1F2937]"
                     : "text-[#9AA5B8]"
@@ -138,7 +138,7 @@ export default function AddContactPage({
 
           <div className="mt-4 divide-y divide-gray-100 rounded-2xl bg-[#F5F5F7] px-4">
             <div className="flex items-center justify-between gap-3 py-3.5">
-              <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+              <span className="text-sm sm:text-base font-medium text-[#1F2937]">
                 Primary contact
               </span>
               <ToggleSwitch
@@ -148,7 +148,7 @@ export default function AddContactPage({
               />
             </div>
             <div className="flex items-center justify-between gap-3 py-3.5">
-              <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+              <span className="text-sm sm:text-base font-medium text-[#1F2937]">
                 Notify when a ride starts
               </span>
               <ToggleSwitch
@@ -159,9 +159,9 @@ export default function AddContactPage({
             </div>
           </div>
 
-          {error && <p className="mt-3 text-[13px] sm:text-sm text-red-500">{error}</p>}
+          {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
 
-          <p className="mt-4 text-[12px] sm:text-[13.5px] leading-relaxed text-[#9AA5B8]">
+          <p className="mt-4 text-xs sm:text-sm leading-relaxed text-[#9AA5B8]">
             By adding a trusted contact, you confirm they know you've
             provided their details to Sur Drive. We may contact them in an
             emergency if you're unreachable. For more information, please
@@ -183,7 +183,7 @@ export default function AddContactPage({
             type="button"
             onClick={submit}
             disabled={!isValid || isPending}
-            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
+            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
           >
             {isPending ? "Adding..." : "Add contact"}
           </button>

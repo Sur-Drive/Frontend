@@ -45,10 +45,10 @@ export default function MyFleetPage({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             My Fleet
           </h1>
-          <p className="mt-1.5 text-[13px] sm:text-[15px] leading-relaxed text-[#9AA5B8]">
+          <p className="mt-1.5 text-sm sm:text-base leading-relaxed text-[#9AA5B8]">
             View the fleet, vehicle, and Fleet Manager assigned to you.
           </p>
 
@@ -59,40 +59,40 @@ export default function MyFleetPage({ onBack }: { onBack: () => void }) {
                 <Building2 size={22} className="text-white" />
               </span>
               <div>
-                <p className="text-[11px] font-semibold tracking-wide text-white/60">
+                <p className="text-xs font-semibold tracking-wide text-white/60">
                   COMPANY
                 </p>
-                <p className="text-[15px] sm:text-lg font-bold text-white">
+                <p className="text-base sm:text-lg font-bold text-white">
                   Acme Logistics.
                 </p>
-                <p className="text-[11.5px] sm:text-[12.5px] text-white/50">ACME-NG-001</p>
+                <p className="text-xs text-white/50">ACME-NG-001</p>
               </div>
             </div>
-            <span className="shrink-0 whitespace-nowrap rounded-full bg-white/15 px-3 py-1.5 text-[11px] font-bold tracking-wide text-white">
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold tracking-wide text-white">
               PRO FLEET
             </span>
           </div>
 
           {/* sub-fleet */}
-          <h2 className="mb-3 mt-7 text-[15px] sm:text-lg font-bold text-[#1F2937]">
+          <h2 className="mb-3 mt-7 text-base sm:text-lg font-bold text-[#1F2937]">
             Sub-fleet
           </h2>
           <div className="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-4 shadow-sm">
             <div>
-              <p className="text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+              <p className="text-sm sm:text-base font-bold text-[#1F2937]">
                 Lagos Metro
               </p>
-              <p className="mt-1 flex items-center gap-1 text-[12px] sm:text-[13px] text-[#9AA5B8]">
+              <p className="mt-1 flex items-center gap-1 text-xs sm:text-sm text-[#9AA5B8]">
                 <MapPin size={13} /> Lagos, SW
               </p>
             </div>
-            <span className="rounded-full bg-[#DCF5E4] px-3 py-1.5 text-[11px] font-bold tracking-wide text-[#1E9E56]">
+            <span className="rounded-full bg-[#DCF5E4] px-3 py-1.5 text-xs font-bold tracking-wide text-[#1E9E56]">
               ACTIVE
             </span>
           </div>
 
           {/* managers */}
-          <h2 className="mb-3 mt-7 text-[15px] sm:text-lg font-bold text-[#1F2937]">
+          <h2 className="mb-3 mt-7 text-base sm:text-lg font-bold text-[#1F2937]">
             Managers
           </h2>
           <div className="flex flex-col gap-3">
@@ -103,28 +103,28 @@ export default function MyFleetPage({ onBack }: { onBack: () => void }) {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E43A3] text-[13px] sm:text-sm font-bold text-white">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E43A3] text-sm font-bold text-white">
                       {m.initials}
                     </span>
                     <div>
-                      <p className="text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+                      <p className="text-sm sm:text-base font-bold text-[#1F2937]">
                         {m.name}
                       </p>
-                      <p className="text-[11.5px] sm:text-[12.5px] text-[#9AA5B8]">{m.role}</p>
+                      <p className="text-xs text-[#9AA5B8]">{m.role}</p>
                     </div>
                   </div>
-                  <span className="shrink-0 whitespace-nowrap rounded-full bg-[#EFE6F7] px-2.5 py-1 text-[10.5px] font-bold tracking-wide text-[#6E43A3]">
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-[#EFE6F7] px-2.5 py-1 text-xs font-bold tracking-wide text-[#6E43A3]">
                     {m.tag}
                   </span>
                 </div>
 
                 <div className="mt-3 flex items-center gap-3">
                   <div className="min-w-0 flex-1 space-y-1.5">
-                    <p className="flex items-center gap-2 text-[12px] sm:text-[13px] text-[#4B5768]">
+                    <p className="flex items-center gap-2 text-xs sm:text-sm text-[#4B5768]">
                       <Phone size={13} className="shrink-0 text-[#9AA5B8]" />
                       {m.phone}
                     </p>
-                    <p className="flex items-center gap-2 truncate text-[12px] sm:text-[13px] text-[#4B5768]">
+                    <p className="flex items-center gap-2 truncate text-xs sm:text-sm text-[#4B5768]">
                       <Mail size={13} className="shrink-0 text-[#9AA5B8]" />
                       <span className="truncate">{m.email}</span>
                     </p>
@@ -151,7 +151,7 @@ export default function MyFleetPage({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* assigned vehicle */}
-          <h2 className="mb-3 mt-7 text-[15px] sm:text-lg font-bold text-[#1F2937]">
+          <h2 className="mb-3 mt-7 text-base sm:text-lg font-bold text-[#1F2937]">
             Assigned vehicle
           </h2>
           <div className="rounded-2xl border border-gray-100 p-4 shadow-sm">
@@ -161,15 +161,15 @@ export default function MyFleetPage({ onBack }: { onBack: () => void }) {
                   <Car size={20} className="text-[#4B5768]" />
                 </span>
                 <div>
-                  <p className="text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+                  <p className="text-sm sm:text-base font-bold text-[#1F2937]">
                     Toyota Hiace 2022
                   </p>
-                  <p className="text-[11.5px] sm:text-[12.5px] text-[#9AA5B8]">
+                  <p className="text-xs text-[#9AA5B8]">
                     Van · V-1042
                   </p>
                 </div>
               </div>
-              <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-[#EFE6F7] px-2.5 py-1.5 text-[11px] font-bold text-[#6E43A3]">
+              <span className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-[#EFE6F7] px-2.5 py-1.5 text-xs font-bold text-[#6E43A3]">
                 <ShieldCheck size={12} /> LAG-882-KJ
               </span>
             </div>
@@ -178,34 +178,34 @@ export default function MyFleetPage({ onBack }: { onBack: () => void }) {
 
             <div className="grid grid-cols-2 gap-y-4">
               <div>
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-[#9AA5B8]">
+                <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-[#9AA5B8]">
                   <Activity size={12} /> TRIPS
                 </p>
-                <p className="mt-1 text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+                <p className="mt-1 text-sm sm:text-base font-bold text-[#1F2937]">
                   234
                 </p>
               </div>
               <div>
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-[#9AA5B8]">
+                <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-[#9AA5B8]">
                   <Gauge size={12} /> KILOMETER
                 </p>
-                <p className="mt-1 text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+                <p className="mt-1 text-sm sm:text-base font-bold text-[#1F2937]">
                   84,210 km
                 </p>
               </div>
               <div>
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-[#9AA5B8]">
+                <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-[#9AA5B8]">
                   <Wrench size={12} /> LAST SERVICE
                 </p>
-                <p className="mt-1 text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+                <p className="mt-1 text-sm sm:text-base font-bold text-[#1F2937]">
                   2026-05-12
                 </p>
               </div>
               <div>
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-[#9AA5B8]">
+                <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-[#9AA5B8]">
                   <CalendarClock size={12} /> NEXT SERVICE
                 </p>
-                <p className="mt-1 text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+                <p className="mt-1 text-sm sm:text-base font-bold text-[#1F2937]">
                   2026-07-12
                 </p>
               </div>

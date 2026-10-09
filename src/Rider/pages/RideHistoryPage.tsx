@@ -133,10 +133,10 @@ function RideRow({ ride, onOpen }: { ride: Ride; onOpen: (r: Ride) => void }) {
           <Car size={20} className="text-[#4B5768]" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-[#1F2937]">
+          <p className="truncate text-base font-semibold text-[#1F2937]">
             {ride.from} <span className="text-[#9AA5B8]">→</span> {ride.to}
           </p>
-          <p className="mt-0.5 truncate text-[12.5px] text-[#9AA5B8]">
+          <p className="mt-0.5 truncate text-xs text-[#9AA5B8]">
             {ride.date} · {ride.person} ·{" "}
             <StatusText ride={ride} />
           </p>
@@ -147,10 +147,10 @@ function RideRow({ ride, onOpen }: { ride: Ride; onOpen: (r: Ride) => void }) {
       <div className="my-3 h-px w-full bg-gray-100" />
 
       <div className="flex items-center justify-between">
-        <span className="text-[13px] text-[#6E7A8C]">
+        <span className="text-sm text-[#6E7A8C]">
           {ride.paymentMethod}
         </span>
-        <span className="text-[15px] font-bold text-[#1F2937]">
+        <span className="text-base font-bold text-[#1F2937]">
           {naira(ride.amount)}
         </span>
       </div>
@@ -242,14 +242,14 @@ function FilterSheet({
             value={startDate}
             onChange={(e) => onChangeStart(e.target.value)}
             placeholder="Start Date"
-            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-sm text-[#1F2937] outline-none"
+            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-base text-[#1F2937] outline-none"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => onChangeEnd(e.target.value)}
             placeholder="End Date"
-            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-sm text-[#1F2937] outline-none"
+            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-base text-[#1F2937] outline-none"
           />
         </div>
 
@@ -295,7 +295,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
         >
           <ChevronLeft size={20} className="text-[#1F2937]" />
         </button>
-        <h1 className="text-[17px] font-bold text-[#1F2937]">Ride Details</h1>
+        <h1 className="text-lg font-bold text-[#1F2937]">Ride Details</h1>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 pt-4">
@@ -319,10 +319,10 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-semibold text-[#1F2937]">
+                <p className="truncate text-base font-semibold text-[#1F2937]">
                   {ride.driverFullName}
                 </p>
-                <p className="text-[12.5px] text-[#9AA5B8]">{ride.date}</p>
+                <p className="text-xs text-[#9AA5B8]">{ride.date}</p>
               </div>
               <div className="flex items-center gap-1 text-[#F4C542]">
                 <Star size={14} className="fill-[#F4C542]" />
@@ -341,13 +341,13 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
                   </div>
                   <div className="flex flex-1 items-center justify-between">
                     <div>
-                      <p className="text-[12.5px] text-[#9AA5B8]">Duration</p>
+                      <p className="text-xs text-[#9AA5B8]">Duration</p>
                       <p className="text-sm font-bold text-[#1F2937]">
                         {ride.duration}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[12.5px] text-[#9AA5B8]">Distance</p>
+                      <p className="text-xs text-[#9AA5B8]">Distance</p>
                       <p className="text-sm font-bold text-[#1F2937]">
                         {ride.distance}
                       </p>
@@ -360,7 +360,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
 
           {/* route card */}
           <div className="mt-4 rounded-2xl border border-gray-100 p-4 shadow-sm">
-            <h3 className="mb-3 text-[15px] font-bold text-[#1F2937]">
+            <h3 className="mb-3 text-base font-bold text-[#1F2937]">
               Route
             </h3>
             <div className="flex gap-3">
@@ -371,19 +371,19 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
               </div>
               <div className="flex-1">
                 <div className="pb-4">
-                  <p className="text-[14px] font-medium text-[#1F2937]">
+                  <p className="text-sm font-medium text-[#1F2937]">
                     {ride.pickupAddress}
                   </p>
-                  <p className="text-[12px] text-[#9AA5B8]">
+                  <p className="text-xs text-[#9AA5B8]">
                     {isCancelled ? "Pick up" : ride.pickupTime}
                   </p>
                 </div>
                 <div className="h-px w-full bg-gray-100" />
                 <div className="pt-4">
-                  <p className="text-[14px] font-medium text-[#1F2937]">
+                  <p className="text-sm font-medium text-[#1F2937]">
                     {ride.dropoffAddress}
                   </p>
-                  <p className="text-[12px] text-[#9AA5B8]">
+                  <p className="text-xs text-[#9AA5B8]">
                     {isCancelled ? "Drop off" : ride.dropoffTime}
                   </p>
                 </div>
@@ -393,7 +393,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
             <button
               type="button"
               disabled
-              className="mt-4 w-full rounded-full bg-gray-200 py-3.5 text-[15px] font-semibold text-white/90"
+              className="mt-4 w-full rounded-full bg-gray-200 py-3.5 text-base font-semibold text-white/90"
             >
               Get help with ride
             </button>
@@ -401,7 +401,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
 
           {/* payment card */}
           <div className="mt-4 rounded-2xl border border-gray-100 p-4 shadow-sm">
-            <h3 className="mb-3 text-[15px] font-bold text-[#1F2937]">
+            <h3 className="mb-3 text-base font-bold text-[#1F2937]">
               Payment
             </h3>
 
@@ -412,7 +412,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
                   <span className="font-medium text-[#1F2937]">₦0</span>
                 </div>
                 <div className="my-3 h-px w-full bg-gray-100" />
-                <div className="flex items-center justify-between text-[15px] font-bold text-[#1F2937]">
+                <div className="flex items-center justify-between text-base font-bold text-[#1F2937]">
                   <span>Total</span>
                   <span>₦0</span>
                 </div>
@@ -438,7 +438,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
                   </span>
                 </div>
                 <div className="my-3 h-px w-full bg-gray-100" />
-                <div className="flex items-center justify-between text-[15px] font-bold text-[#1F2937]">
+                <div className="flex items-center justify-between text-base font-bold text-[#1F2937]">
                   <span>Total</span>
                   <span>{naira(total)}</span>
                 </div>
@@ -512,7 +512,7 @@ export default function RideHistoryPage() {
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-[calc(env(safe-area-inset-top,0px)+20px)]">
         <div className="mx-auto w-full max-w-xl">
           <div className="mb-5 flex items-center justify-between">
-            <h1 className="text-[26px] font-extrabold text-[#1F2937]">
+            <h1 className="text-2xl font-extrabold text-[#1F2937]">
               Ride History
             </h1>
             <button

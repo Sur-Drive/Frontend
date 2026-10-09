@@ -121,7 +121,7 @@ export default function ShareTripSheet({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && onShare()}
             placeholder="Name, e.g. Jane Doe"
-            className="h-12 min-w-0 flex-1 rounded-2xl bg-[#f4f4f3] px-4 text-sm text-[#1F2937] outline-none placeholder:text-gray-400"
+            className="h-12 min-w-0 flex-1 rounded-2xl bg-[#f4f4f3] px-4 text-base text-[#1F2937] outline-none placeholder:text-gray-400"
           />
           <button
             type="button"

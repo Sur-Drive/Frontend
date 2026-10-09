@@ -38,13 +38,13 @@ function PlainText({ text }: { text: string }) {
       {paragraphs.map((paragraph, idx) => {
         const heading = paragraph.match(/^#{1,6}\s+(.*)$/);
         return heading ? (
-          <h2 key={idx} className="mt-3 text-[16px] sm:text-[19px] font-bold text-[#1F2937]">
+          <h2 key={idx} className="mt-3 text-base sm:text-lg font-bold text-[#1F2937]">
             {heading[1]}
           </h2>
         ) : (
           <p
             key={idx}
-            className="whitespace-pre-line text-[13px] sm:text-[15px] leading-[1.7] text-[#4B5768]"
+            className="whitespace-pre-line text-sm sm:text-base leading-[1.7] text-[#4B5768]"
           >
             {paragraph}
           </p>
@@ -105,7 +105,7 @@ function LegalDocPage({
             >
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
-            <h1 className="text-[21px] sm:text-[26px] font-extrabold text-[#1F2937]">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#1F2937]">
               {data?.title || fallbackTitle}
             </h1>
           </div>
@@ -118,14 +118,14 @@ function LegalDocPage({
 
           {isError && (
             <div className="mt-10 rounded-2xl bg-gray-50 p-5 text-center">
-              <p className="text-[13px] sm:text-[15px] text-[#4B5768]">
+              <p className="text-sm sm:text-base text-[#4B5768]">
                 {(error as Error)?.message || "Couldn't load this document."}
               </p>
               <button
                 type="button"
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="mt-3 rounded-full bg-[#1F2937] px-5 py-2 text-[12.5px] sm:text-[14px] font-medium text-white disabled:opacity-60"
+                className="mt-3 rounded-full bg-[#1F2937] px-5 py-2 text-xs sm:text-sm font-medium text-white disabled:opacity-60"
               >
                 {isFetching ? "Retrying..." : "Try again"}
               </button>
@@ -133,7 +133,7 @@ function LegalDocPage({
           )}
 
           {!isLoading && !isError && data && !hasBody && (
-            <p className="mt-10 text-center text-[13px] sm:text-[15px] text-[#7B87B8]">
+            <p className="mt-10 text-center text-sm sm:text-base text-[#7B87B8]">
               Nothing to show yet.
             </p>
           )}
@@ -141,7 +141,7 @@ function LegalDocPage({
           {data && hasBody && (
             <div className="mt-6">
               {data.updatedAt && !Number.isNaN(Date.parse(data.updatedAt)) && (
-                <p className="mb-4 text-[12px] sm:text-[13.5px] text-[#9AA5B8]">
+                <p className="mb-4 text-xs sm:text-sm text-[#9AA5B8]">
                   Last updated{" "}
                   {new Date(data.updatedAt).toLocaleDateString(undefined, {
                     year: "numeric",
@@ -158,7 +158,7 @@ function LegalDocPage({
               {data.sections.map((section, idx) => (
                 <div key={idx} className="mt-6">
                   {section.title && (
-                    <h2 className="mb-2 text-[16px] sm:text-[19px] font-bold text-[#1F2937]">
+                    <h2 className="mb-2 text-base sm:text-lg font-bold text-[#1F2937]">
                       {section.title}
                     </h2>
                   )}
@@ -213,7 +213,7 @@ export default function LegalPage({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[21px] sm:text-[26px] font-extrabold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-extrabold text-[#1F2937]">
             Legals
           </h1>
 
@@ -227,10 +227,10 @@ export default function LegalPage({ onBack }: { onBack: () => void }) {
                 <FileText size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+                <p className="text-sm sm:text-base font-medium text-[#1F2937]">
                   Terms &amp; Conditions
                 </p>
-                <p className="text-[12px] sm:text-[13.5px] text-[#7B87B8]">
+                <p className="text-xs sm:text-sm text-[#7B87B8]">
                   Read our terms &amp; conditions
                 </p>
               </div>
@@ -246,10 +246,10 @@ export default function LegalPage({ onBack }: { onBack: () => void }) {
                 <FileText size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+                <p className="text-sm sm:text-base font-medium text-[#1F2937]">
                   Privacy policy
                 </p>
-                <p className="text-[12px] sm:text-[13.5px] text-[#7B87B8]">
+                <p className="text-xs sm:text-sm text-[#7B87B8]">
                   Read our Privacy policy
                 </p>
               </div>

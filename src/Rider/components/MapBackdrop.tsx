@@ -110,28 +110,28 @@ export default function MapBackdrop({
       </svg>
 
       {/* Street labels */}
-      <span className="absolute left-3 top-[8%] text-[10px] font-medium text-[#8B95A5]">
+      <span className="absolute left-3 top-[8%] text-xs font-medium text-[#8B95A5]">
         NW 100th St
       </span>
-      <span className="absolute left-[36%] top-[18%] -rotate-45 text-[10px] font-medium text-[#8B95A5]">
+      <span className="absolute left-[36%] top-[18%] -rotate-45 text-xs font-medium text-[#8B95A5]">
         Holman Rd NW
       </span>
-      <span className="absolute left-[22%] top-[38%] -rotate-90 text-[10px] font-medium text-[#8B95A5]">
+      <span className="absolute left-[22%] top-[38%] -rotate-90 text-xs font-medium text-[#8B95A5]">
         8th Ave NW
       </span>
-      <span className="absolute left-[62%] top-[34%] -rotate-90 text-[10px] font-medium text-[#8B95A5]">
+      <span className="absolute left-[62%] top-[34%] -rotate-90 text-xs font-medium text-[#8B95A5]">
         3rd Ave NW
       </span>
-      <span className="absolute right-3 top-[24%] -rotate-90 text-[10px] font-medium text-[#8B95A5]">
+      <span className="absolute right-3 top-[24%] -rotate-90 text-xs font-medium text-[#8B95A5]">
         Greenwood Ave N
       </span>
-      <span className="absolute left-3 top-[62%] text-[11px] font-bold tracking-wide text-[#9AA5B8]">
+      <span className="absolute left-3 top-[62%] text-xs font-bold tracking-wide text-[#9AA5B8]">
         N HILL
       </span>
-      <span className="absolute left-3 bottom-[30%] text-[10px] font-medium text-[#8B95A5]">
+      <span className="absolute left-3 bottom-[30%] text-xs font-medium text-[#8B95A5]">
         NW 85th St
       </span>
-      <span className="absolute right-4 bottom-[30%] text-[11px] font-bold tracking-wide text-[#9AA5B8]">
+      <span className="absolute right-4 bottom-[30%] text-xs font-bold tracking-wide text-[#9AA5B8]">
         GREENWOOD
       </span>
 

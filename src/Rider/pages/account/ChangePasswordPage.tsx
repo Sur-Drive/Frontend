@@ -81,7 +81,7 @@ export default function ChangePasswordPage({
 
   const inputClass =
     "h-14 w-full rounded-2xl bg-[#f4f4f3] px-4 pr-12 text-sm sm:text-base text-gray-800 outline-none placeholder:text-gray-400";
-  const labelClass = "text-[13px] sm:text-sm font-medium text-gray-800";
+  const labelClass = "text-sm font-medium text-gray-800";
 
   return (
     <div className="font-outfit relative flex h-full min-h-0 w-full flex-col bg-white">
@@ -94,7 +94,7 @@ export default function ChangePasswordPage({
           <ChevronLeft size={22} className="text-[#1F2937]" />
         </button>
 
-        <h1 className="mt-8 text-[22px] sm:text-[28px] font-bold text-[#2b2b2b]">
+        <h1 className="mt-8 text-xl sm:text-2xl font-bold text-[#2b2b2b]">
           Change account password
         </h1>
         <p className="mt-2 text-sm sm:text-base text-gray-400">
@@ -169,7 +169,7 @@ export default function ChangePasswordPage({
                   />
                 </div>
 
-                <p className="mt-3 text-[13px] sm:text-sm text-gray-800">
+                <p className="mt-3 text-sm text-gray-800">
                   {strengthMeta[strength].label} password. Must contain:
                 </p>
                 <ul className="mt-2 space-y-1.5">
@@ -178,7 +178,7 @@ export default function ChangePasswordPage({
                     return (
                       <li
                         key={c.label}
-                        className={`flex items-center gap-2 text-[13px] sm:text-sm ${
+                        className={`flex items-center gap-2 text-sm ${
                           met ? "text-emerald-600" : "text-gray-400"
                         }`}
                       >
@@ -219,19 +219,19 @@ export default function ChangePasswordPage({
               </button>
             </div>
             {mismatch && (
-              <p className="mt-2 text-[13px] sm:text-sm text-red-500">
+              <p className="mt-2 text-sm text-red-500">
                 Password doesn't match
               </p>
             )}
           </div>
         </div>
 
-        {error && <p className="mt-5 text-[13px] sm:text-sm text-red-500">{error}</p>}
+        {error && <p className="mt-5 text-sm text-red-500">{error}</p>}
 
         <button
           onClick={submit}
           disabled={!canSubmit}
-          className="mt-8 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
+          className="mt-8 h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
         >
           {isPending ? "Saving..." : "Change Password"}
         </button>
@@ -247,17 +247,17 @@ export default function ChangePasswordPage({
               </div>
             </div>
 
-            <h2 className="mt-5 text-[17px] sm:text-xl font-bold text-[#2b2b2b]">
+            <h2 className="mt-5 text-lg sm:text-xl font-bold text-[#2b2b2b]">
               Password Changed Successfully
             </h2>
-            <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-gray-500">
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
               Your password has been changed successfully. You can now log in
               using your new password.
             </p>
 
             <button
               onClick={onDone}
-              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
               Done
             </button>

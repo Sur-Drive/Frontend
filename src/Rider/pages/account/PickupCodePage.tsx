@@ -24,17 +24,17 @@ export default function PickupCodePage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Pick-up code
           </h1>
-          <p className="mt-1.5 text-[13px] sm:text-[15px] leading-relaxed text-[#9AA5B8]">
+          <p className="mt-1.5 text-sm sm:text-base leading-relaxed text-[#9AA5B8]">
             Verify your ride with a unique code. Match the code with your
             driver before getting in to make sure you're in the right
             vehicle with the right driver.
           </p>
 
           <div className="mt-6 flex w-full items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm">
-            <span className="text-[13.5px] sm:text-[15.5px] font-medium text-[#1F2937]">
+            <span className="text-sm sm:text-base font-medium text-[#1F2937]">
               Enable Pick-up code
             </span>
             <ToggleSwitch

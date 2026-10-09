@@ -100,7 +100,7 @@ export default function ResetPasswordPage() {
     <div className="font-outfit min-h-[100dvh] bg-white px-6 pb-8 pt-4">
       <OnboardingProgress progress={100} />
 
-      <h1 className="mt-8 text-[28px] font-bold text-[#2b2b2b]">
+      <h1 className="mt-8 text-2xl font-bold text-[#2b2b2b]">
         Create new password
       </h1>
       <p className="mt-2 text-base text-gray-400">

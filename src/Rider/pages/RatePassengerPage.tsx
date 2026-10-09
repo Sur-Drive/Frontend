@@ -82,13 +82,13 @@ export default function RatePassengerPage() {
           <p className="mt-2 text-base font-bold text-[#1F2937]">
             {passenger.name}
           </p>
-          <p className="text-[11px] text-[#9AA5B8]">{passenger.id}</p>
+          <p className="text-xs text-[#9AA5B8]">{passenger.id}</p>
         </div>
 
         {/* Trip summary */}
         <div className="mt-3 flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-3 text-xs text-[#4B5768]">
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-[#9AA5B8]">
+            <p className="text-xs uppercase tracking-wide text-[#9AA5B8]">
               Destination
             </p>
             <p className="mt-0.5 font-semibold text-[#1F2937]">
@@ -96,7 +96,7 @@ export default function RatePassengerPage() {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wide text-[#9AA5B8]">
+            <p className="text-xs uppercase tracking-wide text-[#9AA5B8]">
               Distance
             </p>
             <p className="mt-0.5 font-semibold text-[#1F2937]">
@@ -135,10 +135,10 @@ export default function RatePassengerPage() {
           onChange={(e) => setNote(e.target.value)}
           placeholder="Write your comment"
           rows={2}
-          className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-xs text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
+          className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-base text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
         />
 
-        <p className="mt-3 text-[11px] text-[#9AA5B8]">Or select feedback</p>
+        <p className="mt-3 text-xs text-[#9AA5B8]">Or select feedback</p>
         <div className="flex flex-wrap gap-2 mt-2">
           {TAGS.map((tag) => {
             const isBad = NEGATIVE_RIDER_RATING_TAGS.includes(tag);
@@ -148,7 +148,7 @@ export default function RatePassengerPage() {
                 key={tag}
                 type="button"
                 onClick={() => toggleTag(tag)}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   isSelected
                     ? isBad
                       ? "border-[#E53935] bg-[#E53935]/10 text-[#E53935]"

@@ -193,7 +193,7 @@ export default function DriverHomePage() {
           className="flex items-center justify-between w-full px-4 py-3 mt-3 text-left border border-gray-100 shadow-sm rounded-2xl"
         >
           <div>
-            <p className="text-[13px] text-[#4B5768]">Today's Earnings</p>
+            <p className="text-sm text-[#4B5768]">Today's Earnings</p>
             <p className="mt-1 text-xl font-extrabold text-[#1F2937]">{todayEarnings}</p>
           </div>
           <span className="text-gray-300">›</span>
@@ -203,14 +203,14 @@ export default function DriverHomePage() {
         <div className="grid grid-cols-2 gap-3 mt-3">
           <div className="px-4 py-3 border border-gray-100 shadow-sm rounded-2xl">
             <div className="flex items-center justify-between">
-              <p className="text-[13px] text-[#4B5768]">Drive score</p>
+              <p className="text-sm text-[#4B5768]">Drive score</p>
               <span className="text-gray-300">›</span>
             </div>
             <p className="mt-1 text-lg font-extrabold text-[#1F2937]">93%</p>
           </div>
           <div className="px-4 py-3 border border-gray-100 shadow-sm rounded-2xl">
             <div className="flex items-center justify-between">
-              <p className="text-[13px] text-[#4B5768]">Current Rating</p>
+              <p className="text-sm text-[#4B5768]">Current Rating</p>
               <span className="text-gray-300">›</span>
             </div>
             <p className="mt-1 flex items-center gap-1 text-lg font-extrabold text-[#1F2937]">

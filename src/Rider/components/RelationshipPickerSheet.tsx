@@ -69,7 +69,7 @@ export default function RelationshipPickerSheet({
           type="button"
           {...tapMotion}
           onClick={() => onSelect(value)}
-          className="mt-4 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30"
+          className="mt-4 h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30"
         >
           Select
         </motion.button>

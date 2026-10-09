@@ -78,14 +78,14 @@ function DriverCard({
         <div className="flex items-center gap-1.5">
           <p className="truncate text-sm font-semibold text-[#1F2937]">{ride.passengerName}</p>
           {ride.passengerRating !== undefined && (
-            <span className="flex items-center gap-0.5 rounded bg-[#FFF6D6] px-1 text-[11px] font-semibold text-[#D39B13]">
+            <span className="flex items-center gap-0.5 rounded bg-[#FFF6D6] px-1 text-xs font-semibold text-[#D39B13]">
               <Star size={10} className="fill-[#F4C542] text-[#F4C542]" />
               {ride.passengerRating.toFixed(1)}
             </span>
           )}
         </div>
         {ride.passengerTrips !== undefined && (
-          <p className="text-[11px] text-[#6F7DA3]">{ride.passengerTrips} Completed ride</p>
+          <p className="text-xs text-[#6F7DA3]">{ride.passengerTrips} Completed ride</p>
         )}
       </div>
       <button

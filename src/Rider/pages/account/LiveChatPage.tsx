@@ -59,14 +59,14 @@ export default function LiveChatPage({ onBack }: { onBack: () => void }) {
             >
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E43A3] text-[13px] sm:text-sm font-bold text-white">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E43A3] text-sm font-bold text-white">
               SD
             </span>
             <div>
-              <p className="text-[15px] sm:text-[17px] font-semibold text-[#1F2937]">
+              <p className="text-base sm:text-lg font-semibold text-[#1F2937]">
                 Support team
               </p>
-              <p className="text-[12px] sm:text-[13.5px] text-[#8B93C9]">
+              <p className="text-xs sm:text-sm text-[#8B93C9]">
                 Support agent
               </p>
             </div>
@@ -78,7 +78,7 @@ export default function LiveChatPage({ onBack }: { onBack: () => void }) {
                 <Loader2 className="animate-spin text-[#6E43A3]" />
               </div>
             ) : (
-              <p className="whitespace-pre-line text-[13px] sm:text-[15px] leading-relaxed text-[#1F2937]">
+              <p className="whitespace-pre-line text-sm sm:text-base leading-relaxed text-[#1F2937]">
                 {"Hi there.\nWhat brings you here today?"}
               </p>
             )}
@@ -104,7 +104,7 @@ export default function LiveChatPage({ onBack }: { onBack: () => void }) {
                 if (e.key === "Enter") start();
               }}
               placeholder="Write a message"
-              className="h-full w-full bg-transparent text-[13px] sm:text-[15px] text-[#1F2937] outline-none placeholder:text-gray-400"
+              className="h-full w-full bg-transparent text-base text-[#1F2937] outline-none placeholder:text-gray-400"
             />
             <button
               type="button"

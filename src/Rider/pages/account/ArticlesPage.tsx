@@ -30,7 +30,7 @@ function FaqItem({
         onClick={onToggle}
         className="flex w-full items-center justify-between gap-3 text-left"
       >
-        <span className="text-[14px] sm:text-[16px] text-[#1F2937]">{faq.question}</span>
+        <span className="text-sm sm:text-base text-[#1F2937]">{faq.question}</span>
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EFE0FB]">
           {open ? (
             <ChevronUp size={16} className="text-[#6E43A3]" />
@@ -43,19 +43,19 @@ function FaqItem({
       {open && (
         <div className="mt-3">
           {answer ? (
-            <p className="whitespace-pre-line text-[12.5px] sm:text-[14.5px] leading-relaxed text-[#7C86C9]">
+            <p className="whitespace-pre-line text-xs sm:text-sm leading-relaxed text-[#7C86C9]">
               {answer}
             </p>
           ) : detail.isLoading ? (
             <Loader2 size={18} className="animate-spin text-[#6E43A3]" />
           ) : detail.isError ? (
-            <p className="text-[12.5px] sm:text-[14px] text-red-500">
+            <p className="text-xs sm:text-sm text-red-500">
               {detail.error instanceof Error
                 ? detail.error.message
                 : "Couldn't load this answer."}
             </p>
           ) : (
-            <p className="text-[12.5px] sm:text-[14px] text-[#9AA5B8]">No answer available yet.</p>
+            <p className="text-xs sm:text-sm text-[#9AA5B8]">No answer available yet.</p>
           )}
         </div>
       )}
@@ -92,7 +92,7 @@ export default function ArticlesPage({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Articles
           </h1>
           <p className="mt-1.5 text-sm sm:text-base text-[#9AA5B8]">
@@ -106,11 +106,11 @@ export default function ArticlesPage({ onBack }: { onBack: () => void }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search help articles..."
-              className="h-full w-full bg-transparent text-sm sm:text-base text-[#1F2937] outline-none placeholder:text-gray-400"
+              className="h-full w-full bg-transparent text-base text-[#1F2937] outline-none placeholder:text-gray-400"
             />
           </div>
 
-          <h2 className="mb-3 mt-6 text-[15px] sm:text-lg font-bold text-[#1F2937]">
+          <h2 className="mb-3 mt-6 text-base sm:text-lg font-bold text-[#1F2937]">
             FAQ's
           </h2>
 
@@ -122,7 +122,7 @@ export default function ArticlesPage({ onBack }: { onBack: () => void }) {
 
           {isError && (
             <div className="rounded-2xl bg-gray-50 p-5 text-center">
-              <p className="text-[13px] sm:text-[15px] text-[#4B5768]">
+              <p className="text-sm sm:text-base text-[#4B5768]">
                 {error instanceof Error
                   ? error.message
                   : "Couldn't load the FAQs."}
@@ -131,7 +131,7 @@ export default function ArticlesPage({ onBack }: { onBack: () => void }) {
                 type="button"
                 onClick={() => refetch()}
                 disabled={isFetching}
-                className="mt-3 rounded-full bg-[#1F2937] px-5 py-2 text-[12.5px] sm:text-[14px] font-medium text-white disabled:opacity-60"
+                className="mt-3 rounded-full bg-[#1F2937] px-5 py-2 text-xs sm:text-sm font-medium text-white disabled:opacity-60"
               >
                 {isFetching ? "Retrying..." : "Try again"}
               </button>
@@ -149,7 +149,7 @@ export default function ArticlesPage({ onBack }: { onBack: () => void }) {
                 />
               ))}
               {filtered.length === 0 && (
-                <p className="mt-4 text-center text-[13px] sm:text-sm text-[#9AA5B8]">
+                <p className="mt-4 text-center text-sm text-[#9AA5B8]">
                   {query.trim()
                     ? `No articles match "${query}".`
                     : "No FAQs yet."}

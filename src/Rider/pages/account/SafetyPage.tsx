@@ -39,7 +39,7 @@ export default function SafetyPage({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Safety
           </h1>
 
@@ -53,10 +53,10 @@ export default function SafetyPage({ onBack }: { onBack: () => void }) {
                 <Phone size={18} className="text-[#4B5768]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+                <p className="text-sm sm:text-base font-medium text-[#1F2937]">
                   Emergency contact
                 </p>
-                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">
+                <p className="text-xs sm:text-sm text-[#9AA5B8]">
                   {contacts.length === 0
                     ? "None Added"
                     : `${contacts.length} Added`}
@@ -74,10 +74,10 @@ export default function SafetyPage({ onBack }: { onBack: () => void }) {
                 <KeyRound size={18} className="text-[#4B5768]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+                <p className="text-sm sm:text-base font-medium text-[#1F2937]">
                   Pick-up code
                 </p>
-                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">
+                <p className="text-xs sm:text-sm text-[#9AA5B8]">
                   {pickupCodeEnabled ? "On" : "Off"}
                 </p>
               </div>

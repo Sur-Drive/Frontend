@@ -603,26 +603,26 @@ function ComingSoonModal({
             {/* Content */}
 
             <div className="relative mt-5 text-center">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#6E43A3]">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6E43A3]">
                 Coming Soon
               </p>
 
               <h2
                 id="coming-soon-title"
-                className="mt-2 text-[23px] font-bold tracking-[-0.03em] text-[#302B34]"
+                className="mt-2 text-2xl font-bold tracking-[-0.03em] text-[#302B34]"
               >
                 {isRide
                   ? "Book a Ride"
                   : "Earn as a Driver"}
               </h2>
 
-              <p className="mx-auto mt-2 max-w-[300px] text-[14px] leading-6 text-[#817A85]">
+              <p className="mx-auto mt-2 max-w-[300px] text-sm leading-6 text-[#817A85]">
                 {isRide
                   ? "We're putting the finishing touches on the SUR-DRIVE ride booking experience."
                   : "Our driver onboarding and earning experience is currently being prepared."}
               </p>
 
-              <p className="mt-3 text-[13px] font-medium text-[#6E43A3]">
+              <p className="mt-3 text-sm font-medium text-[#6E43A3]">
                 We'll be ready for you soon.
               </p>
             </div>
@@ -635,7 +635,7 @@ function ComingSoonModal({
               whileTap={{
                 scale: 0.97,
               }}
-              className="relative mt-6 flex h-[52px] w-full items-center justify-center rounded-[15px] bg-[#6E43A3] text-[15px] font-semibold text-white shadow-[0_10px_25px_rgba(110,67,163,0.25)]"
+              className="relative mt-6 flex h-[52px] w-full items-center justify-center rounded-[15px] bg-[#6E43A3] text-base font-semibold text-white shadow-[0_10px_25px_rgba(110,67,163,0.25)]"
             >
               Got it
             </motion.button>

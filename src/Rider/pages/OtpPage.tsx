@@ -135,7 +135,7 @@ export default function OtpPage() {
           <ChevronLeft size={22} />
         </button>
 
-        <h1 className="mt-8 text-[28px] font-bold text-[#2b2b2b]">
+        <h1 className="mt-8 text-2xl font-bold text-[#2b2b2b]">
           OTP Verification
         </h1>
         <p className="mt-2 text-base text-gray-400">
@@ -144,11 +144,11 @@ export default function OtpPage() {
         </p>
 
         {/* OTP boxes */}
-        <div className="flex items-center gap-4 mt-8">
+        <div className="flex items-center justify-center gap-3 mt-8 sm:gap-4">
           {code.map((digit, i) => (
             <div
               key={i}
-              className={`flex h-[68px] w-[68px] items-center justify-center rounded-2xl text-2xl font-bold text-gray-800 transition ${
+              className={`flex h-14 w-14 items-center sm:h-[68px] sm:w-[68px] justify-center rounded-2xl text-2xl font-bold text-gray-800 transition ${
                 digit
                   ? "bg-white shadow-[0_6px_16px_rgba(0,0,0,0.12)]"
                   : i === currentIndex

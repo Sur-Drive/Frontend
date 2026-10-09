@@ -97,7 +97,7 @@ function PeriodTabs({
             type="button"
             onClick={() => onChange(i)}
             style={{ width: TAB_W }}
-            className={`h-full shrink-0 whitespace-nowrap rounded-md text-[14.5px] font-semibold transition-colors ${
+            className={`h-full shrink-0 whitespace-nowrap rounded-md text-sm font-semibold transition-colors ${
               i === active ? "bg-white text-[#251F61]" : "text-[#6B7A99]"
             }`}
           >
@@ -203,7 +203,7 @@ function BarChart({ data }: { data: PeriodData }) {
             className="absolute right-full -translate-y-1/2 whitespace-nowrap pr-1 text-right font-medium leading-none text-[#6B7A99]"
             style={{
               top: dense ? 7.75 + 28 * i : i * 30,
-              fontSize: dense ? 11 : 12,
+              fontSize: 12,
             }}
           >
             {t.label}
@@ -237,7 +237,7 @@ function BarChart({ data }: { data: PeriodData }) {
                 />
                 {!dense && (
                   <span
-                    className={`absolute left-1/2 top-full mt-[7px] -translate-x-1/2 whitespace-nowrap text-[12px] leading-4 sm:text-[13px] ${
+                    className={`absolute left-1/2 top-full mt-[7px] -translate-x-1/2 whitespace-nowrap text-xs leading-4 sm:text-sm ${
                       isHi
                         ? "font-semibold text-[#6E43A3]"
                         : "font-medium text-[#667085]"
@@ -251,7 +251,7 @@ function BarChart({ data }: { data: PeriodData }) {
           })}
 
           {dense && data.axisLabels && (
-            <div className="pointer-events-none absolute inset-x-0 top-full mt-[7px] flex justify-between text-[12px] leading-4 text-[#878787] sm:text-[13px]">
+            <div className="pointer-events-none absolute inset-x-0 top-full mt-[7px] flex justify-between text-xs leading-4 text-[#878787] sm:text-sm">
               {data.axisLabels.map((l) => (
                 <span key={l}>{l}</span>
               ))}
@@ -260,7 +260,7 @@ function BarChart({ data }: { data: PeriodData }) {
 
           {/* tooltip over the selected bar (kept inside the plot) */}
           <span
-            className="pointer-events-none absolute z-10 flex items-center justify-center whitespace-nowrap rounded-md text-[12px] font-semibold text-white"
+            className="pointer-events-none absolute z-10 flex items-center justify-center whitespace-nowrap rounded-md text-xs font-semibold text-white"
             style={{
               backgroundColor: PURPLE,
               width: tipW,
@@ -306,7 +306,7 @@ function TimeRangeSheet({
       />
       <div className="relative w-full max-w-md rounded-t-[24px] bg-white pb-[calc(env(safe-area-inset-bottom,0px)+7px)]">
         <div className="flex h-[84.5px] items-start justify-between border-b border-[#E8E6EB] px-6 pt-10">
-          <h2 className="text-[19px] font-semibold leading-7 text-[#2E2E2E]">
+          <h2 className="text-lg font-semibold leading-7 text-[#2E2E2E]">
             Time Range
           </h2>
           <button
@@ -327,7 +327,7 @@ function TimeRangeSheet({
               onClick={() => onChange(opt.key)}
               className="flex h-[60px] items-center justify-between border-b border-[#E8E6EB] pl-6 pr-[26px] text-left"
             >
-              <span className="text-[17px] font-semibold text-[#2E2E2E]">
+              <span className="text-lg font-semibold text-[#2E2E2E]">
                 {opt.label}
               </span>
               <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#6E43A3]">
@@ -342,7 +342,7 @@ function TimeRangeSheet({
         <button
           type="button"
           onClick={onClose}
-          className="mx-6 mt-[10px] flex h-[59px] w-[calc(100%-48px)] items-center justify-center rounded-full bg-[#6E43A3] text-[17px] font-semibold text-white shadow-[0_12px_24px_rgba(110,67,163,0.28)] transition active:scale-[0.99]"
+          className="mx-6 mt-[10px] flex h-[59px] w-[calc(100%-48px)] items-center justify-center rounded-full bg-[#6E43A3] text-lg font-semibold text-white shadow-[0_12px_24px_rgba(110,67,163,0.28)] transition active:scale-[0.99]"
         >
           Done
         </button>
@@ -382,7 +382,7 @@ function EarningsDetail({
         >
           <ChevronLeft size={20} strokeWidth={2} className="text-[#141414]" />
         </button>
-        <h1 className="flex-1 text-center text-[24px] font-semibold leading-9 text-[#2E2E2E]">
+        <h1 className="flex-1 text-center text-2xl font-semibold leading-9 text-[#2E2E2E]">
           Earnings Details
         </h1>
       </div>
@@ -390,7 +390,7 @@ function EarningsDetail({
       <div className="flex-1 min-h-0 px-6 pt-5 pb-8 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-[20.5px]">
           {detail.error && (
-            <div className="flex items-center justify-between rounded-[11px] bg-[#FEF3F2] px-4 py-3 text-[13px] text-[#B42318]">
+            <div className="flex items-center justify-between rounded-[11px] bg-[#FEF3F2] px-4 py-3 text-sm text-[#B42318]">
               <span>{(detail.error as Error).message}</span>
               <button
                 type="button"
@@ -406,7 +406,7 @@ function EarningsDetail({
           <div
             className={`flex h-[45px] items-center rounded-[11px] bg-white px-[14.5px] ${CARD_SHADOW_SOFT}`}
           >
-            <p className="text-[15px] font-medium text-[#1D2939]">
+            <p className="text-base font-medium text-[#1D2939]">
               {period.label}
             </p>
           </div>
@@ -415,8 +415,8 @@ function EarningsDetail({
           <div
             className={`rounded-[11px] bg-white px-4 pb-[14.5px] pt-[13px] ${CARD_SHADOW_SOFT}`}
           >
-            <p className="text-[12px] leading-4 text-[#6B7A99]">Net Earnings</p>
-            <p className="mt-0.5 text-[30px] font-bold leading-9 text-[#251F61]">
+            <p className="text-xs leading-4 text-[#6B7A99]">Net Earnings</p>
+            <p className="mt-0.5 text-3xl font-bold leading-9 text-[#251F61]">
               {d ? naira(d.earning) : "—"}
             </p>
             <div className="-mx-4 mb-3.5 mt-[15px] h-px bg-[#F2F4F7]" />
@@ -428,10 +428,10 @@ function EarningsDetail({
                 ["Avg / Trip", d ? naira(d.avgPerTrip) : "—"],
               ].map(([label, value]) => (
                 <div key={label}>
-                  <p className="text-[12px] leading-4 text-[#6B7A99]">
+                  <p className="text-xs leading-4 text-[#6B7A99]">
                     {label}
                   </p>
-                  <p className="text-[16px] font-semibold leading-5 text-[#1D2939]">
+                  <p className="text-base font-semibold leading-5 text-[#1D2939]">
                     {value}
                   </p>
                 </div>
@@ -443,16 +443,16 @@ function EarningsDetail({
           <div
             className={`rounded-[11px] bg-white px-4 pb-[14.5px] pt-[13px] ${CARD_SHADOW_SOFT}`}
           >
-            <h3 className="text-[15px] font-semibold leading-5 text-[#1D2939]">
+            <h3 className="text-base font-semibold leading-5 text-[#1D2939]">
               Fare Breakdown
             </h3>
-            <div className="mt-2.5 flex items-center justify-between text-[14px] leading-5">
+            <div className="mt-2.5 flex items-center justify-between text-sm leading-5">
               <span className="text-[#6B7A99]">Trip Fares</span>
               <span className="font-medium text-[#1D2939]">
                 {d ? naira(d.tripFares) : "—"}
               </span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-[14px] leading-5">
+            <div className="mt-2 flex items-center justify-between text-sm leading-5">
               <span className="text-[#6B7A99]">
                 App Commission{rate !== undefined ? ` (${rate}%)` : ""}
               </span>
@@ -460,7 +460,7 @@ function EarningsDetail({
                 {d ? `-${naira(d.commission)}` : "—"}
               </span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-[15px] font-semibold leading-5 text-[#1D2939]">
+            <div className="mt-2 flex items-center justify-between text-base font-semibold leading-5 text-[#1D2939]">
               <span>Net Earnings</span>
               <span>{d ? naira(d.earning) : "—"}</span>
             </div>
@@ -468,20 +468,20 @@ function EarningsDetail({
 
           {/* trips */}
           <div className="-mt-[3px]">
-            <h3 className="mb-3 text-[17px] font-semibold leading-[22px] text-[#2E2E2E]">
+            <h3 className="mb-3 text-lg font-semibold leading-[22px] text-[#2E2E2E]">
               Trips
             </h3>
 
             {rides.isLoading && (
-              <p className="text-[14px] text-[#6B7A99]">Loading trips…</p>
+              <p className="text-sm text-[#6B7A99]">Loading trips…</p>
             )}
             {rides.error && (
-              <p className="text-[14px] text-[#B42318]">
+              <p className="text-sm text-[#B42318]">
                 {(rides.error as Error).message}
               </p>
             )}
             {!rides.isLoading && !rides.error && trips.length === 0 && (
-              <p className="text-[14px] text-[#6B7A99]">
+              <p className="text-sm text-[#6B7A99]">
                 No trips in this period.
               </p>
             )}
@@ -499,7 +499,7 @@ function EarningsDetail({
                       className="h-8 w-8 shrink-0 rounded-[11px] bg-[#F5F5F4] object-cover"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="flex items-center truncate text-[16px] font-medium leading-[22px] text-[#2E2E2E]">
+                      <p className="flex items-center truncate text-base font-medium leading-[22px] text-[#2E2E2E]">
                         <span className="truncate">{t.from}</span>
                         <ArrowRight
                           size={21}
@@ -508,7 +508,7 @@ function EarningsDetail({
                         />
                         <span className="truncate">{t.to}</span>
                       </p>
-                      <p className="truncate text-[12.5px] leading-[17px] text-[#7282A7]">
+                      <p className="truncate text-xs leading-[17px] text-[#7282A7]">
                         {t.date} • {t.person} •{" "}
                         <span className="text-[#47CA6C]">Completed</span>
                       </p>
@@ -521,10 +521,10 @@ function EarningsDetail({
                   </div>
                   <div className="ml-[42px] mt-[7.5px] h-px bg-[#C7CDDC]" />
                   <div className="flex items-center justify-between pt-[5px]">
-                    <span className="text-[13px] text-[#7282A7]">
+                    <span className="text-sm text-[#7282A7]">
                       {t.paymentMethod}
                     </span>
-                    <span className="text-[19px] font-semibold leading-[26px] text-[#2E2E2E]">
+                    <span className="text-lg font-semibold leading-[26px] text-[#2E2E2E]">
                       {naira(t.amount)}
                     </span>
                   </div>
@@ -537,7 +537,7 @@ function EarningsDetail({
                 type="button"
                 onClick={() => rides.fetchNextPage()}
                 disabled={rides.isFetchingNextPage}
-                className="mt-4 h-[41px] w-full rounded-[10px] border border-[#6E43A3] text-[15px] font-semibold text-[#6E43A3] transition active:scale-[0.99] disabled:opacity-60"
+                className="mt-4 h-[41px] w-full rounded-[10px] border border-[#6E43A3] text-base font-semibold text-[#6E43A3] transition active:scale-[0.99] disabled:opacity-60"
               >
                 {rides.isFetchingNextPage ? "Loading…" : "Load more"}
               </button>
@@ -599,7 +599,7 @@ export default function EarningsPage() {
         <div className="w-full max-w-xl mx-auto">
           {/* header */}
           <div className="flex items-center justify-between px-6 h-9">
-            <h1 className="text-[24px] font-semibold leading-9 text-[#2E2E2E]">
+            <h1 className="text-2xl font-semibold leading-9 text-[#2E2E2E]">
               Earnings
             </h1>
             <button
@@ -619,7 +619,7 @@ export default function EarningsPage() {
 
           <div className="px-6">
             {error && (
-              <div className="mt-4 flex items-center justify-between rounded-[11px] bg-[#FEF3F2] px-4 py-3 text-[13px] text-[#B42318]">
+              <div className="mt-4 flex items-center justify-between rounded-[11px] bg-[#FEF3F2] px-4 py-3 text-sm text-[#B42318]">
                 <span>{error.message}</span>
                 <button
                   type="button"
@@ -638,7 +638,7 @@ export default function EarningsPage() {
               className="mt-[22px] flex h-[108px] w-full flex-col rounded-2xl border border-[#E8E6EB] bg-[#6E43A3] px-5 pt-[17px] text-left transition active:scale-[0.99]"
             >
               <div className="flex h-[18px] w-full items-center justify-between">
-                <span className="text-[14px] leading-[18px] text-white/80">
+                <span className="text-sm leading-[18px] text-white/80">
                   Earning
                 </span>
                 <ChevronRight
@@ -647,7 +647,7 @@ export default function EarningsPage() {
                   className="shrink-0 text-white/80"
                 />
               </div>
-              <span className="mt-[13px] text-[33px] font-bold leading-[40px] text-white">
+              <span className="mt-[13px] text-3xl font-bold leading-[40px] text-white">
                 {summary ? naira(summary.earning) : isLoading ? "…" : "—"}
               </span>
             </button>
@@ -658,10 +658,10 @@ export default function EarningsPage() {
             >
               {stats.map((s) => (
                 <div key={s.label}>
-                  <p className="text-[12px] leading-4 text-[#6B7A99]">
+                  <p className="text-xs leading-4 text-[#6B7A99]">
                     {s.label}
                   </p>
-                  <p className="mt-px text-[17px] font-bold leading-[22px] text-[#1D2939]">
+                  <p className="mt-px text-lg font-bold leading-[22px] text-[#1D2939]">
                     {s.value}
                   </p>
                 </div>
@@ -677,14 +677,14 @@ export default function EarningsPage() {
             <div
               className={`mt-[23px] rounded-[11px] border border-[#F2F4F7] bg-white px-[15px] pb-[13.5px] pt-[13px] ${CARD_SHADOW}`}
             >
-              <p className="text-[12px] leading-4 text-[#6B7A99]">
+              <p className="text-xs leading-4 text-[#6B7A99]">
                 Available to Withdraw
               </p>
-              <p className="mt-[3px] text-[26px] font-bold leading-8 text-[#1D2939]">
+              <p className="mt-[3px] text-2xl font-bold leading-8 text-[#1D2939]">
                 {withdrawable !== undefined ? naira(withdrawable) : "—"}
               </p>
               {nextPayout && (
-                <p className="mt-1 text-[12px] leading-4 text-[#6B7A99]">
+                <p className="mt-1 text-xs leading-4 text-[#6B7A99]">
                   Next auto-payout:{" "}
                   <span className="text-[#1D2939]">{nextPayout}</span>
                 </p>
@@ -692,7 +692,7 @@ export default function EarningsPage() {
               <button
                 type="button"
                 onClick={() => navigate("/driver/account")}
-                className="mt-[15.5px] h-[41px] w-full rounded-[10px] bg-[#6E43A3] text-[15px] font-semibold text-white transition active:scale-[0.99]"
+                className="mt-[15.5px] h-[41px] w-full rounded-[10px] bg-[#6E43A3] text-base font-semibold text-white transition active:scale-[0.99]"
               >
                 Withdraw Earnings
               </button>
