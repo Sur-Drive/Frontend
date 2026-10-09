@@ -7,7 +7,7 @@ import RouteMapView from "../components/map/RouteMapView";
 import type { MapMarkerSpec } from "../components/map/GoogleMapView";
 import MapControls, { type MapTypeId } from "../components/map/MapControls";
 import StreetViewModal, {
-  StreetViewPegman,
+  StreetViewThumbnail,
 } from "../components/map/StreetView";
 import AddressAutocompleteInput, {
   type SelectedAddress,
@@ -2641,7 +2641,9 @@ export default function PlanRoutePage() {
       )}
 
       {!showSOS && !showPlanModal && !showScanResults && (
-        <StreetViewPegman
+        <StreetViewThumbnail
+          lat={(destinationCoords ?? routePath[routePath.length - 1] ?? { lat: mapCenter[0], lng: mapCenter[1] }).lat}
+          lng={(destinationCoords ?? routePath[routePath.length - 1] ?? { lat: mapCenter[0], lng: mapCenter[1] }).lng}
           onClick={() => setStreetViewOpen(true)}
           className={`absolute z-[999] left-4 sm:left-8 transition-[bottom] ${
             isNavigating
