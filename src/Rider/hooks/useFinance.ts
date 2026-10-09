@@ -14,7 +14,7 @@ import {
   normalizeTransactions,
   normalizeWallet,
 } from "../lib/financeMap";
-import { useRideDriverProfile } from "./UseProfile";
+import { useRideDriverProfile } from "./useProfile";
 
 /** ownerId (wallet) and providerId (payouts) are both the driver's id. */
 export function useDriverId() {
@@ -59,7 +59,8 @@ export function usePayoutBanks() {
 export function usePayoutAccounts(providerId?: string) {
   return useQuery({
     queryKey: ["finance", "payout-accounts", providerId],
-    queryFn: async () => normalizeAccounts(await getPayoutAccounts(providerId!)),
+    queryFn: async () =>
+      normalizeAccounts(await getPayoutAccounts(providerId!)),
     enabled: !!providerId,
     retry: false,
   });
