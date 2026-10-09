@@ -64,11 +64,11 @@ function Attachment({ m, mine }: { m: TicketMessage; mine: boolean }) {
       href={a.url}
       target="_blank"
       rel="noreferrer"
-      className="mb-1 flex max-w-full items-center gap-2 rounded-2xl bg-[#F3EAFB] px-3 py-2 text-[13px] text-[#1F2937]"
+      className="mb-1 flex max-w-full items-center gap-2 rounded-2xl bg-[#F3EAFB] px-3 py-2 text-sm text-[#1F2937]"
     >
       <FileText size={18} className="shrink-0 text-[#6E43A3]" />
       <span className="min-w-0 truncate">{a.name}</span>
-      <span className="shrink-0 text-[11px] text-[#8B93C9]">{fmtSize(a.size)}</span>
+      <span className="shrink-0 text-xs text-[#8B93C9]">{fmtSize(a.size)}</span>
     </a>
   );
 }
@@ -132,14 +132,14 @@ export default function TicketDetailPage({
               </button>
               {live ? (
                 <>
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E43A3] text-[13px] sm:text-sm font-bold text-white">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E43A3] text-sm font-bold text-white">
                     {initialsOf(agentName)}
                   </span>
                   <div>
-                    <p className="text-[15px] sm:text-[17px] font-semibold text-[#1F2937]">
+                    <p className="text-base sm:text-lg font-semibold text-[#1F2937]">
                       {agentName}
                     </p>
-                    <p className="text-[12px] sm:text-[13.5px] text-[#8B93C9]">
+                    <p className="text-xs sm:text-sm text-[#8B93C9]">
                       {chat.typing
                         ? "typing…"
                         : chat.connected
@@ -150,10 +150,10 @@ export default function TicketDetailPage({
                 </>
               ) : (
                 <div>
-                  <p className="text-[15px] sm:text-[17px] font-bold text-[#1F2937]">
+                  <p className="text-base sm:text-lg font-bold text-[#1F2937]">
                     #{ticket.number}
                   </p>
-                  <p className="text-[12px] sm:text-[13.5px] text-[#6E43A3]">
+                  <p className="text-xs sm:text-sm text-[#6E43A3]">
                     {ticket.createdLabel}
                   </p>
                 </div>
@@ -161,13 +161,13 @@ export default function TicketDetailPage({
             </div>
             <div className="mt-1 flex shrink-0 items-center gap-2">
               <span
-                className={`rounded-full px-3 py-1 text-[12px] sm:text-[13px] font-semibold ${STATUS_BADGE[ticket.status]}`}
+                className={`rounded-full px-3 py-1 text-xs sm:text-sm font-semibold ${STATUS_BADGE[ticket.status]}`}
               >
                 {ticket.status}
               </span>
               {!live && (
                 <span
-                  className={`rounded-full px-3 py-1 text-[12px] sm:text-[13px] font-semibold ${PRIORITY_BADGE[ticket.priority]}`}
+                  className={`rounded-full px-3 py-1 text-xs sm:text-sm font-semibold ${PRIORITY_BADGE[ticket.priority]}`}
                 >
                   {ticket.priority}
                 </span>
@@ -199,19 +199,19 @@ export default function TicketDetailPage({
             {messages.map((m) => (
               <div key={m.id}>
                 {m.sender === "system" ? (
-                  <p className="text-center text-[12.5px] text-[#9AA5B8]">
+                  <p className="text-center text-xs text-[#9AA5B8]">
                     {m.text}
                   </p>
                 ) : (
                   <>
-                    <p className="mb-2 text-center text-[11.5px] sm:text-[12.5px] text-[#9AA5B8]">
+                    <p className="mb-2 text-center text-xs text-[#9AA5B8]">
                       {m.time}
                     </p>
                     {m.sender === "agent" ? (
                       <div>
                         <Attachment m={m} mine={false} />
                         {m.text && (
-                          <p className="whitespace-pre-line break-words text-[13px] sm:text-[15px] leading-relaxed text-[#1F2937]">
+                          <p className="whitespace-pre-line break-words text-sm sm:text-base leading-relaxed text-[#1F2937]">
                             {m.text}
                           </p>
                         )}
@@ -222,7 +222,7 @@ export default function TicketDetailPage({
                           <Attachment m={m} mine />
                           {m.text && (
                             <p
-                              className={`whitespace-pre-line break-words rounded-2xl rounded-tr-sm px-4 py-3 text-[13px] sm:text-[15px] leading-relaxed text-white ${
+                              className={`whitespace-pre-line break-words rounded-2xl rounded-tr-sm px-4 py-3 text-sm sm:text-base leading-relaxed text-white ${
                                 m.status ? "bg-[#6E43A3]/60" : "bg-[#6E43A3]"
                               }`}
                             >
@@ -231,10 +231,10 @@ export default function TicketDetailPage({
                           )}
                         </div>
                         {m.status === "sending" && (
-                          <p className="mt-1 text-[11px] text-[#9AA5B8]">Sending…</p>
+                          <p className="mt-1 text-xs text-[#9AA5B8]">Sending…</p>
                         )}
                         {m.status === "failed" && (
-                          <p className="mt-1 flex items-center gap-2 text-[11.5px] text-[#E53935]">
+                          <p className="mt-1 flex items-center gap-2 text-xs text-[#E53935]">
                             <AlertCircle size={13} /> Not sent
                             <button
                               type="button"
@@ -253,7 +253,7 @@ export default function TicketDetailPage({
                           </p>
                         )}
                         {seenId === m.id && (
-                          <p className="mt-1 text-[11px] text-[#9AA5B8]">Seen</p>
+                          <p className="mt-1 text-xs text-[#9AA5B8]">Seen</p>
                         )}
                       </div>
                     )}
@@ -263,7 +263,7 @@ export default function TicketDetailPage({
             ))}
 
             {chat.typing && !live && (
-              <p className="text-[12.5px] italic text-[#9AA5B8]">
+              <p className="text-xs italic text-[#9AA5B8]">
                 Support is typing…
               </p>
             )}
@@ -289,7 +289,7 @@ export default function TicketDetailPage({
                 onClick={() => {
                   if (window.confirm("Mark this ticket as resolved?")) chat.resolve();
                 }}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#1E9E56] py-3 text-[12.5px] sm:text-[14px] font-semibold text-[#1E9E56] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[#1E9E56] py-3 text-xs sm:text-sm font-semibold text-[#1E9E56] disabled:opacity-60"
               >
                 <CheckCircle2 size={16} /> Mark Resolved
               </button>
@@ -345,7 +345,7 @@ export default function TicketDetailPage({
                   if (e.key === "Enter") submit();
                 }}
                 placeholder="Write a message"
-                className="h-full w-full bg-transparent text-[13px] sm:text-[15px] text-[#1F2937] outline-none placeholder:text-gray-400"
+                className="h-full w-full bg-transparent text-base text-[#1F2937] outline-none placeholder:text-gray-400"
               />
               <button
                 type="button"
@@ -362,12 +362,12 @@ export default function TicketDetailPage({
               type="button"
               disabled={chat.busy}
               onClick={chat.reopen}
-              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-[#6E43A3] py-3 text-[12.5px] sm:text-[14px] font-semibold text-[#6E43A3] disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-[#6E43A3] py-3 text-xs sm:text-sm font-semibold text-[#6E43A3] disabled:opacity-60"
             >
               <RotateCcw size={16} /> Reopen Ticket
             </button>
           ) : (
-            <p className="rounded-2xl bg-[#F6F7F9] px-4 py-3 text-center text-[13px] text-[#6B7280]">
+            <p className="rounded-2xl bg-[#F6F7F9] px-4 py-3 text-center text-sm text-[#6B7280]">
               This ticket has been resolved. No further actions can be taken.
             </p>
           )}

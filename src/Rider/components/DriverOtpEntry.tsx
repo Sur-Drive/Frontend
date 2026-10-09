@@ -127,7 +127,7 @@ export default function DriverOtpEntry({
           <ChevronLeft size={22} className="text-[#1F2937]" />
         </button>
 
-        <h1 className="mt-8 text-[22px] sm:text-[28px] font-bold text-[#2b2b2b]">
+        <h1 className="mt-8 text-xl sm:text-2xl font-bold text-[#2b2b2b]">
           OTP Verification
         </h1>
         <p className="mt-2 text-sm sm:text-base text-gray-400">
@@ -153,7 +153,7 @@ export default function DriverOtpEntry({
         </div>
 
         {error && (
-          <p className="mx-auto mt-4 w-full max-w-sm text-[13px] sm:text-sm text-red-500">
+          <p className="mx-auto mt-4 w-full max-w-sm text-sm text-red-500">
             {error}
           </p>
         )}
@@ -163,7 +163,7 @@ export default function DriverOtpEntry({
             type="button"
             onClick={handleResend}
             disabled={!canResend || isResending}
-            className={`h-14 w-full rounded-2xl text-[15px] sm:text-lg font-semibold transition ${
+            className={`h-14 w-full rounded-2xl text-base sm:text-lg font-semibold transition ${
               canResend && !isResending
                 ? "bg-[#6E43A3] text-white shadow-lg shadow-[#6E43A3]/30 active:scale-[0.99]"
                 : "cursor-not-allowed bg-[#dcdcdc] text-white/90"
@@ -205,7 +205,7 @@ export default function DriverOtpEntry({
                     key={ki}
                     type="button"
                     onClick={() => handleDigit(key)}
-                    className="h-16 flex-1 rounded-2xl bg-white text-[17px] sm:text-xl font-semibold text-gray-800 shadow-sm active:scale-[0.97]"
+                    className="h-16 flex-1 rounded-2xl bg-white text-lg sm:text-xl font-semibold text-gray-800 shadow-sm active:scale-[0.97]"
                   >
                     {key}
                   </button>

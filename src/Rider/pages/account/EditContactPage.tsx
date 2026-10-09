@@ -88,7 +88,7 @@ export default function EditContactPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Edit contact
           </h1>
 
@@ -105,7 +105,7 @@ export default function EditContactPage({
                   setError("");
                 }}
                 placeholder="Full Name"
-                className="w-full min-w-0 flex-1 bg-transparent text-[13px] sm:text-[15px] font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
+                className="w-full min-w-0 flex-1 bg-transparent text-base font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
               />
             </div>
 
@@ -114,7 +114,7 @@ export default function EditContactPage({
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EFE6F7]">
                 <Phone size={16} className="text-[#6E43A3]" />
               </span>
-              <span className="text-[13px] sm:text-[15px] font-semibold text-[#1F2937]">
+              <span className="text-sm sm:text-base font-semibold text-[#1F2937]">
                 {contact.phoneNumber || "—"}
               </span>
             </div>
@@ -123,7 +123,7 @@ export default function EditContactPage({
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EFE6F7]">
                 <UserPlus2 size={16} className="text-[#6E43A3]" />
               </span>
-              <span className="text-[13px] sm:text-[15px] font-semibold text-[#1F2937]">
+              <span className="text-sm sm:text-base font-semibold text-[#1F2937]">
                 {relationshipLabel(contact.relationship) || "—"}
               </span>
             </div>
@@ -131,7 +131,7 @@ export default function EditContactPage({
 
           <div className="mt-4 divide-y divide-gray-100 rounded-2xl bg-[#F5F5F7] px-4">
             <div className="flex items-center justify-between gap-3 py-3.5">
-              <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+              <span className="text-sm sm:text-base font-medium text-[#1F2937]">
                 Primary contact
               </span>
               <ToggleSwitch
@@ -141,7 +141,7 @@ export default function EditContactPage({
               />
             </div>
             <div className="flex items-center justify-between gap-3 py-3.5">
-              <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+              <span className="text-sm sm:text-base font-medium text-[#1F2937]">
                 Notify when a ride starts
               </span>
               <ToggleSwitch
@@ -152,13 +152,13 @@ export default function EditContactPage({
             </div>
           </div>
 
-          {error && <p className="mt-3 text-[13px] sm:text-sm text-red-500">{error}</p>}
+          {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
 
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
             disabled={busy}
-            className="mt-6 flex items-center gap-2 text-[13px] sm:text-[15px] font-semibold text-red-500 disabled:opacity-50"
+            className="mt-6 flex items-center gap-2 text-sm sm:text-base font-semibold text-red-500 disabled:opacity-50"
           >
             <Trash2 size={17} />
             Delete contact
@@ -172,7 +172,7 @@ export default function EditContactPage({
             type="button"
             onClick={save}
             disabled={!isValid || busy}
-            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
+            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-50"
           >
             {isSaving ? "Saving..." : "Save changes"}
           </button>
@@ -182,10 +182,10 @@ export default function EditContactPage({
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-3xl bg-white px-6 py-7 text-center shadow-2xl">
-            <h2 className="text-[17px] sm:text-xl font-bold text-[#2b2b2b]">
+            <h2 className="text-lg sm:text-xl font-bold text-[#2b2b2b]">
               Delete contact?
             </h2>
-            <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-gray-500">
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
               {contact.name} will be removed from your emergency contacts.
             </p>
             <div className="mt-6 flex gap-3">
@@ -193,7 +193,7 @@ export default function EditContactPage({
                 type="button"
                 onClick={() => setConfirmDelete(false)}
                 disabled={isDeleting}
-                className="h-12 flex-1 rounded-2xl bg-gray-100 text-[13px] sm:text-[15px] font-semibold text-[#1F2937]"
+                className="h-12 flex-1 rounded-2xl bg-gray-100 text-sm sm:text-base font-semibold text-[#1F2937]"
               >
                 Cancel
               </button>
@@ -201,7 +201,7 @@ export default function EditContactPage({
                 type="button"
                 onClick={remove}
                 disabled={isDeleting}
-                className="h-12 flex-1 rounded-2xl bg-red-500 text-[13px] sm:text-[15px] font-semibold text-white disabled:opacity-60"
+                className="h-12 flex-1 rounded-2xl bg-red-500 text-sm sm:text-base font-semibold text-white disabled:opacity-60"
               >
                 {isDeleting ? "Deleting..." : "Delete"}
               </button>

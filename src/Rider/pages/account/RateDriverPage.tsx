@@ -50,16 +50,16 @@ export default function RateDriverPage({ onBack, rideId: rideIdProp }: Props) {
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#EFE6F7]">
           <Check size={30} className="text-[#6E43A3]" />
         </span>
-        <h2 className="mt-4 text-[17px] sm:text-xl font-extrabold text-[#1F2937]">
+        <h2 className="mt-4 text-lg sm:text-xl font-extrabold text-[#1F2937]">
           Thanks for your feedback
         </h2>
-        <p className="mt-1 text-[13px] sm:text-sm text-[#9AA5B8]">
+        <p className="mt-1 text-sm text-[#9AA5B8]">
           Your rating has been submitted.
         </p>
         <button
           type="button"
           onClick={onBack}
-          className="mt-6 w-full max-w-xs rounded-2xl bg-[#6E43A3] py-3.5 text-[13px] sm:text-sm font-bold text-white"
+          className="mt-6 w-full max-w-xs rounded-2xl bg-[#6E43A3] py-3.5 text-sm font-bold text-white"
         >
           Done
         </button>
@@ -85,12 +85,12 @@ export default function RateDriverPage({ onBack, rideId: rideIdProp }: Props) {
                 value={rideIdInput}
                 onChange={(e) => setRideIdInput(e.target.value)}
                 placeholder="Enter the ride ID"
-                className="mt-2 w-full rounded-xl border border-gray-200 p-3 text-xs text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
+                className="mt-2 w-full rounded-xl border border-gray-200 p-3 text-base text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
               />
             </>
           )}
 
-          <p className="mt-5 text-center text-[13px] sm:text-sm font-semibold text-[#1F2937]">
+          <p className="mt-5 text-center text-sm font-semibold text-[#1F2937]">
             How was your driver?
           </p>
           <div className="flex justify-center gap-2 mt-3">
@@ -120,7 +120,7 @@ export default function RateDriverPage({ onBack, rideId: rideIdProp }: Props) {
                   key={tag}
                   type="button"
                   onClick={() => toggleTag(tag)}
-                  className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                     isSelected
                       ? isBad
                         ? "border-[#E53935] bg-[#E53935]/10 text-[#E53935]"
@@ -145,7 +145,7 @@ export default function RateDriverPage({ onBack, rideId: rideIdProp }: Props) {
             }}
             placeholder="Tell us more about your ride"
             rows={3}
-            className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-xs text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
+            className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-base text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
           />
 
           {error && (
@@ -161,7 +161,7 @@ export default function RateDriverPage({ onBack, rideId: rideIdProp }: Props) {
           type="button"
           disabled={!canSubmit}
           onClick={submit}
-          className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-[#6E43A3] py-3.5 text-[13px] sm:text-sm font-bold text-white shadow-sm disabled:opacity-40"
+          className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-[#6E43A3] py-3.5 text-sm font-bold text-white shadow-sm disabled:opacity-40"
         >
           {isPending ? <Loader2 size={16} className="animate-spin" /> : "Submit"}
         </button>

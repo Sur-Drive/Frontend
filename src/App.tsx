@@ -32,6 +32,7 @@ import DriverRideFlowPage from "./Rider/pages/DriverRideFlowPage";
 import RideHistoryPage from "./Rider/pages/RideHistoryPage";
 import EarningsPage from "./Rider/pages/EarningsPage";
 import AccountPage from "./Rider/pages/AccountPage";
+import RiderFrame from "./Rider/components/RiderFrame";
 import RatePassengerPage from "./Rider/pages/RatePassengerPage";
 import FeedPage from "./pages/FeedPage";
 import ReportPage from "./pages/ReportPage";
@@ -282,48 +283,48 @@ function AppRoutes() {
       <div className={`min-h-screen bg-gray-50 ${showNav ? "" : ""}`}>
         <Routes>
           <Route path="/" element={<RootEntry />} />
-          <Route path="/welcome" element={<WelcomePage />} />
-          <Route path="/signin" element={<SignInPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/forgot-password/otp" element={<ResetOtpPage />} />
+          <Route path="/welcome" element={<RiderFrame><WelcomePage /></RiderFrame>} />
+          <Route path="/signin" element={<RiderFrame><SignInPage /></RiderFrame>} />
+          <Route path="/forgot-password" element={<RiderFrame><ForgotPasswordPage /></RiderFrame>} />
+          <Route path="/forgot-password/otp" element={<RiderFrame><ResetOtpPage /></RiderFrame>} />
           <Route
             path="/forgot-password/reset"
-            element={<ResetPasswordPage />}
+            element={<RiderFrame><ResetPasswordPage /></RiderFrame>}
           />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/register/otp" element={<OtpPage />} />
+          <Route path="/register" element={<RiderFrame><RegisterPage /></RiderFrame>} />
+          <Route path="/register/otp" element={<RiderFrame><OtpPage /></RiderFrame>} />
           <Route
             path="/register/personal-information"
-            element={<PersonalInformationPage />}
+            element={<RiderFrame><PersonalInformationPage /></RiderFrame>}
           />
           <Route
             path="/register/vehicle-information"
-            element={<VehicleInformationPage />}
+            element={<RiderFrame><VehicleInformationPage /></RiderFrame>}
           />
-          <Route path="/register/license" element={<DriversLicensePage />} />
+          <Route path="/register/license" element={<RiderFrame><DriversLicensePage /></RiderFrame>} />
           <Route
             path="/register/vehicle-inspection"
-            element={<VehicleInspectionPage />}
+            element={<RiderFrame><VehicleInspectionPage /></RiderFrame>}
           />
           <Route
             path="/register/face-verification"
-            element={<FaceVerificationPage />}
+            element={<RiderFrame><FaceVerificationPage /></RiderFrame>}
           />
-          <Route path="/register/password" element={<CreatePasswordPage />} />
+          <Route path="/register/password" element={<RiderFrame><CreatePasswordPage /></RiderFrame>} />
           <Route
             path="/register/review"
-            element={<ApplicationUnderReviewPage />}
+            element={<RiderFrame><ApplicationUnderReviewPage /></RiderFrame>}
           />
           {/* Public share link, no login: GET /rides/trip/:token */}
-          <Route path="/trip/:token" element={<SharedTripPage />} />
-          <Route path="/driver/home" element={<DriverHomePage />} />
-          <Route path="/driver/ride" element={<DriverRideFlowPage />} />
-          <Route path="/driver/rides" element={<RideHistoryPage />} />
-          <Route path="/driver/earnings" element={<EarningsPage />} />
-          <Route path="/driver/account" element={<AccountPage />} />
+          <Route path="/trip/:token" element={<RiderFrame><SharedTripPage /></RiderFrame>} />
+          <Route path="/driver/home" element={<RiderFrame><DriverHomePage /></RiderFrame>} />
+          <Route path="/driver/ride" element={<RiderFrame><DriverRideFlowPage /></RiderFrame>} />
+          <Route path="/driver/rides" element={<RiderFrame><RideHistoryPage /></RiderFrame>} />
+          <Route path="/driver/earnings" element={<RiderFrame><EarningsPage /></RiderFrame>} />
+          <Route path="/driver/account" element={<RiderFrame><AccountPage /></RiderFrame>} />
           <Route
             path="/driver/rate-passenger"
-            element={<RatePassengerPage />}
+            element={<RiderFrame><RatePassengerPage /></RiderFrame>}
           />
           <Route path="/access-list" element={<WaitlistPage />} />
           <Route path="/home" element={<HomePage />} />

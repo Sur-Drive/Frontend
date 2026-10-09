@@ -209,17 +209,17 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">Profile</h1>
-          <p className="mt-1.5 text-[13px] sm:text-[15px] text-[#9AA5B8]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">Profile</h1>
+          <p className="mt-1.5 text-sm sm:text-base text-[#9AA5B8]">
             Help our drivers identify you easily
           </p>
           {isLoading && (
-            <p className="mt-3 text-[13px] sm:text-sm text-[#9AA5B8]">
+            <p className="mt-3 text-sm text-[#9AA5B8]">
               Loading your profile...
             </p>
           )}
           {profileError && (
-            <p className="mt-3 text-[13px] sm:text-sm text-red-600">
+            <p className="mt-3 text-sm text-red-600">
               {profileError instanceof Error
                 ? profileError.message
                 : "Couldn't load your profile."}
@@ -247,18 +247,18 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <User size={16} className="text-[#6E43A3]" />
             </span>
-            <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+            <span className="text-sm sm:text-base font-medium text-[#1F2937]">
               {name || "—"}
             </span>
           </div>
 
           {/* phone */}
           <div className="flex items-center justify-between mt-5 mb-2">
-            <span className="text-[13px] sm:text-sm text-[#1F2937]">Phone Number</span>
+            <span className="text-sm text-[#1F2937]">Phone Number</span>
             <button
               type="button"
               onClick={() => setStep("change-phone")}
-              className="text-[13px] sm:text-sm font-semibold text-[#6E43A3]"
+              className="text-sm font-semibold text-[#6E43A3]"
             >
               Change Number
             </button>
@@ -267,18 +267,18 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <Phone size={15} className="text-[#6E43A3]" />
             </span>
-            <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+            <span className="text-sm sm:text-base font-medium text-[#1F2937]">
               {phone || "—"}
             </span>
           </div>
 
           {/* email */}
           <div className="flex items-center justify-between mt-5 mb-2">
-            <span className="text-[13px] sm:text-sm text-[#1F2937]">Email</span>
+            <span className="text-sm text-[#1F2937]">Email</span>
             <button
               type="button"
               onClick={() => setStep("change-email")}
-              className="text-[13px] sm:text-sm font-semibold text-[#6E43A3]"
+              className="text-sm font-semibold text-[#6E43A3]"
             >
               Change Email
             </button>
@@ -287,7 +287,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <Mail size={15} className="text-[#6E43A3]" />
             </span>
-            <span className="truncate text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+            <span className="truncate text-sm sm:text-base font-medium text-[#1F2937]">
               {email || "—"}
             </span>
           </div>
@@ -302,7 +302,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
                 <User size={15} className="text-[#6E43A3]" />
               </span>
-              <span className="flex-1 text-left text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+              <span className="flex-1 text-left text-sm sm:text-base font-medium text-[#1F2937]">
                 {gender}
               </span>
               <ChevronDown
@@ -320,7 +320,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
                       setGender(g);
                       setGenderOpen(false);
                     }}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left text-[13px] sm:text-[15px] text-[#1F2937] hover:bg-gray-50"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm sm:text-base text-[#1F2937] hover:bg-gray-50"
                   >
                     {g}
                     {gender === g && (
@@ -337,7 +337,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <Cake size={15} className="text-[#6E43A3]" />
             </span>
-            <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+            <span className="text-sm sm:text-base font-medium text-[#1F2937]">
               {dob || "—"}
             </span>
           </div>
@@ -358,7 +358,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DCF5E4]">
               <Check size={13} className="text-[#1E9E56]" strokeWidth={3} />
             </span>
-            <span className="flex-1 text-[12.5px] sm:text-[14px] font-medium text-[#1F2937]">
+            <span className="flex-1 text-xs sm:text-sm font-medium text-[#1F2937]">
               Changes successfully saved
             </span>
             <button
@@ -429,8 +429,8 @@ function ChangeContactStep({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">{title}</h1>
-          <p className="mt-2 text-[13px] sm:text-[15px] leading-relaxed text-[#9AA5B8]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">{title}</h1>
+          <p className="mt-2 text-sm sm:text-base leading-relaxed text-[#9AA5B8]">
             {description}
           </p>
 
@@ -447,11 +447,11 @@ function ChangeContactStep({
               }}
               onKeyDown={(e) => e.key === "Enter" && void send()}
               placeholder={placeholder}
-              className="w-full flex-1 bg-transparent text-[13px] sm:text-[15px] font-medium text-[#1F2937] placeholder:text-[#9AA5B8] focus:outline-none"
+              className="w-full flex-1 bg-transparent text-base font-medium text-[#1F2937] placeholder:text-[#9AA5B8] focus:outline-none"
             />
           </div>
 
-          {error && <p className="mt-2 text-[13px] sm:text-sm text-red-500">{error}</p>}
+          {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
           <button
             type="button"

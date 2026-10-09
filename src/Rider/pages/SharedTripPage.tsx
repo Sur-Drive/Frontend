@@ -33,7 +33,7 @@ export default function SharedTripPage() {
   return (
     <div className="font-outfit flex min-h-[100dvh] w-full flex-col items-center bg-white px-6 py-10">
       <div className="w-full max-w-md">
-        <h1 className="text-[22px] font-bold text-[#1F2937]">Live trip</h1>
+        <h1 className="text-xl font-bold text-[#1F2937]">Live trip</h1>
         <p className="mt-1 text-sm text-[#9AA5B8]">
           {sharedBy ? `${sharedBy} shared this trip with you.` : "Someone shared this trip with you."}
         </p>
@@ -79,7 +79,7 @@ export default function SharedTripPage() {
               </p>
             )}
             {eta && <p className="text-sm text-[#4B5768]">ETA: {String(eta)}{typeof eta === "number" ? " min" : ""}</p>}
-            <p className="pt-1 text-[11px] text-[#9AA5B8]">Updates every few seconds.</p>
+            <p className="pt-1 text-xs text-[#9AA5B8]">Updates every few seconds.</p>
           </div>
         )}
       </div>

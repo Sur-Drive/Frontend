@@ -58,12 +58,12 @@ export default function PrivacySecurityPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[21px] sm:text-[26px] font-extrabold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-extrabold text-[#1F2937]">
             Privacy &amp; security
           </h1>
 
           {(loadError || saveError) && (
-            <p className="mt-4 text-[13px] sm:text-sm text-red-600">
+            <p className="mt-4 text-sm text-red-600">
               {saveError ||
                 (loadError instanceof Error
                   ? loadError.message
@@ -77,10 +77,10 @@ export default function PrivacySecurityPage({
                 <Mail size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+                <p className="text-sm sm:text-base font-medium text-[#1F2937]">
                   Email Notification
                 </p>
-                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">
+                <p className="text-xs sm:text-sm text-[#9AA5B8]">
                   Get updates via email
                 </p>
               </div>
@@ -97,10 +97,10 @@ export default function PrivacySecurityPage({
                 <Smartphone size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+                <p className="text-sm sm:text-base font-medium text-[#1F2937]">
                   Push Notifications
                 </p>
-                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">Receive update</p>
+                <p className="text-xs sm:text-sm text-[#9AA5B8]">Receive update</p>
               </div>
               <ToggleSwitch
                 checked={pushNotifications}
@@ -119,10 +119,10 @@ export default function PrivacySecurityPage({
                 <Lock size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
+                <p className="text-sm sm:text-base font-medium text-[#1F2937]">
                   Security Settings
                 </p>
-                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">
+                <p className="text-xs sm:text-sm text-[#9AA5B8]">
                   Change account password
                 </p>
               </div>

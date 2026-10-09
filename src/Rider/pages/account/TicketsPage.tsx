@@ -68,7 +68,7 @@ function FilterSheet({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-5 shadow-2xl sm:max-w-lg">
         <div className="flex items-center justify-between">
-          <h2 className="text-[17px] sm:text-xl font-bold text-[#1F2937]">Filters</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-[#1F2937]">Filters</h2>
           <button
             type="button"
             onClick={onClose}
@@ -80,7 +80,7 @@ function FilterSheet({
 
         <div className="my-4 h-px w-full bg-gray-100" />
 
-        <p className="mb-2 text-[13px] sm:text-sm font-semibold text-[#1F2937]">Status</p>
+        <p className="mb-2 text-sm font-semibold text-[#1F2937]">Status</p>
         <div className="flex flex-wrap gap-2">
           {statusPills.map((p) => {
             const active = status === p;
@@ -89,7 +89,7 @@ function FilterSheet({
                 key={p}
                 type="button"
                 onClick={() => onChangeStatus(p)}
-                className={`rounded-full px-4 py-2.5 text-[13px] sm:text-sm font-semibold transition ${
+                className={`rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   active
                     ? "bg-[#6E43A3] text-white"
                     : "bg-[#F1F2F5] text-[#4B5768]"
@@ -101,7 +101,7 @@ function FilterSheet({
           })}
         </div>
 
-        <p className="mb-2 mt-5 text-[13px] sm:text-sm font-semibold text-[#1F2937]">
+        <p className="mb-2 mt-5 text-sm font-semibold text-[#1F2937]">
           Priority
         </p>
         <div className="flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ function FilterSheet({
                 key={p}
                 type="button"
                 onClick={() => onChangePriority(p)}
-                className={`rounded-full px-4 py-2.5 text-[13px] sm:text-sm font-semibold transition ${
+                className={`rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   active
                     ? "bg-[#6E43A3] text-white"
                     : "bg-[#F1F2F5] text-[#4B5768]"
@@ -124,7 +124,7 @@ function FilterSheet({
           })}
         </div>
 
-        <p className="mb-2 mt-5 text-[13px] sm:text-sm font-semibold text-[#1F2937]">
+        <p className="mb-2 mt-5 text-sm font-semibold text-[#1F2937]">
           Custom Dates
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -132,13 +132,13 @@ function FilterSheet({
             type="date"
             value={startDate}
             onChange={(e) => onChangeStart(e.target.value)}
-            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-[13px] sm:text-sm text-[#1F2937] outline-none"
+            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-base text-[#1F2937] outline-none"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => onChangeEnd(e.target.value)}
-            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-[13px] sm:text-sm text-[#1F2937] outline-none"
+            className="w-full rounded-xl bg-[#F1F2F5] px-3.5 py-3 text-base text-[#1F2937] outline-none"
           />
         </div>
 
@@ -173,32 +173,32 @@ function TicketRow({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span
-            className={`rounded-full px-3 py-1 text-[11.5px] sm:text-[12.5px] font-semibold ${STATUS_BADGE[ticket.status]}`}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_BADGE[ticket.status]}`}
           >
             {ticket.status}
           </span>
           <span
-            className={`rounded-full px-3 py-1 text-[11.5px] sm:text-[12.5px] font-semibold ${PRIORITY_BADGE[ticket.priority]}`}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${PRIORITY_BADGE[ticket.priority]}`}
           >
             {ticket.priority}
           </span>
         </div>
-        <span className="shrink-0 text-[12px] sm:text-[13px] text-[#8B93C9]">
+        <span className="shrink-0 text-xs sm:text-sm text-[#8B93C9]">
           #{ticket.number}
         </span>
       </div>
 
-      <p className="mt-3 text-[15px] sm:text-[17px] font-semibold text-[#1F2937]">
+      <p className="mt-3 text-base sm:text-lg font-semibold text-[#1F2937]">
         {ticket.title}
       </p>
-      <p className="mt-1.5 text-[12.5px] sm:text-[14px] leading-relaxed text-[#7C86C9]">
+      <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-[#7C86C9]">
         {ticket.description}
       </p>
 
       <div className="my-3.5 h-px w-full bg-gray-100" />
 
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-2 text-[12.5px] sm:text-[14px] text-[#4B5768]">
+        <span className="flex items-center gap-2 text-xs sm:text-sm text-[#4B5768]">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EFE0FB] text-[#6E43A3]">
             <User size={15} />
           </span>
@@ -207,7 +207,7 @@ function TicketRow({
         <button
           type="button"
           onClick={onOpen}
-          className="flex items-center gap-1 rounded-full bg-[#F1F2F5] px-3.5 py-2 text-[12px] sm:text-[13.5px] font-semibold text-[#1F2937]"
+          className="flex items-center gap-1 rounded-full bg-[#F1F2F5] px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#1F2937]"
         >
           {ticket.actionLabel}
           <ChevronRight size={15} />
@@ -216,7 +216,7 @@ function TicketRow({
 
       <div className="my-3.5 h-px w-full bg-gray-100" />
 
-      <div className="flex items-center justify-between text-[12px] sm:text-[13px]">
+      <div className="flex items-center justify-between text-xs sm:text-sm">
         <span className="text-[#9AA5B8]">{ticket.updatedLabel}</span>
         <span
           className={
@@ -323,7 +323,7 @@ export default function TicketsPage({ onBack }: { onBack: () => void }) {
             </button>
           </div>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Tickets
           </h1>
           <p className="mt-1.5 text-sm sm:text-base text-[#9AA5B8]">
@@ -342,7 +342,7 @@ export default function TicketsPage({ onBack }: { onBack: () => void }) {
               <button
                 type="button"
                 onClick={() => list.refetch()}
-                className="mt-3 rounded-full bg-[#F1F2F5] px-4 py-2 text-[13px] font-semibold text-[#1F2937]"
+                className="mt-3 rounded-full bg-[#F1F2F5] px-4 py-2 text-sm font-semibold text-[#1F2937]"
               >
                 Try again
               </button>
@@ -354,14 +354,14 @@ export default function TicketsPage({ onBack }: { onBack: () => void }) {
                   <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F3EAFB]">
                     <FileSearch size={40} className="text-[#9B7CC9]" />
                   </span>
-                  <p className="mt-5 text-[15px] sm:text-lg font-bold text-[#1F2937]">
+                  <p className="mt-5 text-base sm:text-lg font-bold text-[#1F2937]">
                     No tickets found
                   </p>
-                  <p className="mt-1.5 max-w-xs text-[13px] sm:text-sm leading-relaxed text-[#9AA5B8]">
+                  <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-[#9AA5B8]">
                     We couldn't find any tickets matching this filter. Try
                     another status or raise a new request.
                   </p>
-                  <span className="mt-4 rounded-full bg-[#F1F2F5] px-4 py-2 text-[12px] sm:text-[13px] text-[#4B5768]">
+                  <span className="mt-4 rounded-full bg-[#F1F2F5] px-4 py-2 text-xs sm:text-sm text-[#4B5768]">
                     Tip: Clear filters to see all tickets
                   </span>
                 </>
@@ -370,10 +370,10 @@ export default function TicketsPage({ onBack }: { onBack: () => void }) {
                   <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[#F3EAFB]">
                     <FileEdit size={40} className="text-[#9B7CC9]" />
                   </span>
-                  <p className="mt-5 text-[15px] sm:text-lg font-bold text-[#1F2937]">
+                  <p className="mt-5 text-base sm:text-lg font-bold text-[#1F2937]">
                     No Open ticket
                   </p>
-                  <p className="mt-1.5 text-[13px] sm:text-sm text-[#9AA5B8]">
+                  <p className="mt-1.5 text-sm text-[#9AA5B8]">
                     Create a ticket when you need help
                   </p>
                 </>
@@ -397,7 +397,7 @@ export default function TicketsPage({ onBack }: { onBack: () => void }) {
               create.reset();
               setView("raise");
             }}
-            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
           >
             Raise a ticket
           </button>

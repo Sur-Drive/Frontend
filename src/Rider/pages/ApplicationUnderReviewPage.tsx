@@ -64,7 +64,7 @@ export default function ApplicationUnderReviewPage() {
           <ChevronLeft className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />
         </button>
 
-        <h1 className="mt-5 text-[22px] font-bold leading-tight text-[#2b2b2b] sm:mt-8 sm:text-[28px]">
+        <h1 className="mt-5 text-xl font-bold leading-tight text-[#2b2b2b] sm:mt-8 sm:text-2xl">
           Application under review
         </h1>
         <p className="mt-1.5 text-sm leading-snug text-gray-400 sm:mt-2 sm:text-base">
@@ -90,7 +90,7 @@ export default function ApplicationUnderReviewPage() {
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold sm:px-3 sm:py-1 sm:text-xs ${
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold sm:px-3 sm:py-1 sm:text-xs ${
                       item.status === "Verified"
                         ? "bg-emerald-100 text-emerald-600"
                         : "bg-amber-100 text-amber-600"

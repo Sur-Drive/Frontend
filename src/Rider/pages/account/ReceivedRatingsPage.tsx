@@ -66,7 +66,7 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
             <>
               {/* summary */}
               <div className="rounded-2xl bg-white p-4 shadow-sm">
-                <p className="text-[12px] text-[#9AA5B8] sm:text-[13px]">
+                <p className="text-xs text-[#9AA5B8] sm:text-sm">
                   Passenger rating
                 </p>
                 <div className="mt-1 flex items-center gap-3">
@@ -75,7 +75,7 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
                   </span>
                   <div>
                     <Stars value={avg} size={16} />
-                    <p className="mt-0.5 text-[12px] text-[#9AA5B8]">
+                    <p className="mt-0.5 text-xs text-[#9AA5B8]">
                       {items.length} {items.length === 1 ? "rating" : "ratings"}
                     </p>
                   </div>
@@ -84,7 +84,7 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
                 {items.length > 0 && (
                   <div className="mt-4 space-y-1.5">
                     {counts.map(({ n, c }) => (
-                      <div key={n} className="flex items-center gap-2 text-[11px] text-[#6B7A99]">
+                      <div key={n} className="flex items-center gap-2 text-xs text-[#6B7A99]">
                         <span className="w-3 text-right">{n}</span>
                         <Star size={10} className="fill-[#F4C542] text-[#F4C542]" />
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100">
@@ -101,7 +101,7 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
               </div>
 
               {items.length === 0 && (
-                <p className="mt-8 text-center text-[13px] text-[#9AA5B8]">
+                <p className="mt-8 text-center text-sm text-[#9AA5B8]">
                   No passenger ratings yet.
                 </p>
               )}
@@ -111,10 +111,10 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
                 {items.map((r) => (
                   <div key={r.id} className="rounded-2xl bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-[14px] font-bold text-[#1F2937]">
+                      <p className="truncate text-sm font-bold text-[#1F2937]">
                         {r.passenger}
                       </p>
-                      <span className="shrink-0 text-[11px] text-[#9AA5B8]">{r.date}</span>
+                      <span className="shrink-0 text-xs text-[#9AA5B8]">{r.date}</span>
                     </div>
                     <div className="mt-1">
                       <Stars value={r.stars} />
@@ -124,7 +124,7 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
                         {r.tags.map((t) => (
                           <span
                             key={t}
-                            className="rounded-full border border-[#6E43A3]/30 bg-[#6E43A3]/10 px-2.5 py-1 text-[11px] font-medium text-[#6E43A3]"
+                            className="rounded-full border border-[#6E43A3]/30 bg-[#6E43A3]/10 px-2.5 py-1 text-xs font-medium text-[#6E43A3]"
                           >
                             {t}
                           </span>
@@ -132,14 +132,14 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
                       </div>
                     )}
                     {r.comment && (
-                      <p className="mt-2 text-[13px] leading-5 text-[#4B5768]">{r.comment}</p>
+                      <p className="mt-2 text-sm leading-5 text-[#4B5768]">{r.comment}</p>
                     )}
                   </div>
                 ))}
               </div>
 
               {failed > 0 && (
-                <p className="mt-3 text-center text-[11px] text-[#9AA5B8]">
+                <p className="mt-3 text-center text-xs text-[#9AA5B8]">
                   {failed} ride{failed === 1 ? "" : "s"} couldn't be loaded.
                 </p>
               )}
@@ -149,7 +149,7 @@ export default function ReceivedRatingsPage({ onBack }: Props) {
                   type="button"
                   onClick={() => q.fetchNextPage()}
                   disabled={q.isFetchingNextPage}
-                  className="mt-4 h-[41px] w-full rounded-[10px] border border-[#6E43A3] text-[14px] font-semibold text-[#6E43A3] disabled:opacity-60"
+                  className="mt-4 h-[41px] w-full rounded-[10px] border border-[#6E43A3] text-sm font-semibold text-[#6E43A3] disabled:opacity-60"
                 >
                   {q.isFetchingNextPage ? "Loading…" : "Load more"}
                 </button>

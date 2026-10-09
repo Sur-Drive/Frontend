@@ -59,10 +59,10 @@ function SupportRow({
         {icon}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] sm:text-[17px] font-medium text-[#1F2937]">
+        <p className="text-base sm:text-lg font-medium text-[#1F2937]">
           {title}
         </p>
-        <p className="mt-0.5 truncate text-[12.5px] sm:text-[14px] text-[#8B93C9]">
+        <p className="mt-0.5 truncate text-xs sm:text-sm text-[#8B93C9]">
           {subtitle}
         </p>
       </div>
@@ -125,7 +125,7 @@ export default function SupportPage({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Support
           </h1>
           <p className="mt-1.5 text-sm sm:text-base text-[#9AA5B8]">
@@ -153,7 +153,7 @@ export default function SupportPage({ onBack }: { onBack: () => void }) {
               trailing={
                 <span className="flex items-center gap-2">
                   {unreadCount > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6E43A3] px-1.5 text-[11px] font-bold text-white">
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6E43A3] px-1.5 text-xs font-bold text-white">
                       {unreadCount}
                     </span>
                   )}

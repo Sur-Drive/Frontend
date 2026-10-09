@@ -112,24 +112,24 @@ export default function DocumentUpdatePage({
             >
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
-            <h1 className="text-[17px] sm:text-xl font-bold text-[#1F2937]">
+            <h1 className="text-lg sm:text-xl font-bold text-[#1F2937]">
               Update Document
             </h1>
           </div>
 
           {/* document summary card */}
           <div className="p-4 mt-6 border border-gray-100 shadow-sm rounded-2xl">
-            <h2 className="text-[17px] sm:text-xl font-bold text-[#2b2b2b]">{doc.label}</h2>
-            <p className="mt-1 text-[13px] sm:text-[15px] text-[#9AA5B8]">{vehicleName}</p>
+            <h2 className="text-lg sm:text-xl font-bold text-[#2b2b2b]">{doc.label}</h2>
+            <p className="mt-1 text-sm sm:text-base text-[#9AA5B8]">{vehicleName}</p>
             <div className="mt-2.5 flex items-center gap-2.5">
               <span
-                className={`rounded-full px-3 py-1 text-[12px] sm:text-[13px] font-semibold ${statusBadgeClasses(
+                className={`rounded-full px-3 py-1 text-xs sm:text-sm font-semibold ${statusBadgeClasses(
                   doc.status,
                 )}`}
               >
                 {doc.badgeText}
               </span>
-              <span className="text-[13px] sm:text-[15px] text-[#9AA5B8]">
+              <span className="text-sm sm:text-base text-[#9AA5B8]">
                 {doc.expiresLabel}
               </span>
             </div>
@@ -147,10 +147,10 @@ export default function DocumentUpdatePage({
                   />
                 ) : null}
                 <div className="flex items-center justify-between px-4 py-3">
-                  <span className="truncate text-[13px] sm:text-[15px] text-[#1F2937]">
+                  <span className="truncate text-sm sm:text-base text-[#1F2937]">
                     {doc.fileName || "Document"}
                   </span>
-                  <span className="shrink-0 text-[12px] sm:text-[13px] font-semibold text-[#1E9E56]">
+                  <span className="shrink-0 text-xs sm:text-sm font-semibold text-[#1E9E56]">
                     On file
                   </span>
                 </div>
@@ -158,7 +158,7 @@ export default function DocumentUpdatePage({
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="mt-4 w-full rounded-2xl border border-gray-200 py-3 text-[13px] sm:text-[15px] font-semibold text-[#6E43A3]"
+                className="mt-4 w-full rounded-2xl border border-gray-200 py-3 text-sm sm:text-base font-semibold text-[#6E43A3]"
               >
                 Replace document
               </button>
@@ -175,10 +175,10 @@ export default function DocumentUpdatePage({
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F1F2F5]">
                 <UploadCloud size={26} className="text-[#4B5768]" />
               </span>
-              <span className="text-[15px] sm:text-lg font-semibold text-[#1F2937]">
+              <span className="text-base sm:text-lg font-semibold text-[#1F2937]">
                 Upload {doc.label}
               </span>
-              <span className="text-[13px] sm:text-[15px] text-[#9AA5B8]">
+              <span className="text-sm sm:text-base text-[#9AA5B8]">
                 Take a photo or upload from files
               </span>
             </button>
@@ -212,13 +212,13 @@ export default function DocumentUpdatePage({
 
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] sm:text-[15px] text-[#1F2937]">
+                  <p className="truncate text-sm sm:text-base text-[#1F2937]">
                     {fileName}
                   </p>
                 </div>
 
                 {fileState === "ready" && (
-                  <span className="shrink-0 text-[12px] sm:text-[13px] font-semibold text-[#1E9E56]">
+                  <span className="shrink-0 text-xs sm:text-sm font-semibold text-[#1E9E56]">
                     Ready
                   </span>
                 )}
@@ -243,14 +243,14 @@ export default function DocumentUpdatePage({
         <div className="px-6 pb-8">
           <div className="w-full max-w-xl mx-auto">
             {errorMsg && (
-              <p className="mb-3 text-center text-[13px] text-[#E8542F]">
+              <p className="mb-3 text-center text-sm text-[#E8542F]">
                 {errorMsg}
               </p>
             )}
             <button
               onClick={submit}
               disabled={upload.isPending}
-              className="h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              className="h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
               {upload.isPending ? "Uploading..." : "Submit for review"}
             </button>
@@ -268,17 +268,17 @@ export default function DocumentUpdatePage({
               </div>
             </div>
 
-            <h2 className="mt-5 text-[17px] sm:text-xl font-bold text-[#2b2b2b]">
+            <h2 className="mt-5 text-lg sm:text-xl font-bold text-[#2b2b2b]">
               Document submitted successfully
             </h2>
-            <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-gray-500">
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">
               Your document has been submitted successfully. We'll review it and
               notify you once there's an update.
             </p>
 
             <button
               onClick={finishDone}
-              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
               Done
             </button>

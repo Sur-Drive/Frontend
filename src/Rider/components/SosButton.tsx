@@ -157,7 +157,7 @@ export default function SosButton() {
           onPointerLeave={endPress}
           onPointerCancel={endPress}
           onContextMenu={(e) => e.preventDefault()}
-          className="relative flex h-11 w-11 select-none items-center justify-center overflow-hidden rounded-full bg-[#E53935] text-[11px] font-extrabold text-white shadow-md"
+          className="relative flex h-11 w-11 select-none items-center justify-center overflow-hidden rounded-full bg-[#E53935] text-xs font-extrabold text-white shadow-md"
           style={{
             touchAction: "none",
             WebkitTouchCallout: "none",
@@ -188,7 +188,7 @@ export default function SosButton() {
         </button>
 
         {(isPressing || hint) && (
-          <span className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-lg bg-[#1F2937]/85 px-2.5 py-1 text-[11px] font-medium text-white shadow">
+          <span className="pointer-events-none absolute right-0 top-full mt-2 whitespace-nowrap rounded-lg bg-[#1F2937]/85 px-2.5 py-1 text-xs font-medium text-white shadow">
             {isPressing ? "Keep holding…" : hint}
           </span>
         )}

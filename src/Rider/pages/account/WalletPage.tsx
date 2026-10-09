@@ -148,7 +148,7 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
             >
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
-            <h1 className="text-[17px] sm:text-[20px] font-bold text-[#1F2937]">Wallet</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-[#1F2937]">Wallet</h1>
           </div>
 
           {/* balance card */}
@@ -158,7 +158,7 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
               aria-hidden="true"
             />
             <div className="relative flex items-center justify-between">
-              <p className="text-[12.5px] sm:text-[14px] text-white/70">Available Balance</p>
+              <p className="text-xs sm:text-sm text-white/70">Available Balance</p>
               <button
                 type="button"
                 onClick={() => setShowBalance((v) => !v)}
@@ -168,21 +168,21 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
                 {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
               </button>
             </div>
-            <p className="relative mt-1.5 text-[26px] sm:text-[34px] font-extrabold tracking-tight text-white">
+            <p className="relative mt-1.5 text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               {wallet.isLoading ? "…" : showBalance ? naira(balance) : "₦••••••"}
             </p>
             <button
               type="button"
               onClick={() => setWithdrawOpen(true)}
               disabled={!wallet.data || balance <= 0}
-              className="relative mt-5 w-full rounded-2xl bg-white/25 disabled:opacity-50 py-3.5 text-[13px] sm:text-[15px] font-bold text-white backdrop-blur-sm transition active:scale-[0.99]"
+              className="relative mt-5 w-full rounded-2xl bg-white/25 disabled:opacity-50 py-3.5 text-sm sm:text-base font-bold text-white backdrop-blur-sm transition active:scale-[0.99]"
             >
               Withdraw Now
             </button>
           </div>
 
           {wallet.isError && (
-            <p className="mt-3 rounded-2xl bg-[#FDE8E8] px-4 py-3 text-[13px] text-[#E8542F]">
+            <p className="mt-3 rounded-2xl bg-[#FDE8E8] px-4 py-3 text-sm text-[#E8542F]">
               {(wallet.error as Error)?.message}{" "}
               <button type="button" className="font-semibold underline" onClick={() => wallet.refetch()}>
                 Retry
@@ -193,29 +193,29 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
           {/* pending / paid */}
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
-              <p className="text-[12px] sm:text-[13px] text-[#9AA5B8]">Pending Earnings</p>
-              <p className="mt-1.5 text-[17px] sm:text-xl font-extrabold text-[#1F2937]">
+              <p className="text-xs sm:text-sm text-[#9AA5B8]">Pending Earnings</p>
+              <p className="mt-1.5 text-lg sm:text-xl font-extrabold text-[#1F2937]">
                 {naira(pendingEarnings)}
               </p>
             </div>
             <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
-              <p className="text-[12px] sm:text-[13px] text-[#9AA5B8]">Paid This Month</p>
-              <p className="mt-1.5 text-[17px] sm:text-xl font-extrabold text-[#1E9E56]">
+              <p className="text-xs sm:text-sm text-[#9AA5B8]">Paid This Month</p>
+              <p className="mt-1.5 text-lg sm:text-xl font-extrabold text-[#1E9E56]">
                 {naira(paidThisMonth)}
               </p>
             </div>
           </div>
 
           {/* payout account */}
-          <h2 className="mb-3 mt-6 text-[15px] sm:text-lg font-bold text-[#1F2937]">
+          <h2 className="mb-3 mt-6 text-base sm:text-lg font-bold text-[#1F2937]">
             Payout Account
           </h2>
           <div className="divide-y divide-gray-100 rounded-3xl bg-white px-4 shadow-sm">
             {accountsQ.isLoading && (
-              <p className="py-4 text-[13px] text-[#9AA5B8]">Loading accounts…</p>
+              <p className="py-4 text-sm text-[#9AA5B8]">Loading accounts…</p>
             )}
             {accountsQ.isError && (
-              <p className="py-4 text-[13px] text-[#E8542F]">
+              <p className="py-4 text-sm text-[#E8542F]">
                 {(accountsQ.error as Error)?.message}
               </p>
             )}
@@ -227,16 +227,16 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
                 className="flex w-full items-center gap-3.5 py-4 text-left"
               >
                 <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-bold"
                   style={{ background: acc.badgeBg, color: acc.badgeColor }}
                 >
                   {acc.badgeText}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] sm:text-[15px] font-semibold text-[#1F2937]">
+                  <p className="truncate text-sm sm:text-base font-semibold text-[#1F2937]">
                     {acc.bank} ····{acc.last4}
                   </p>
-                  <p className="truncate text-[12px] sm:text-[13px] text-[#6E43A3]">
+                  <p className="truncate text-xs sm:text-sm text-[#6E43A3]">
                     {acc.holder}
                   </p>
                 </div>
@@ -263,10 +263,10 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
                 <Plus size={18} className="text-[#4B5768]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] sm:text-[15px] font-semibold text-[#1F2937]">
+                <p className="text-sm sm:text-base font-semibold text-[#1F2937]">
                   Add Bank Account
                 </p>
-                <p className="truncate text-[12px] sm:text-[13px] text-[#9AA5B8]">
+                <p className="truncate text-xs sm:text-sm text-[#9AA5B8]">
                   Add your bank details for seamless payouts.
                 </p>
               </div>
@@ -276,13 +276,13 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
 
           {/* payout history */}
           <div className="mb-3 mt-6 flex items-center justify-between">
-            <h2 className="text-[15px] sm:text-lg font-bold text-[#1F2937]">
+            <h2 className="text-base sm:text-lg font-bold text-[#1F2937]">
               Payout History
             </h2>
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}
-              className="flex items-center gap-0.5 text-[12.5px] sm:text-[14px] font-semibold text-[#6E43A3]"
+              className="flex items-center gap-0.5 text-xs sm:text-sm font-semibold text-[#6E43A3]"
             >
               {showAll ? "Show less" : "View All"}
               <ChevronRight size={16} />
@@ -290,15 +290,15 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
           </div>
           <div className="divide-y divide-gray-100 rounded-3xl bg-white px-4 shadow-sm">
             {txQ.isLoading && (
-              <p className="py-4 text-[13px] text-[#9AA5B8]">Loading…</p>
+              <p className="py-4 text-sm text-[#9AA5B8]">Loading…</p>
             )}
             {txQ.isError && (
-              <p className="py-4 text-[13px] text-[#E8542F]">
+              <p className="py-4 text-sm text-[#E8542F]">
                 {(txQ.error as Error)?.message}
               </p>
             )}
             {!txQ.isLoading && !txQ.isError && shownTx.length === 0 && (
-              <p className="py-4 text-[13px] text-[#9AA5B8]">No transactions yet.</p>
+              <p className="py-4 text-sm text-[#9AA5B8]">No transactions yet.</p>
             )}
             {shownTx.map((item) => (
               <div
@@ -306,17 +306,17 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
                 className="flex items-center justify-between py-4"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] sm:text-[15px] font-semibold text-[#1F2937]">
+                  <p className="truncate text-sm sm:text-base font-semibold text-[#1F2937]">
                     {item.title}
                   </p>
-                  <p className="mt-0.5 text-[12px] sm:text-[13px] text-[#9AA5B8]">
+                  <p className="mt-0.5 text-xs sm:text-sm text-[#9AA5B8]">
                     {item.date} ·{" "}
                     <span className={`font-medium ${STATUS_STYLES[item.status]}`}>
                       {item.status}
                     </span>
                   </p>
                 </div>
-                <p className="shrink-0 text-[13px] sm:text-[15px] font-bold text-[#1F2937]">
+                <p className="shrink-0 text-sm sm:text-base font-bold text-[#1F2937]">
                   {item.isDebit ? "-" : ""}
                   {naira(item.amount)}
                 </p>
@@ -343,7 +343,7 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
 
             {withdrawDone ? (
               <>
-                <p className="mt-6 text-center text-[15px] font-semibold text-[#1E9E56]">
+                <p className="mt-6 text-center text-base font-semibold text-[#1E9E56]">
                   Withdrawal requested successfully
                 </p>
                 <button
@@ -356,14 +356,14 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
               </>
             ) : (
               <>
-                <p className="mt-4 text-[13px] text-[#9AA5B8]">
+                <p className="mt-4 text-sm text-[#9AA5B8]">
                   Available: {naira(balance)}
                   {selectedAccount
                     ? ` · to ${selectedAccount.bank} ····${selectedAccount.last4}`
                     : ""}
                 </p>
                 {!selectedAccount && (
-                  <p className="mt-2 text-[13px] text-[#E8542F]">
+                  <p className="mt-2 text-sm text-[#E8542F]">
                     Add a payout account first.
                   </p>
                 )}
@@ -374,15 +374,15 @@ export default function WalletPage({ onBack }: { onBack: () => void }) {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="Enter amount (₦)"
-                  className="mt-3 w-full rounded-xl bg-[#F1F2F5] px-4 py-3.5 text-[15px] text-[#1F2937] outline-none"
+                  className="mt-3 w-full rounded-xl bg-[#F1F2F5] px-4 py-3.5 text-base text-[#1F2937] outline-none"
                 />
                 {amountNum > balance && (
-                  <p className="mt-2 text-[13px] text-[#E8542F]">
+                  <p className="mt-2 text-sm text-[#E8542F]">
                     Amount is more than your available balance.
                   </p>
                 )}
                 {withdrawError && (
-                  <p className="mt-2 text-[13px] text-[#E8542F]">{withdrawError}</p>
+                  <p className="mt-2 text-sm text-[#E8542F]">{withdrawError}</p>
                 )}
                 <button
                   type="button"

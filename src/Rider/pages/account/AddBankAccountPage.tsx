@@ -94,10 +94,10 @@ export default function AddBankAccountPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-xl sm:text-2xl font-bold text-[#1F2937]">
             Add Bank Account
           </h1>
-          <p className="mt-1.5 text-[13px] sm:text-[15px] leading-relaxed text-[#9AA5B8]">
+          <p className="mt-1.5 text-sm sm:text-base leading-relaxed text-[#9AA5B8]">
             The account name must match your SUR-DRIVEHT account name.
           </p>
 
@@ -112,7 +112,7 @@ export default function AddBankAccountPage({
                 <Landmark size={16} className="text-[#6E43A3]" />
               </span>
               <span
-                className={`flex-1 truncate text-[13px] sm:text-[15px] ${
+                className={`flex-1 truncate text-sm sm:text-base ${
                   bank ? "font-semibold text-[#1F2937]" : "text-[#9AA5B8]"
                 }`}
               >
@@ -135,15 +135,15 @@ export default function AddBankAccountPage({
                   setAccountNumber(e.target.value.replace(/\D/g, ""))
                 }
                 placeholder="Enter account number"
-                className="w-full min-w-0 flex-1 bg-transparent text-[13px] sm:text-[15px] font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
+                className="w-full min-w-0 flex-1 bg-transparent text-base font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
               />
             </div>
 
             {blocker && (
-              <p className="px-1 text-[13px] text-[#9AA5B8]">{blocker}</p>
+              <p className="px-1 text-sm text-[#9AA5B8]">{blocker}</p>
             )}
             {banksError && (
-              <p className="px-1 text-[13px] text-[#E8542F]">
+              <p className="px-1 text-sm text-[#E8542F]">
                 Couldn't load banks. Check your connection and reopen this page.
               </p>
             )}
@@ -158,7 +158,7 @@ export default function AddBankAccountPage({
             type="button"
             disabled={!isReady || add.isPending}
             onClick={handleAddAccount}
-            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-[#D8D2E3] disabled:shadow-none"
+            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-base sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-[#D8D2E3] disabled:shadow-none"
           >
             {add.isPending ? "Adding..." : "Add Account"}
           </button>
@@ -172,7 +172,7 @@ export default function AddBankAccountPage({
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DCF5E4]">
               <CheckCircle2 size={14} className="text-[#1E9E56]" />
             </span>
-            <span className="flex-1 text-[12.5px] sm:text-[14px] font-medium text-[#1F2937]">
+            <span className="flex-1 text-xs sm:text-sm font-medium text-[#1F2937]">
               Bank account successfully added
             </span>
             <button
@@ -203,16 +203,16 @@ export default function AddBankAccountPage({
                 <XCircle size={28} className="text-white" />
               </span>
             </div>
-            <h3 className="mt-5 text-[17px] sm:text-xl font-bold text-[#1F2937]">
+            <h3 className="mt-5 text-lg sm:text-xl font-bold text-[#1F2937]">
               Unable to add account
             </h3>
-            <p className="mt-2 text-[12.5px] sm:text-[14.5px] leading-relaxed text-[#6B7280]">
+            <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#6B7280]">
               {failMessage}
             </p>
             <button
               type="button"
               onClick={() => setFailMessage("")}
-              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-[13px] sm:text-[15px] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-sm sm:text-base font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
               Try again
             </button>

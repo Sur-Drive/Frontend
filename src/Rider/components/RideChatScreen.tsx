@@ -84,16 +84,16 @@ export default function RideChatScreen({
 
         <div className="min-w-0 flex-1 leading-tight">
           <div className="flex items-center gap-2">
-            <p className="truncate text-[16px] font-normal text-[#2B2B2B]">{person.name}</p>
+            <p className="truncate text-base font-normal text-[#2B2B2B]">{person.name}</p>
             {person.rating !== undefined && (
-              <span className="flex shrink-0 items-center gap-[3px] rounded-[3px] bg-[#FFF7DB] px-1 py-[1px] text-[9px] font-medium text-[#E9B21A]">
-                <span className="text-[8px]">★</span>
+              <span className="flex shrink-0 items-center gap-[3px] rounded-[3px] bg-[#FFF7DB] px-1 py-[1px] text-xs font-medium text-[#E9B21A]">
+                <span className="text-xs">★</span>
                 {person.rating.toFixed(1)}
               </span>
             )}
           </div>
           {person.trips !== undefined && (
-            <p className="mt-0.5 text-[12px] text-[#6C7BA8]">{person.trips} Completed ride</p>
+            <p className="mt-0.5 text-xs text-[#6C7BA8]">{person.trips} Completed ride</p>
           )}
         </div>
 
@@ -137,7 +137,7 @@ export default function RideChatScreen({
               key={r}
               type="button"
               onClick={() => submit(r)}
-              className="h-[35px] shrink-0 whitespace-nowrap rounded-full border border-[#E6E6EA] bg-white px-4 text-[13px] font-medium text-[#1B0F3B] active:scale-95"
+              className="h-[35px] shrink-0 whitespace-nowrap rounded-full border border-[#E6E6EA] bg-white px-4 text-sm font-medium text-[#1B0F3B] active:scale-95"
             >
               {r}
             </button>
@@ -174,7 +174,7 @@ export default function RideChatScreen({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Write a message"
-            className="min-w-0 flex-1 bg-transparent text-[16px] text-[#2B2B2B] outline-none placeholder:text-[#B2ABC4]"
+            className="min-w-0 flex-1 bg-transparent text-base text-[#2B2B2B] outline-none placeholder:text-[#B2ABC4]"
           />
           <button
             type="submit"
@@ -195,7 +195,7 @@ function Bubble({ m, stamp, onRetry }: { m: ChatMsg; stamp: string | null; onRet
   const corner = m.mine ? "rounded-br-none" : "rounded-bl-none";
   return (
     <div className="mb-4">
-      {stamp && <p className="mb-[7px] text-center text-[12px] text-[#8F8BA0]">{stamp}</p>}
+      {stamp && <p className="mb-[7px] text-center text-xs text-[#8F8BA0]">{stamp}</p>}
       <div className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
         {m.type === "image" ? (
           <img
@@ -205,7 +205,7 @@ function Bubble({ m, stamp, onRetry }: { m: ChatMsg; stamp: string | null; onRet
           />
         ) : (
           <div
-            className={`max-w-[300px] whitespace-pre-wrap break-words rounded-[30px] px-6 text-[16px] leading-[21px] ${corner} ${
+            className={`max-w-[300px] whitespace-pre-wrap break-words rounded-[30px] px-6 text-base leading-[21px] ${corner} ${
               m.mine ? "bg-[#6E43A3] py-6 pl-[30px] text-white" : "bg-white py-[19px] text-[#222]"
             }`}
           >
