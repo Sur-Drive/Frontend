@@ -1,64 +1,23 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import DocumentUpdatePage from "./DocumentUpdatePage";
+import { useDriverVehicle } from "../../hooks/useAccountVehicle";
+import { buildDocuments, type DocStatus } from "../../lib/vehicleDocs";
 
-export type DocStatus = "expiring" | "warning" | "ok" | "verified" | "pending";
-
-export interface VehicleDocument {
-  key: string;
-  label: string;
-  expiresLabel: string;
-  status: DocStatus;
-  badgeText: string;
-  fileName?: string;
-  previewUrl?: string;
-}
-
-const VEHICLE = {
-  name: "Corrolla toyota 2021",
-  plate: "LAG-001-AB",
-};
-
-const INITIAL_DOCUMENTS: VehicleDocument[] = [
-  {
-    key: "vehicle-license",
-    label: "Vehicle License",
-    expiresLabel: "Expires Sept 21, 2026",
-    status: "expiring",
-    badgeText: "Expires in 3 days",
-  },
-  {
-    key: "road-worthiness",
-    label: "Vehicle Road Worthiness",
-    expiresLabel: "Expires Sept 21, 2026",
-    status: "warning",
-    badgeText: "Expiring soon",
-  },
-  {
-    key: "drivers-license",
-    label: "Driver's License",
-    expiresLabel: "Expires Dec 21, 2026",
-    status: "ok",
-    badgeText: "Up to date",
-  },
-  {
-    key: "ownership",
-    label: "Ownership Document",
-    expiresLabel: "Document has been Verified",
-    status: "verified",
-    badgeText: "Verified",
-  },
-];
+export type { DocStatus, VehicleDocument } from "../../lib/vehicleDocs";
 
 function statusBadgeClasses(status: DocStatus) {
   switch (status) {
     case "expiring":
     case "warning":
+    case "expired":
       return "bg-[#FCE4E4] text-[#E8542F]";
     case "ok":
     case "verified":
+    case "on-file":
       return "bg-[#DCF5E4] text-[#1E9E56]";
     case "pending":
+    case "missing":
       return "bg-[#FDF1DC] text-[#E8A93E]";
     default:
       return "bg-gray-100 text-gray-600";
@@ -70,39 +29,28 @@ export default function VehicleInformationPage({
 }: {
   onBack: () => void;
 }) {
-  const [documents, setDocuments] =
-    useState<VehicleDocument[]>(INITIAL_DOCUMENTS);
+  const { data: vehicle, isLoading, isError, error, refetch } =
+    useDriverVehicle();
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
+  const documents = useMemo(() => buildDocuments(vehicle), [vehicle]);
+  const vehicleName = vehicle?.vehicleModel || "Vehicle";
+  const plate = vehicle?.plateNumber || "";
+
   const expiringSoon = documents.filter(
-    (d) => d.status === "expiring" || d.status === "warning",
+    (d) => d.status === "expiring" || d.status === "warning" || d.status === "expired",
   );
   const mostUrgent = expiringSoon[0];
 
   const activeDoc = documents.find((d) => d.key === activeKey) || null;
 
-  const markSubmitted = (key: string) => {
-    setDocuments((prev) =>
-      prev.map((d) =>
-        d.key === key
-          ? {
-              ...d,
-              status: "pending",
-              badgeText: "Pending Review",
-              expiresLabel: "Submitted for review",
-            }
-          : d,
-      ),
-    );
-  };
-
   if (activeDoc) {
     return (
       <DocumentUpdatePage
         document={activeDoc}
-        vehicleName={VEHICLE.name}
+        vehicleName={vehicleName}
         onBack={() => setActiveKey(null)}
-        onSubmitted={() => markSubmitted(activeDoc.key)}
+        onSubmitted={() => setActiveKey(null)}
       />
     );
   }
@@ -119,7 +67,7 @@ export default function VehicleInformationPage({
             >
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
-            <h1 className="text-xl font-bold text-[#1F2937]">
+            <h1 className="text-[17px] sm:text-xl font-bold text-[#1F2937]">
               vehicle information
             </h1>
           </div>
@@ -164,11 +112,20 @@ export default function VehicleInformationPage({
 
           {/* vehicle name card */}
           <div className="rounded-2xl border border-gray-100 p-5 shadow-sm">
-            <h2 className="text-2xl font-bold text-[#241238]">
-              {VEHICLE.name}
+            <h2 className="text-xl sm:text-2xl font-bold text-[#241238]">
+              {isLoading ? "Loading…" : vehicleName}
             </h2>
-            <p className="mt-1 text-[15px] text-[#9AA5B8]">{VEHICLE.plate}</p>
+            <p className="mt-1 text-[13px] sm:text-[15px] text-[#9AA5B8]">{plate}</p>
           </div>
+
+          {isError && (
+            <div className="mt-4 rounded-2xl bg-[#FCE4E4] px-4 py-3 text-[13px] text-[#E8542F]">
+              {(error as Error)?.message || "Could not load vehicle information."}{" "}
+              <button type="button" onClick={() => refetch()} className="font-semibold underline">
+                Retry
+              </button>
+            </div>
+          )}
 
           {/* expiry banner */}
           {mostUrgent && (
@@ -179,8 +136,8 @@ export default function VehicleInformationPage({
             >
               <span className="flex items-center gap-2.5">
                 <AlertTriangle size={18} className="text-[#D98A1F]" />
-                <span className="text-[15px] font-medium text-[#B4700F]">
-                  Your documents will expire in 3 days
+                <span className="text-[13px] sm:text-[15px] font-medium text-[#B4700F]">
+                  {mostUrgent.status === "expired" ? `${mostUrgent.label} has expired` : `${mostUrgent.label} is expiring soon`}
                 </span>
               </span>
               <ChevronRight size={18} className="shrink-0 text-[#D98A1F]" />
@@ -197,14 +154,14 @@ export default function VehicleInformationPage({
                 className="flex w-full items-center justify-between gap-3 py-4 text-left"
               >
                 <div className="min-w-0">
-                  <p className="text-[17px] text-[#1F2937]">{d.label}</p>
-                  <p className="mt-0.5 text-[14px] text-[#9AA5B8]">
+                  <p className="text-[15px] sm:text-[17px] text-[#1F2937]">{d.label}</p>
+                  <p className="mt-0.5 text-[12.5px] sm:text-[14px] text-[#9AA5B8]">
                     {d.expiresLabel}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span
-                    className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold ${statusBadgeClasses(
+                    className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] sm:text-[13px] font-semibold ${statusBadgeClasses(
                       d.status,
                     )}`}
                   >

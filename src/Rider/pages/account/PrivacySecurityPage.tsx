@@ -2,6 +2,10 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, Mail, Smartphone } from "lucide-react";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import ChangePasswordPage from "./ChangePasswordPage";
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+} from "../../hooks/useAccount";
 
 type View = "home" | "change-password";
 
@@ -11,8 +15,27 @@ export default function PrivacySecurityPage({
   onBack: () => void;
 }) {
   const [view, setView] = useState<View>("home");
-  const [emailNotification, setEmailNotification] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(false);
+  const { data: prefs, isLoading, error: loadError } =
+    useNotificationPreferences();
+  const { mutate: updatePrefs, isPending: isSaving } =
+    useUpdateNotificationPreferences();
+  const [saveError, setSaveError] = useState("");
+
+  const emailNotification = prefs?.emailEnabled ?? false;
+  const pushNotifications = prefs?.pushEnabled ?? false;
+
+  // PATCH /ride-drivers/notification-preferences (only the toggle that changed)
+  const savePref = (patch: { emailEnabled?: boolean; pushEnabled?: boolean }) => {
+    setSaveError("");
+    updatePrefs(patch, {
+      onError: (err: unknown) =>
+        setSaveError(
+          err instanceof Error
+            ? err.message
+            : "Couldn't save your notification settings.",
+        ),
+    });
+  };
 
   if (view === "change-password") {
     return (
@@ -35,9 +58,18 @@ export default function PrivacySecurityPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[26px] font-extrabold text-[#1F2937]">
+          <h1 className="mt-6 text-[21px] sm:text-[26px] font-extrabold text-[#1F2937]">
             Privacy &amp; security
           </h1>
+
+          {(loadError || saveError) && (
+            <p className="mt-4 text-[13px] sm:text-sm text-red-600">
+              {saveError ||
+                (loadError instanceof Error
+                  ? loadError.message
+                  : "Couldn't load your notification settings.")}
+            </p>
+          )}
 
           <div className="mt-5 divide-y divide-gray-100 rounded-3xl bg-white px-4 shadow-sm">
             <div className="flex w-full items-center gap-3.5 py-4 text-left">
@@ -45,16 +77,17 @@ export default function PrivacySecurityPage({
                 <Mail size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium text-[#1F2937]">
+                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
                   Email Notification
                 </p>
-                <p className="text-[13.5px] text-[#9AA5B8]">
+                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">
                   Get updates via email
                 </p>
               </div>
               <ToggleSwitch
                 checked={emailNotification}
-                onChange={setEmailNotification}
+                disabled={isLoading || !!loadError || isSaving}
+                onChange={(v) => savePref({ emailEnabled: v })}
                 ariaLabel="Email Notification"
               />
             </div>
@@ -64,14 +97,15 @@ export default function PrivacySecurityPage({
                 <Smartphone size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium text-[#1F2937]">
+                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
                   Push Notifications
                 </p>
-                <p className="text-[13.5px] text-[#9AA5B8]">Receive update</p>
+                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">Receive update</p>
               </div>
               <ToggleSwitch
                 checked={pushNotifications}
-                onChange={setPushNotifications}
+                disabled={isLoading || !!loadError || isSaving}
+                onChange={(v) => savePref({ pushEnabled: v })}
                 ariaLabel="Push Notifications"
               />
             </div>
@@ -85,10 +119,10 @@ export default function PrivacySecurityPage({
                 <Lock size={18} className="text-[#1F2937]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium text-[#1F2937]">
+                <p className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
                   Security Settings
                 </p>
-                <p className="text-[13.5px] text-[#9AA5B8]">
+                <p className="text-[12px] sm:text-[13.5px] text-[#9AA5B8]">
                   Change account password
                 </p>
               </div>

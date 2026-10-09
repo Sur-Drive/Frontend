@@ -11,18 +11,16 @@ import type {
 
 interface PassengerProfileContextValue {
   profile: PassengerProfile;
+  userId: string | null;
+
+  setAuthenticatedUserId: (id: string | null) => void;
 
   updateProfile: (
     updates: Partial<PassengerProfile>,
   ) => void;
 
-  updateEmail: (
-    email: string,
-  ) => void;
-
-  updatePhone: (
-    phone: string,
-  ) => void;
+  updateEmail: (email: string) => void;
+  updatePhone: (phone: string) => void;
 }
 
 const PassengerProfileContext =
@@ -45,9 +43,16 @@ export function PassengerProfileProvider({
   children: ReactNode;
 }) {
   const [profile, setProfile] =
-    useState<PassengerProfile>(
-      initialProfile,
-    );
+    useState<PassengerProfile>(initialProfile);
+
+  const [userId, setUserId] =
+    useState<string | null>(null);
+
+  const setAuthenticatedUserId = (
+    id: string | null,
+  ) => {
+    setUserId(id);
+  };
 
   const updateProfile = (
     updates: Partial<PassengerProfile>,
@@ -58,15 +63,11 @@ export function PassengerProfileProvider({
     }));
   };
 
-  const updateEmail = (
-    email: string,
-  ) => {
+  const updateEmail = (email: string) => {
     updateProfile({ email });
   };
 
-  const updatePhone = (
-    phone: string,
-  ) => {
+  const updatePhone = (phone: string) => {
     updateProfile({ phone });
   };
 
@@ -74,6 +75,8 @@ export function PassengerProfileProvider({
     <PassengerProfileContext.Provider
       value={{
         profile,
+        userId,
+        setAuthenticatedUserId,
         updateProfile,
         updateEmail,
         updatePhone,
@@ -85,10 +88,9 @@ export function PassengerProfileProvider({
 }
 
 export function usePassengerProfile() {
-  const context =
-    useContext(
-      PassengerProfileContext,
-    );
+  const context = useContext(
+    PassengerProfileContext,
+  );
 
   if (!context) {
     throw new Error(
@@ -98,3 +100,4 @@ export function usePassengerProfile() {
 
   return context;
 }
+

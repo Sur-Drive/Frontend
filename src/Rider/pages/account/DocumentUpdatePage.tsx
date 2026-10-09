@@ -3,19 +3,24 @@ import {
   ChevronLeft,
   UploadCloud,
   X,
-  Pause,
-  Play,
-  XCircle,
   Check,
 } from "lucide-react";
-import type { VehicleDocument } from "./VehicleInformationPage";
+import type { VehicleDocument } from "../../lib/vehicleDocs";
+import { useUploadVehicleDocument } from "../../hooks/useAccountVehicle";
 
-type FileState = "empty" | "uploading" | "ready";
+type FileState = "empty" | "ready";
 
 function statusBadgeClasses(status: VehicleDocument["status"]) {
   switch (status) {
+    case "expiring":
+    case "warning":
+    case "expired":
+      return "bg-[#FCE4E4] text-[#E8542F]";
+    case "ok":
+    case "verified":
     case "on-file":
       return "bg-[#DCF5E4] text-[#1E9E56]";
+    case "pending":
     case "missing":
       return "bg-[#FDF1DC] text-[#E8A93E]";
     default:
@@ -35,87 +40,58 @@ export default function DocumentUpdatePage({
   onSubmitted: (fileName: string, previewUrl?: string) => void;
 }) {
   const [fileState, setFileState] = useState<FileState>("empty");
-  const [progress, setProgress] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [isImage, setIsImage] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  // Whether we're still showing the read-only "existing document on file"
-  // view (from the API) rather than the upload flow. Driven by whether the
-  // document actually has a file attached, not by an invented status.
+  const [errorMsg, setErrorMsg] = useState("");
+  // Showing the read-only "existing document on file" view (from the API)
+  // until the driver picks a replacement.
   const [viewingExisting, setViewingExisting] = useState(Boolean(doc.fileName));
 
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const upload = useUploadVehicleDocument();
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startUpload = (file: File) => {
+  const pickFile = (f: File) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setViewingExisting(false);
-    setFileName(file.name);
-    setIsImage(file.type.startsWith("image/"));
-    setPreviewUrl(
-      file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
-    );
-    setProgress(0);
-    setPaused(false);
-    setFileState("uploading");
-
-    intervalRef.current = setInterval(() => {
-      setProgress((p) => {
-        const next = p + Math.floor(Math.random() * 10) + 6;
-        if (next >= 100) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          setFileState("ready");
-          return 100;
-        }
-        return next;
-      });
-    }, 220);
-  };
-
-  const togglePause = () => {
-    if (paused) {
-      setPaused(false);
-      intervalRef.current = setInterval(() => {
-        setProgress((p) => {
-          const next = p + Math.floor(Math.random() * 10) + 6;
-          if (next >= 100) {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            setFileState("ready");
-            return 100;
-          }
-          return next;
-        });
-      }, 220);
-    } else {
-      setPaused(true);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
+    setErrorMsg("");
+    setFile(f);
+    setFileName(f.name);
+    setIsImage(f.type.startsWith("image/"));
+    setPreviewUrl(f.type.startsWith("image/") ? URL.createObjectURL(f) : "");
+    setFileState("ready");
   };
 
   const cancelUpload = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
     setFileState("empty");
-    setProgress(0);
-    setPaused(false);
     setFileName("");
     setPreviewUrl("");
+    setErrorMsg("");
     setViewingExisting(Boolean(doc.fileName));
   };
 
-  const secondsRemaining = Math.max(1, Math.ceil((100 - progress) / 10));
-
   const submit = () => {
-    setShowSuccess(true);
+    if (!file) return;
+    setErrorMsg("");
+    upload.mutate(
+      { kind: doc.kind, file },
+      {
+        onSuccess: () => setShowSuccess(true),
+        onError: (e) =>
+          setErrorMsg((e as Error).message || "Upload failed. Try again."),
+      },
+    );
   };
 
   const finishDone = () => {
@@ -136,24 +112,24 @@ export default function DocumentUpdatePage({
             >
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
-            <h1 className="text-xl font-bold text-[#1F2937]">
+            <h1 className="text-[17px] sm:text-xl font-bold text-[#1F2937]">
               Update Document
             </h1>
           </div>
 
           {/* document summary card */}
           <div className="p-4 mt-6 border border-gray-100 shadow-sm rounded-2xl">
-            <h2 className="text-xl font-bold text-[#2b2b2b]">{doc.label}</h2>
-            <p className="mt-1 text-[15px] text-[#9AA5B8]">{vehicleName}</p>
+            <h2 className="text-[17px] sm:text-xl font-bold text-[#2b2b2b]">{doc.label}</h2>
+            <p className="mt-1 text-[13px] sm:text-[15px] text-[#9AA5B8]">{vehicleName}</p>
             <div className="mt-2.5 flex items-center gap-2.5">
               <span
-                className={`rounded-full px-3 py-1 text-[13px] font-semibold ${statusBadgeClasses(
+                className={`rounded-full px-3 py-1 text-[12px] sm:text-[13px] font-semibold ${statusBadgeClasses(
                   doc.status,
                 )}`}
               >
                 {doc.badgeText}
               </span>
-              <span className="text-[15px] text-[#9AA5B8]">
+              <span className="text-[13px] sm:text-[15px] text-[#9AA5B8]">
                 {doc.expiresLabel}
               </span>
             </div>
@@ -171,10 +147,10 @@ export default function DocumentUpdatePage({
                   />
                 ) : null}
                 <div className="flex items-center justify-between px-4 py-3">
-                  <span className="truncate text-[15px] text-[#1F2937]">
+                  <span className="truncate text-[13px] sm:text-[15px] text-[#1F2937]">
                     {doc.fileName || "Document"}
                   </span>
-                  <span className="shrink-0 text-[13px] font-semibold text-[#1E9E56]">
+                  <span className="shrink-0 text-[12px] sm:text-[13px] font-semibold text-[#1E9E56]">
                     On file
                   </span>
                 </div>
@@ -182,7 +158,7 @@ export default function DocumentUpdatePage({
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="mt-4 w-full rounded-2xl border border-gray-200 py-3 text-[15px] font-semibold text-[#6E43A3]"
+                className="mt-4 w-full rounded-2xl border border-gray-200 py-3 text-[13px] sm:text-[15px] font-semibold text-[#6E43A3]"
               >
                 Replace document
               </button>
@@ -199,10 +175,10 @@ export default function DocumentUpdatePage({
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F1F2F5]">
                 <UploadCloud size={26} className="text-[#4B5768]" />
               </span>
-              <span className="text-lg font-semibold text-[#1F2937]">
+              <span className="text-[15px] sm:text-lg font-semibold text-[#1F2937]">
                 Upload {doc.label}
               </span>
-              <span className="text-[15px] text-[#9AA5B8]">
+              <span className="text-[13px] sm:text-[15px] text-[#9AA5B8]">
                 Take a photo or upload from files
               </span>
             </button>
@@ -236,44 +212,13 @@ export default function DocumentUpdatePage({
 
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[15px] text-[#1F2937]">
+                  <p className="truncate text-[13px] sm:text-[15px] text-[#1F2937]">
                     {fileName}
                   </p>
-                  {fileState === "uploading" && (
-                    <p className="text-[13px] text-[#9AA5B8]">
-                      {paused
-                        ? "Paused"
-                        : `${secondsRemaining} seconds remaining`}
-                    </p>
-                  )}
                 </div>
 
-                {fileState === "uploading" && (
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[13px] font-semibold text-[#3b7ec2]">
-                      Uploading... {Math.min(progress, 99)}%
-                    </span>
-                    <button
-                      type="button"
-                      onClick={togglePause}
-                      aria-label={paused ? "Resume upload" : "Pause upload"}
-                      className="flex items-center justify-center w-8 h-8 text-gray-600 bg-gray-100 rounded-full"
-                    >
-                      {paused ? <Play size={14} /> : <Pause size={14} />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelUpload}
-                      aria-label="Cancel upload"
-                      className="flex items-center justify-center w-8 h-8 text-red-500 rounded-full"
-                    >
-                      <XCircle size={20} />
-                    </button>
-                  </div>
-                )}
-
                 {fileState === "ready" && (
-                  <span className="shrink-0 text-[13px] font-semibold text-[#1E9E56]">
+                  <span className="shrink-0 text-[12px] sm:text-[13px] font-semibold text-[#1E9E56]">
                     Ready
                   </span>
                 )}
@@ -288,7 +233,7 @@ export default function DocumentUpdatePage({
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) startUpload(file);
+              if (file) pickFile(file);
             }}
           />
         </div>
@@ -297,11 +242,17 @@ export default function DocumentUpdatePage({
       {!viewingExisting && fileState === "ready" && (
         <div className="px-6 pb-8">
           <div className="w-full max-w-xl mx-auto">
+            {errorMsg && (
+              <p className="mb-3 text-center text-[13px] text-[#E8542F]">
+                {errorMsg}
+              </p>
+            )}
             <button
               onClick={submit}
-              className="h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              disabled={upload.isPending}
+              className="h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
-              Submit for review
+              {upload.isPending ? "Uploading..." : "Submit for review"}
             </button>
           </div>
         </div>
@@ -317,17 +268,17 @@ export default function DocumentUpdatePage({
               </div>
             </div>
 
-            <h2 className="mt-5 text-xl font-bold text-[#2b2b2b]">
+            <h2 className="mt-5 text-[17px] sm:text-xl font-bold text-[#2b2b2b]">
               Document submitted successfully
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-gray-500">
+            <p className="mt-2 text-[13px] sm:text-sm leading-relaxed text-gray-500">
               Your document has been submitted successfully. We'll review it and
               notify you once there's an update.
             </p>
 
             <button
               onClick={finishDone}
-              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
               Done
             </button>

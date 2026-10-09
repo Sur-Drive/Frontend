@@ -3,28 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Car, SlidersHorizontal, Star, X } from "lucide-react";
 import MapBackdrop from "../components/MapBackdrop";
 import DriverBottomNav from "../components/DriverBottomNav";
+import { RIDE_STATUSES, type DriverRideStatus } from "../api/rides";
+import { extractRides, useDriverRideHistory } from "../hooks/useRideHistory";
 
 /* ------------------------------------------------------------------ */
 /* Types & sample data                                                */
 /* ------------------------------------------------------------------ */
-
-type RideStatus = "completed" | "cancelled";
 
 type Ride = {
   id: string;
   from: string;
   to: string;
   date: string; // display date, e.g. "5 Oct, 12:26"
-  isoDate: string; // "YYYY-MM-DD" for filtering/sorting
   person: string;
-  status: RideStatus;
+  status: string; // raw API status, e.g. "ride_completed"
   statusLabel: string;
-  paymentMethod: "Card" | "Cash";
+  tone: "good" | "bad" | "neutral";
+  paymentMethod: string;
   amount: number;
   monthGroup: string;
-  // detail-view-only fields
   driverFullName: string;
-  rating: number;
+  rating: number | null;
   duration: string;
   distance: string;
   pickupAddress: string;
@@ -38,165 +37,88 @@ type Ride = {
 const naira = (n: number) =>
   `₦${n.toLocaleString("en-NG", { minimumFractionDigits: n % 1 !== 0 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
-const RIDES: Ride[] = [
-  {
-    id: "r1",
-    from: "Ikoyi",
-    to: "Ajah",
-    date: "5 Nov, 12:26",
-    isoDate: "2025-11-05",
-    person: "Ngozi U.",
-    status: "completed",
-    statusLabel: "Completed",
-    paymentMethod: "Card",
-    amount: 9440,
-    monthGroup: "",
-    driverFullName: "Ngozi U.",
-    rating: 4.8,
-    duration: "18 mins 05 sec",
-    distance: "21.4 km",
-    pickupAddress: "9 Bourdillon Road, Ikoyi",
-    pickupTime: "Wed, 5 Nov, 12:26",
-    dropoffAddress: "Ajah Bus Stop, Ajah",
-    dropoffTime: "Wed, 5 Nov, 12:59",
-    fare: 9345.6,
-    bookingFee: 94.4,
-  },
-  {
-    id: "r2",
-    from: "VI",
-    to: "Lekki Phase 1",
-    date: "3 Nov, 09:14",
-    isoDate: "2025-11-03",
-    person: "Femi B.",
-    status: "completed",
-    statusLabel: "Completed",
-    paymentMethod: "Card",
-    amount: 4960,
-    monthGroup: "",
-    driverFullName: "Femi B.",
-    rating: 4.7,
-    duration: "14 mins 20 sec",
-    distance: "9.8 km",
-    pickupAddress: "1004 Estate, Victoria Island",
-    pickupTime: "Mon, 3 Nov, 09:14",
-    dropoffAddress: "Admiralty Way, Lekki Phase 1",
-    dropoffTime: "Mon, 3 Nov, 09:33",
-    fare: 4910.4,
-    bookingFee: 49.6,
-  },
-  {
-    id: "r3",
-    from: "Ikeja",
-    to: "MM Airport",
-    date: "18 Oct, 07:05",
-    isoDate: "2025-10-18",
-    person: "Dapo A.",
-    status: "cancelled",
-    statusLabel: "Passenger Cancelled",
-    paymentMethod: "Cash",
-    amount: 5920,
-    monthGroup: "October 2025",
-    driverFullName: "Dapo A.",
-    rating: 4.6,
-    duration: "—",
-    distance: "—",
-    pickupAddress: "14 Admiralty Way",
-    pickupTime: "Sat, 18 Oct, 07:05",
-    dropoffAddress: "25 Marina Street",
-    dropoffTime: "—",
-    fare: 0,
-    bookingFee: 0,
-  },
-  {
-    id: "r4",
-    from: "Yaba",
-    to: "Surulere",
-    date: "12 Oct, 11:20",
-    isoDate: "2025-10-12",
-    person: "Femi B.",
-    status: "completed",
-    statusLabel: "Completed",
-    paymentMethod: "Card",
-    amount: 3840,
-    monthGroup: "October 2025",
-    driverFullName: "Femi B.",
-    rating: 4.7,
-    duration: "10 mins 48 sec",
-    distance: "6.2 km",
-    pickupAddress: "Herbert Macaulay Way, Yaba",
-    pickupTime: "Sun, 12 Oct, 11:20",
-    dropoffAddress: "Adeniran Ogunsanya St, Surulere",
-    dropoffTime: "Sun, 12 Oct, 11:37",
-    fare: 3801.6,
-    bookingFee: 38.4,
-  },
-  {
-    id: "r5",
-    from: "Gbagada",
-    to: "Victoria Island",
-    date: "22 Aug, 11:20",
-    isoDate: "2025-08-22",
-    person: "Ify O.",
-    status: "completed",
-    statusLabel: "Completed",
-    paymentMethod: "Card",
-    amount: 7280,
-    monthGroup: "August 2025",
-    driverFullName: "Ify O.",
-    rating: 4.9,
-    duration: "16 mins 02 sec",
-    distance: "14.6 km",
-    pickupAddress: "Gbagada Expressway, Gbagada",
-    pickupTime: "Fri, 22 Aug, 11:20",
-    dropoffAddress: "Ozumba Mbadiwe Ave, Victoria Island",
-    dropoffTime: "Fri, 22 Aug, 11:36",
-    fare: 7203.2,
-    bookingFee: 76.8,
-  },
-  {
-    id: "r6",
-    from: "Gbagada",
-    to: "Victoria Island",
-    date: "15 Aug, 08:02",
-    isoDate: "2025-08-15",
-    person: "Ify O.",
-    status: "completed",
-    statusLabel: "Completed",
-    paymentMethod: "Card",
-    amount: 7280,
-    monthGroup: "August 2025",
-    driverFullName: "Ify O.",
-    rating: 4.9,
-    duration: "15 mins 40 sec",
-    distance: "14.2 km",
-    pickupAddress: "Gbagada Expressway, Gbagada",
-    pickupTime: "Fri, 15 Aug, 08:02",
-    dropoffAddress: "Ozumba Mbadiwe Ave, Victoria Island",
-    dropoffTime: "Fri, 15 Aug, 08:18",
-    fare: 7203.2,
-    bookingFee: 76.8,
-  },
-];
+const STATUS_LABEL = (s: string) =>
+  s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
-type StatusFilter = "all" | "completed" | "cancelled";
+const fmtDate = (iso?: string) => {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-NG", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const addr = (v: any): string =>
+  typeof v === "string" ? v : v?.address || v?.name || "—";
+
+/**
+ * Maps one item from GET /rides/driver/history to the Ride the UI uses.
+ * Field names are read defensively — check the [rides] console log once and
+ * tighten these to the backend's real names.
+ */
+function normalizeRide(r: any): Ride {
+  const status = String(r.status ?? "");
+  const pickup = addr(r.pickupAddress ?? r.pickup ?? r.pickupLocation ?? r.origin);
+  const dropoff = addr(r.dropoffAddress ?? r.dropoff ?? r.dropoffLocation ?? r.destination);
+  const created = r.createdAt ?? r.requestedAt ?? r.startedAt;
+  const p = r.passenger ?? r.rider ?? {};
+  const person =
+    [p.firstName, p.lastName].filter(Boolean).join(" ") ||
+    p.name ||
+    r.passengerName ||
+    "Passenger";
+  const fare = Number(r.fare ?? r.fareAmount ?? r.baseFare ?? r.amount ?? 0);
+  const bookingFee = Number(r.bookingFee ?? 0);
+  const done = ["ride_completed", "payment_pending", "paid", "closed"].includes(status);
+  const dist = r.distanceKm ?? r.distance;
+  const dur = r.durationMinutes ?? r.duration;
+  const d = created ? new Date(created) : null;
+
+  return {
+    id: String(r.id ?? r._id ?? r.rideId ?? Math.random()),
+    from: pickup,
+    to: dropoff,
+    date: fmtDate(created),
+    person,
+    status,
+    statusLabel: STATUS_LABEL(status),
+    tone: done ? "good" : status === "cancelled" ? "bad" : "neutral",
+    paymentMethod: String(r.paymentMethod ?? r.paymentType ?? "—"),
+    amount: Number(r.totalFare ?? r.total ?? fare + bookingFee),
+    monthGroup:
+      d && !isNaN(d.getTime())
+        ? d.toLocaleString("en-NG", { month: "long", year: "numeric" })
+        : "",
+    driverFullName: person,
+    rating: typeof r.rating === "number" ? r.rating : null,
+    duration: dur != null ? `${dur} mins` : "—",
+    distance: dist != null ? `${dist} km` : "—",
+    pickupAddress: pickup,
+    pickupTime: fmtDate(r.startedAt ?? created),
+    dropoffAddress: dropoff,
+    dropoffTime: fmtDate(r.completedAt ?? r.endedAt),
+    fare,
+    bookingFee,
+  };
+}
+
+type StatusFilter = "all" | DriverRideStatus;
 
 /* ------------------------------------------------------------------ */
 /* Small pieces                                                       */
 /* ------------------------------------------------------------------ */
 
 function StatusText({ ride }: { ride: Ride }) {
-  return (
-    <span
-      className={
-        ride.status === "completed"
-          ? "text-[#1E9E56] font-medium"
-          : "text-[#E8542F] font-medium"
-      }
-    >
-      {ride.statusLabel}
-    </span>
-  );
+  const color =
+    ride.tone === "good"
+      ? "text-[#1E9E56]"
+      : ride.tone === "bad"
+        ? "text-[#E8542F]"
+        : "text-[#E8A93E]";
+  return <span className={`${color} font-medium`}>{ride.statusLabel}</span>;
 }
 
 function RideRow({ ride, onOpen }: { ride: Ride; onOpen: (r: Ride) => void }) {
@@ -267,8 +189,7 @@ function FilterSheet({
 
   const pills: { key: StatusFilter; label: string }[] = [
     { key: "all", label: "All" },
-    { key: "completed", label: "Completed" },
-    { key: "cancelled", label: "Cancelled" },
+    ...RIDE_STATUSES.map((k) => ({ key: k, label: STATUS_LABEL(k) })),
   ];
 
   return (
@@ -387,7 +308,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
                 isCancelled ? "bg-[#E8542F]" : "bg-[#1E9E56]"
               }`}
             >
-              {isCancelled ? "Cancelled" : "Completed"}
+              {ride.statusLabel}
             </span>
           </div>
 
@@ -406,7 +327,7 @@ function RideDetail({ ride, onBack }: { ride: Ride; onBack: () => void }) {
               <div className="flex items-center gap-1 text-[#F4C542]">
                 <Star size={14} className="fill-[#F4C542]" />
                 <span className="text-sm font-semibold text-[#1F2937]">
-                  {ride.rating}
+                  {ride.rating ?? "—"}
                 </span>
               </div>
             </div>
@@ -546,14 +467,27 @@ export default function RideHistoryPage() {
   const [appliedStart, setAppliedStart] = useState("");
   const [appliedEnd, setAppliedEnd] = useState("");
 
-  const filtered = useMemo(() => {
-    return RIDES.filter((r) => {
-      if (appliedStatus !== "all" && r.status !== appliedStatus) return false;
-      if (appliedStart && r.isoDate < appliedStart) return false;
-      if (appliedEnd && r.isoDate > appliedEnd) return false;
-      return true;
-    });
-  }, [appliedStatus, appliedStart, appliedEnd]);
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useDriverRideHistory({
+    status: appliedStatus === "all" ? undefined : appliedStatus,
+    startDate: appliedStart || undefined,
+    endDate: appliedEnd || undefined,
+  });
+
+  const filtered = useMemo<Ride[]>(() => {
+    const raw = (data?.pages ?? []).flatMap((p: any) => extractRides(p));
+    // TEMP DEBUG LOGGING — check the real field names, then remove.
+    if (raw[0]) console.log("[rides] first history item:", raw[0]);
+    return raw.map(normalizeRide);
+  }, [data]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Ride[]>();
@@ -590,7 +524,27 @@ export default function RideHistoryPage() {
             </button>
           </div>
 
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <p className="mt-16 text-center text-sm text-[#9AA5B8]">
+              Loading rides…
+            </p>
+          ) : isError ? (
+            <div className="mt-16 flex flex-col items-center text-center">
+              <p className="text-base font-semibold text-[#1F2937]">
+                Couldn't load ride history
+              </p>
+              <p className="mt-1 text-sm text-[#9AA5B8]">
+                {(error as Error)?.message}
+              </p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="mt-4 rounded-full bg-[#6E43A3] px-6 py-2.5 text-sm font-bold text-white"
+              >
+                Retry
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="mt-16 flex flex-col items-center text-center">
               <p className="text-base font-semibold text-[#1F2937]">
                 No rides found
@@ -619,6 +573,16 @@ export default function RideHistoryPage() {
                   </div>
                 </div>
               ))}
+              {hasNextPage && (
+                <button
+                  type="button"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="mx-auto mb-2 rounded-full bg-[#F1F2F5] px-6 py-2.5 text-sm font-semibold text-[#4B5768] disabled:opacity-60"
+                >
+                  {isFetchingNextPage ? "Loading…" : "Load more"}
+                </button>
+              )}
             </div>
           )}
         </div>

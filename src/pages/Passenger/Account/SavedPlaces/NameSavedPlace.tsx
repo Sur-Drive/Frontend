@@ -1,4 +1,5 @@
 import {
+  LoaderCircle,
   MapPin,
 } from "lucide-react";
 
@@ -16,11 +17,15 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import {
+  toast,
+} from "sonner";
+
 import RideHeader from "../../../../components/passenger/ride/RideHeader";
 
 import {
-  usePassengerSavedPlaces,
-} from "../../../../context/PassengerSavedPlacesContext";
+  passengerSavedPlacesApi,
+} from "../../../../api/passenger/savedPlaces";
 
 import type {
   RideLocation,
@@ -28,7 +33,21 @@ import type {
 
 interface NameState {
   mode: "new";
+
   location: RideLocation;
+}
+
+function getErrorMessage(
+  error: unknown,
+) {
+  if (
+    error instanceof Error &&
+    error.message
+  ) {
+    return error.message;
+  }
+
+  return "Unable to save this place. Please try again.";
 }
 
 export default function NameSavedPlace() {
@@ -37,11 +56,6 @@ export default function NameSavedPlace() {
 
   const routerLocation =
     useLocation();
-
-  const {
-    addSavedPlace,
-  } =
-    usePassengerSavedPlaces();
 
   const state =
     routerLocation.state as
@@ -53,10 +67,14 @@ export default function NameSavedPlace() {
     setName,
   ] = useState("");
 
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
+
   if (
-    !state ||
-    !state.location
-      .coordinates
+    !state?.location
+      ?.coordinates
   ) {
     return (
       <Navigate
@@ -66,30 +84,48 @@ export default function NameSavedPlace() {
     );
   }
 
-  const save =
-    () => {
-      const trimmed =
-        name.trim();
+  const save = async () => {
+    const trimmed =
+      name.trim();
 
-      if (!trimmed) {
-        return;
-      }
+    const coordinates =
+      state.location
+        .coordinates;
 
-      addSavedPlace({
-        id: `custom-${Date.now()}`,
-        type: "custom",
-        name:
-          trimmed,
-        address:
-          state.location
-            .address ??
-          state.location
-            .label,
+    const address =
+      state.location.address ??
+      state.location.label;
 
-        coordinates:
-          state.location
-            .coordinates!,
-      });
+    if (
+      !trimmed ||
+      !coordinates ||
+      saving
+    ) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      await passengerSavedPlacesApi.create(
+        {
+          name: trimmed,
+
+          type: "custom",
+
+          address,
+
+          lat:
+            coordinates.lat,
+
+          lng:
+            coordinates.lng,
+        },
+      );
+
+      toast.success(
+        `${trimmed} saved`,
+      );
 
       navigate(
         "/passenger/account/saved-places",
@@ -97,7 +133,21 @@ export default function NameSavedPlace() {
           replace: true,
         },
       );
-    };
+    } catch (error) {
+      console.error(
+        "CREATE CUSTOM PLACE ERROR:",
+        error,
+      );
+
+      toast.error(
+        getErrorMessage(
+          error,
+        ),
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-[100dvh] bg-white">
@@ -113,7 +163,28 @@ export default function NameSavedPlace() {
           Give this place a name
         </h1>
 
-        <label className="mt-6 flex h-[58px] items-center gap-3 rounded-[13px] bg-[#F5F4F5] px-4">
+        <p className="mt-2 text-[14px] leading-6 text-[#918B95]">
+          Choose a name you'll
+          easily recognize later.
+        </p>
+
+        <div className="mt-5 rounded-[14px] bg-[#F8F6F9] p-4">
+          <div className="flex items-start gap-3">
+            <MapPin
+              size={19}
+              className="mt-0.5 shrink-0 text-[#7442AD]"
+            />
+
+            <p className="text-[14px] leading-5 text-[#665F69]">
+              {state.location
+                .address ??
+                state.location
+                  .label}
+            </p>
+          </div>
+        </div>
+
+        <label className="mt-5 flex h-[58px] items-center gap-3 rounded-[13px] bg-[#F5F4F5] px-4 focus-within:ring-2 focus-within:ring-[#7442AD]/15">
           <MapPin
             size={19}
             className="shrink-0 text-[#7442AD]"
@@ -122,6 +193,8 @@ export default function NameSavedPlace() {
           <input
             autoFocus
             value={name}
+            maxLength={60}
+            disabled={saving}
             onChange={(
               event,
             ) =>
@@ -135,34 +208,50 @@ export default function NameSavedPlace() {
             ) => {
               if (
                 event.key ===
-                "Enter"
+                  "Enter" &&
+                name.trim() &&
+                !saving
               ) {
-                save();
+                void save();
               }
             }}
-            placeholder="Enter place name"
-            className="min-w-0 flex-1 bg-transparent text-[16px] text-[#302B34] outline-none placeholder:text-[#BEB9C2]"
+            placeholder="e.g. Gym, Church, Mum's House"
+            className="min-w-0 flex-1 bg-transparent text-[16px] text-[#302B34] outline-none placeholder:text-[#BEB9C2] disabled:opacity-60"
           />
         </label>
 
         <motion.button
           type="button"
           disabled={
-            !name.trim()
+            !name.trim() ||
+            saving
           }
           whileTap={
-            name.trim()
+            name.trim() &&
+            !saving
               ? {
                   scale: 0.98,
                 }
               : undefined
           }
-          onClick={save}
-          className="mt-5 h-[56px] w-full rounded-[13px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_8px_24px_rgba(116,66,173,0.22)] disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={() =>
+            void save()
+          }
+          className="mt-5 flex h-[56px] w-full items-center justify-center gap-2 rounded-[13px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_8px_24px_rgba(116,66,173,0.22)] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Save Place
+          {saving && (
+            <LoaderCircle
+              size={19}
+              className="animate-spin"
+            />
+          )}
+
+          {saving
+            ? "Saving..."
+            : "Save Place"}
         </motion.button>
       </main>
     </div>
   );
 }
+

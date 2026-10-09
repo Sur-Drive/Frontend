@@ -255,7 +255,7 @@ export default function AddCard() {
             className="shrink-0 text-[#7442AD]"
           />
 
-          <div className="min-w-0 flex-1">
+          <div className="flex-1 min-w-0">
             {cardNumber && (
               <p className="text-[13px] text-[#AAA4AE]">
                 Card number
@@ -288,7 +288,7 @@ export default function AddCard() {
 
         {/* EXPIRY + CVV */}
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 mt-3">
           <div
             onClick={() =>
               focusField("expiry")
@@ -438,68 +438,7 @@ export default function AddCard() {
         </motion.button>
       </main>
 
-      {/* FIGMA-STYLE DEVELOPMENT KEYPAD */}
-      {/* <div className="border-t border-[#E2E3E7] bg-[#E4E7ED] px-5 pb-[calc(14px+env(safe-area-inset-bottom))] pt-4 md:hidden">
-        <div className="mx-auto grid max-w-[420px] grid-cols-3 gap-2.5">
-          {[
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-          ].map(
-            (number) => (
-              <motion.button
-                key={number}
-                type="button"
-                whileTap={{
-                  scale: 0.94,
-                }}
-                onClick={() =>
-                  appendNumber(
-                    number,
-                  )
-                }
-                className="h-[45px] rounded-[7px] bg-white text-[16px] font-semibold text-[#22202A] shadow-sm"
-              >
-                {number}
-              </motion.button>
-            ),
-          )}
-
-          <div />
-
-          <motion.button
-            type="button"
-            whileTap={{
-              scale: 0.94,
-            }}
-            onClick={() =>
-              appendNumber("0")
-            }
-            className="h-[45px] rounded-[7px] bg-white text-[16px] font-semibold text-[#22202A] shadow-sm"
-          >
-            0
-          </motion.button>
-
-          <motion.button
-            type="button"
-            whileTap={{
-              scale: 0.94,
-            }}
-            onClick={
-              removeNumber
-            }
-            className="flex h-[45px] items-center justify-center text-[#22202A]"
-          >
-            <Delete size={21} />
-          </motion.button>
-        </div>
-      </div> */}
+    
     </div>
   );
 }

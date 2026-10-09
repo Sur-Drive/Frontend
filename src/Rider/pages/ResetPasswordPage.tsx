@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Check, Eye, EyeOff, X } from "lucide-react";
 import OnboardingProgress from "../components/OnboardingProgress";
+import { useResetRideDriverPassword } from "../hooks/useAuth";
 
 interface ResetPasswordLocationState {
   identifier?: string;
   sessionId?: string;
+  /** Token returned by /forgot-password/verify-otp. */
+  resetToken?: string;
 }
 
 interface Criterion {
@@ -31,13 +34,16 @@ export default function ResetPasswordPage() {
 
   const identifier = state.identifier ?? "";
   const sessionId = state.sessionId ?? "";
+  const resetToken = state.resetToken;
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const { mutate: resetPassword, isPending: isSubmitting } =
+    useResetRideDriverPassword();
 
   // No session to reset with (e.g. page opened directly) — send back.
   useEffect(() => {
@@ -68,14 +74,22 @@ export default function ResetPasswordPage() {
     !mismatch &&
     !isSubmitting;
 
-  // No API for now: simulate the reset and show the success modal.
+  // POST /ride-drivers/reset-password
   const submit = () => {
     if (!canSubmit) return;
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setShowSuccess(true);
-    }, 500);
+    setError("");
+    resetPassword(
+      { newPassword: password, confirmPassword: confirm, resetToken },
+      {
+        onSuccess: () => setShowSuccess(true),
+        onError: (err: unknown) =>
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Couldn't reset your password. Please try again.",
+          ),
+      },
+    );
   };
 
   const inputClass =
@@ -160,7 +174,10 @@ export default function ResetPasswordPage() {
               type={showConfirm ? "text" : "password"}
               placeholder="Re-type Password"
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+                setError("");
+              }}
               className={inputClass}
             />
             <button
@@ -177,6 +194,8 @@ export default function ResetPasswordPage() {
           )}
         </div>
       </div>
+
+      {error && <p className="mt-5 text-sm text-red-500">{error}</p>}
 
       <button
         onClick={submit}
