@@ -7,6 +7,7 @@ import {
 } from "./passengerSession";
 
 import type {
+  PassengerGoogleAuthResponse,
   PassengerOnboardingStatusResponse,
   PassengerPersonalInfoRequest,
   PassengerPersonalInfoResponse,
@@ -285,9 +286,9 @@ export const passengerAuthApi = {
   /* =======================================================
      GOOGLE AUTH
   ======================================================= */
-  async googleAuth(
+ async googleAuth(
   idToken: string,
-) {
+): Promise<PassengerGoogleAuthResponse> {
   if (!idToken.trim()) {
     throw new Error(
       "Google authentication token is missing.",
@@ -295,7 +296,7 @@ export const passengerAuthApi = {
   }
 
   const response =
-    await passengerApi.post(
+    await passengerApi.post<PassengerGoogleAuthResponse>(
       "/riders/google",
       {
         idToken,
@@ -306,10 +307,18 @@ export const passengerAuthApi = {
       },
     );
 
-  console.log(
-    "PASSENGER GOOGLE AUTH RESPONSE:",
-    response,
-  );
+  if (response.tokens?.accessToken) {
+    passengerSession.setTokens(
+      response.tokens.accessToken,
+      response.tokens.refreshToken,
+    );
+
+    if (response.user?.identifier) {
+      passengerSession.setIdentifier(
+        response.user.identifier,
+      );
+    }
+  }
 
   return response;
 },
