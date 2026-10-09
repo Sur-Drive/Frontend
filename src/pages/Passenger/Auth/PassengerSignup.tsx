@@ -18,6 +18,7 @@ import LegalModal, {
 
 import PassengerAuthShell from "../../../components/passenger/auth/PassengerAuthShell";
 import { usePassengerGoogleAuth, useSendPassengerOtp } from "../../../hooks/passenger/usePassengerAuth";
+import { passengerSession } from "../../../api/passenger/passengerSession";
 
 type SignupMode = "phone" | "email";
 
@@ -70,6 +71,7 @@ export default function PassengerSignup() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [legalModal, setLegalModal] = useState<LegalModalType | null>(null);
+  const [hasConsented, setHasConsented] = useState(false);
 
   const phoneDigits = phone.replace(/\D/g, "");
   
@@ -112,6 +114,11 @@ const handleContinue = () => {
   if (isSendingOtp) {
     return;
   }
+
+  if (!hasConsented) {
+  setError("Please accept the Terms & Conditions to continue.");
+  return;
+}
 
   if (!isValid) {
     setError(
@@ -173,68 +180,66 @@ const handleContinue = () => {
 const handleGoogleCredential = (
   credentialResponse: CredentialResponse,
 ) => {
-  const idToken =
-    credentialResponse.credential;
+  if (!hasConsented) {
+    toast.error(
+      "Please accept the Terms & Conditions before continuing.",
+    );
+    return;
+  }
+
+  const idToken = credentialResponse.credential;
 
   if (!idToken) {
     toast.error(
       "Google authentication was unsuccessful. Please try again.",
     );
-
     return;
   }
 
   setError("");
 
-  googleAuth(
-    idToken,
-    {
-      onSuccess: (
-        response,
-      ) => {
-        console.log(
-          "GOOGLE LOGIN RESPONSE:",
-          response,
-        );
+  googleAuth(idToken, {
+    onSuccess: (response) => {
+      const { user, tokens, requiresPersonalInfo } = response;
 
-        /*
-         * TEMPORARILY:
-         *
-         * Do not navigate yet.
-         *
-         * We need to see the actual backend
-         * response from /riders/google so we
-         * know whether this is:
-         *
-         * 1. An existing passenger with final tokens
-         * 2. A new passenger requiring personal info
-         * 3. Another onboarding state
-         *
-         * Once we see the response, we'll wire the
-         * session + navigation correctly.
-         */
-
+      if (requiresPersonalInfo || !user.hasCompletedOnboarding) {
+        // This route must support the onboarding credentials
+        // returned for a new Google user.
         toast.success(
-          "Google authentication successful.",
+          "Google authentication successful. Complete your profile.",
         );
-      },
 
-      onError: (
-        error,
-      ) => {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to continue with Google.";
+        navigate("/passenger/complete-profile", {
+          replace: true,
+        });
 
-        setError(message);
+        return;
+      }
 
+      if (!tokens?.accessToken) {
         toast.error(
-          message,
+          "Google login succeeded, but no access token was returned.",
         );
-      },
+        return;
+      }
+
+      toast.success("Welcome back to SUR-DRIVE!");
+
+      navigate("/passenger/home", {
+        replace: true,
+      });
     },
-  );
+
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to continue with Google.";
+
+      setError(message);
+      toast.error(message);
+    },
+  });
 };
 
 
@@ -268,16 +273,22 @@ const handleGoogleCredential = (
         >
           <div className="relative">
           <SocialButton
-            icon={<FcGoogle size={20} />}
+            icon={<FcGoogle size={22} />}
             label={
               isGoogleLoading
                 ? "Connecting..."
                 : "Continue with Google"
             }
-            onClick={() => {}}
+            onClick={() => {
+              if (!hasConsented) {
+                toast.error(
+                  "Please accept the Terms & Conditions first.",
+                );
+              }
+            }}
           />
 
-          {!isGoogleLoading && (
+          {hasConsented && !isGoogleLoading && (
             <div
               className="
                 absolute
@@ -303,17 +314,17 @@ const handleGoogleCredential = (
           )}
         </div>
         
-          <SocialButton
+          {/* <SocialButton
             icon={<Apple size={19} fill="currentColor" />}
             label="Continue with Apple"
             onClick={() => {}}
-          />
+          /> */}
 
-          <SocialButton
+          {/* <SocialButton
   icon={<FacebookIcon />}
   label="Continue with Facebook"
   onClick={() => {}}
-/>
+/> */}
         </motion.div>
 
         {/* OR */}
@@ -375,11 +386,11 @@ const handleGoogleCredential = (
 
               <div className="mt-4 flex h-[52px] overflow-hidden rounded-[10px] bg-[#F6F6F7]">
                 <div className="flex items-center gap-2 px-3 border-r border-white">
-                  <span className="flex items-center justify-center w-5 h-5 overflow-hidden rounded-full">
+                  <span className="flex items-center justify-center w-6 h-6 overflow-hidden rounded-full">
                     🇳🇬
                   </span>
 
-                  <span className="text-[12px] font-medium text-gray-700">
+                  <span className="text-[14px] font-medium text-gray-700">
                     +234
                   </span>
                 </div>
@@ -446,16 +457,16 @@ const handleGoogleCredential = (
   type="button"
   onClick={handleContinue}
   disabled={
-    !isValid ||
+    !isValid || !hasConsented || 
     isSendingOtp
   }
   whileTap={
-    isValid && !isSendingOtp
+    isValid && hasConsented && !isSendingOtp
       ? { scale: 0.98 }
       : undefined
   }
   whileHover={
-    isValid && !isSendingOtp
+    isValid && hasConsented && !isSendingOtp
       ? { y: -1 }
       : undefined
   }
@@ -474,7 +485,7 @@ const handleGoogleCredential = (
     transition
 
     ${
-      isValid &&
+      isValid && hasConsented &&
       !isSendingOtp
         ? "bg-[#7442AD]"
         : "cursor-not-allowed bg-[#BDA9D5]"
@@ -516,41 +527,59 @@ const handleGoogleCredential = (
 
         <div className="flex-1" />
 
-        <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className="
-            mx-auto max-w-[330px] pb-1
-            text-center text-[12px] leading-[1.55] mt-3
-            text-gray-400
-          "
-        >
-          By continuing you agree to our{" "}
-          <button
-            type="button"
-            onClick={() =>
-              setLegalModal("terms")
-            }
-            className="font-semibold text-[#7442AD]"
-          >
-            Terms & Conditions
-          </button>
-          , acknowledge our{" "}
-          <button
-              type="button"
-              onClick={() =>
-                setLegalModal("privacy")
-              }
-              className="font-semibold text-[#7442AD]"
-            >
-              privacy policy
-            </button>
-          , and confirm that you're over 18. We may send promotions
-          related to our services — you can unsubscribe anytime in
-          notification setting under your profile.
-        </motion.p>
+        <motion.div
+  initial={{ opacity: 0, y: 8 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.45 }}
+  className="mx-auto mt-4 flex w-full max-w-[380px] items-start gap-3 pb-2"
+>
+  <input
+    id="passenger-consent"
+    type="checkbox"
+    checked={hasConsented}
+    onChange={(event) => {
+      setHasConsented(event.target.checked);
+      setError("");
+    }}
+    className="
+      mt-1 h-[19px] w-[19px] shrink-0
+      cursor-pointer rounded-[5px]
+      border-2 border-[#BDA9D5]
+      accent-[#7442AD]
+      focus:ring-2 focus:ring-[#7442AD]/30
+    "
+  />
 
+  <div className="flex-1 text-left text-[13px] leading-[1.65] text-gray-500">
+    <label htmlFor="passenger-consent" className="cursor-pointer">
+      By continuing you agree to our{" "}
+    </label>
+
+    <button
+      type="button"
+      onClick={() => setLegalModal("terms")}
+      className="font-semibold text-[#7442AD] underline-offset-2 hover:underline"
+    >
+      Terms & Conditions
+    </button>
+
+    <span>, acknowledge our </span>
+
+    <button
+      type="button"
+      onClick={() => setLegalModal("privacy")}
+      className="font-semibold text-[#7442AD] underline-offset-2 hover:underline"
+    >
+      Privacy Policy
+    </button>
+
+    <label htmlFor="passenger-consent" className="cursor-pointer">
+      , and confirm that you're over 18. We may send promotions
+      related to our services — you can unsubscribe anytime in
+      notification settings under your profile.
+    </label>
+  </div>
+</motion.div>
 
         </div>
       </div>
@@ -585,7 +614,7 @@ function AuthTab({
       type="button"
       onClick={onClick}
       className={`
-        relative h-10 text-[11px] font-medium
+        relative h-10 text-[14px] font-medium
         transition-colors
         ${
           active
@@ -635,7 +664,7 @@ function SocialButton({
         relative flex h-[48px] w-full
         items-center justify-center
         rounded-[9px] border border-gray-200
-        bg-white text-[11px] font-medium
+        bg-white text-[14px] font-medium
         text-[#19151E]
       "
     >

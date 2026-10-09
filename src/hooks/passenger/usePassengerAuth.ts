@@ -147,21 +147,14 @@ export function usePassengerOnboardingStatus(
 ========================================================= */
 
 export function usePassengerGoogleAuth() {
-  const queryClient =
-    useQueryClient();
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      idToken: string,
-    ) =>
-      passengerAuthApi.googleAuth(
-        idToken,
-      ),
+    mutationFn: passengerAuthApi.googleAuth,
 
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey:
-          passengerAuthKeys.all,
+        queryKey: passengerAuthKeys.all,
       });
     },
   });

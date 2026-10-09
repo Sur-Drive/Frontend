@@ -277,7 +277,7 @@ export default function RegisterPage() {
       <p className="mt-[clamp(14px,3.6dvh,22px)] text-center text-[clamp(11.5px,2.5dvh,14px)] text-[#8a8cab]">
         Already have an account?{" "}
         <Link to="/signin" className="font-semibold text-[#4a148c] underline">
-          Register Now
+          Sign In
         </Link>
       </p>
     </div>
