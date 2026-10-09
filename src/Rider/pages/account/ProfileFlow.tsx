@@ -13,6 +13,14 @@ import {
 } from "lucide-react";
 import DriverOtpEntry from "../../components/DriverOtpEntry";
 import { useRideDriverProfile } from "../../hooks/useProfile";
+import {
+  useRequestEmailChange,
+  useVerifyEmailChange,
+  useResendEmailChange,
+  useRequestPhoneChange,
+  useVerifyPhoneChange,
+  useResendPhoneChange,
+} from "../../hooks/useAccount";
 
 type Step =
   | "profile"
@@ -46,6 +54,15 @@ function formatDob(raw: string): string {
   return month ? `${month} ${Number(m[3])}, ${m[1]}` : raw;
 }
 
+// "0803 123 4567" / "803-123-4567" -> "+2348031234567" (API expects E.164).
+function toE164(raw: string): string {
+  const v = raw.replace(/[\s()-]/g, "");
+  if (v.startsWith("+")) return v;
+  if (v.startsWith("234")) return `+${v}`;
+  if (v.startsWith("0")) return `+234${v.slice(1)}`;
+  return `+234${v}`;
+}
+
 export default function ProfileFlow({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState<Step>("profile");
   const {
@@ -63,6 +80,13 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
   const [pendingEmail, setPendingEmail] = useState("");
   const [pendingPhone, setPendingPhone] = useState("");
   const [toast, setToast] = useState(false);
+
+  const requestEmail = useRequestEmailChange();
+  const verifyEmail = useVerifyEmailChange();
+  const resendEmail = useResendEmailChange();
+  const requestPhone = useRequestPhoneChange();
+  const verifyPhone = useVerifyPhoneChange();
+  const resendPhone = useResendPhoneChange();
 
   // Fill the screen from GET /ride-drivers/profile.
   useEffect(() => {
@@ -90,7 +114,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
         description={
           <>
             Your current email is {email}. To verify your new address, we'll
-            send you a 4-digit code. Please enter the code to complete
+            send you a verification code. Please enter the code to complete
             verification
           </>
         }
@@ -98,7 +122,9 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
         placeholder="Enter Your New Email"
         inputType="email"
         onBack={() => setStep("profile")}
-        onSend={(value) => {
+        isSending={requestEmail.isPending}
+        onSend={async (value) => {
+          await requestEmail.mutateAsync({ newEmail: value });
           setPendingEmail(value);
           setStep("change-email-otp");
         }}
@@ -111,10 +137,14 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
       <DriverOtpEntry
         destination={pendingEmail || email}
         onBack={() => setStep("change-email")}
-        onVerified={() => {
+        onVerify={async (otp) => {
+          await verifyEmail.mutateAsync({ otp });
           setEmail(pendingEmail || email);
           setStep("profile");
           showSavedToast();
+        }}
+        onResend={async () => {
+          await resendEmail.mutateAsync();
         }}
       />
     );
@@ -128,7 +158,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
         description={
           <>
             Your current Phone number is {phone}. To verify your new address,
-            we'll send you a 4-digit code. Please enter the code to complete
+            we'll send you a verification code. Please enter the code to complete
             verification
           </>
         }
@@ -136,7 +166,11 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
         placeholder="Enter Your New Number"
         inputType="tel"
         onBack={() => setStep("profile")}
-        onSend={(value) => {
+        isSending={requestPhone.isPending}
+        onSend={async (value) => {
+          await requestPhone.mutateAsync({
+            newPhoneNumber: toE164(value),
+          });
           setPendingPhone(value);
           setStep("change-phone-otp");
         }}
@@ -149,10 +183,14 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
       <DriverOtpEntry
         destination={pendingPhone || phone}
         onBack={() => setStep("change-phone")}
-        onVerified={() => {
+        onVerify={async (otp) => {
+          await verifyPhone.mutateAsync({ otp });
           setPhone(pendingPhone || phone);
           setStep("profile");
           showSavedToast();
+        }}
+        onResend={async () => {
+          await resendPhone.mutateAsync();
         }}
       />
     );
@@ -171,17 +209,17 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">Profile</h1>
-          <p className="mt-1.5 text-[15px] text-[#9AA5B8]">
+          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">Profile</h1>
+          <p className="mt-1.5 text-[13px] sm:text-[15px] text-[#9AA5B8]">
             Help our drivers identify you easily
           </p>
           {isLoading && (
-            <p className="mt-3 text-sm text-[#9AA5B8]">
+            <p className="mt-3 text-[13px] sm:text-sm text-[#9AA5B8]">
               Loading your profile...
             </p>
           )}
           {profileError && (
-            <p className="mt-3 text-sm text-red-600">
+            <p className="mt-3 text-[13px] sm:text-sm text-red-600">
               {profileError instanceof Error
                 ? profileError.message
                 : "Couldn't load your profile."}
@@ -209,18 +247,18 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <User size={16} className="text-[#6E43A3]" />
             </span>
-            <span className="text-[15px] font-medium text-[#1F2937]">
+            <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
               {name || "—"}
             </span>
           </div>
 
           {/* phone */}
           <div className="flex items-center justify-between mt-5 mb-2">
-            <span className="text-sm text-[#1F2937]">Phone Number</span>
+            <span className="text-[13px] sm:text-sm text-[#1F2937]">Phone Number</span>
             <button
               type="button"
               onClick={() => setStep("change-phone")}
-              className="text-sm font-semibold text-[#6E43A3]"
+              className="text-[13px] sm:text-sm font-semibold text-[#6E43A3]"
             >
               Change Number
             </button>
@@ -229,18 +267,18 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <Phone size={15} className="text-[#6E43A3]" />
             </span>
-            <span className="text-[15px] font-medium text-[#1F2937]">
+            <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
               {phone || "—"}
             </span>
           </div>
 
           {/* email */}
           <div className="flex items-center justify-between mt-5 mb-2">
-            <span className="text-sm text-[#1F2937]">Email</span>
+            <span className="text-[13px] sm:text-sm text-[#1F2937]">Email</span>
             <button
               type="button"
               onClick={() => setStep("change-email")}
-              className="text-sm font-semibold text-[#6E43A3]"
+              className="text-[13px] sm:text-sm font-semibold text-[#6E43A3]"
             >
               Change Email
             </button>
@@ -249,7 +287,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <Mail size={15} className="text-[#6E43A3]" />
             </span>
-            <span className="truncate text-[15px] font-medium text-[#1F2937]">
+            <span className="truncate text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
               {email || "—"}
             </span>
           </div>
@@ -264,7 +302,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
                 <User size={15} className="text-[#6E43A3]" />
               </span>
-              <span className="flex-1 text-left text-[15px] font-medium text-[#1F2937]">
+              <span className="flex-1 text-left text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
                 {gender}
               </span>
               <ChevronDown
@@ -282,7 +320,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
                       setGender(g);
                       setGenderOpen(false);
                     }}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left text-[15px] text-[#1F2937] hover:bg-gray-50"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left text-[13px] sm:text-[15px] text-[#1F2937] hover:bg-gray-50"
                   >
                     {g}
                     {gender === g && (
@@ -299,7 +337,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6DAF3]">
               <Cake size={15} className="text-[#6E43A3]" />
             </span>
-            <span className="text-[15px] font-medium text-[#1F2937]">
+            <span className="text-[13px] sm:text-[15px] font-medium text-[#1F2937]">
               {dob || "—"}
             </span>
           </div>
@@ -307,7 +345,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
           <button
             type="button"
             onClick={showSavedToast}
-            className="mt-8 w-full rounded-full bg-[#6E43A3] py-4 text-base font-bold text-white shadow-sm transition active:scale-[0.99]"
+            className="mt-8 w-full rounded-full bg-[#6E43A3] py-4 text-sm sm:text-base font-bold text-white shadow-sm transition active:scale-[0.99]"
           >
             Save Changes
           </button>
@@ -320,7 +358,7 @@ export default function ProfileFlow({ onBack }: { onBack: () => void }) {
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DCF5E4]">
               <Check size={13} className="text-[#1E9E56]" strokeWidth={3} />
             </span>
-            <span className="flex-1 text-[14px] font-medium text-[#1F2937]">
+            <span className="flex-1 text-[12.5px] sm:text-[14px] font-medium text-[#1F2937]">
               Changes successfully saved
             </span>
             <button
@@ -350,6 +388,7 @@ function ChangeContactStep({
   inputType,
   onBack,
   onSend,
+  isSending,
 }: {
   title: string;
   description: React.ReactNode;
@@ -357,9 +396,26 @@ function ChangeContactStep({
   placeholder: string;
   inputType: "email" | "tel";
   onBack: () => void;
-  onSend: (value: string) => void;
+  /** Throw to show the error under the input. */
+  onSend: (value: string) => Promise<void>;
+  isSending: boolean;
 }) {
   const [value, setValue] = useState("");
+  const [error, setError] = useState("");
+
+  const send = async () => {
+    if (!value.trim() || isSending) return;
+    setError("");
+    try {
+      await onSend(value.trim());
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't send the code. Please try again.",
+      );
+    }
+  };
 
   return (
     <div className="flex flex-col w-full h-full min-h-0 bg-white font-outfit">
@@ -373,8 +429,8 @@ function ChangeContactStep({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">{title}</h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-[#9AA5B8]">
+          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">{title}</h1>
+          <p className="mt-2 text-[13px] sm:text-[15px] leading-relaxed text-[#9AA5B8]">
             {description}
           </p>
 
@@ -385,21 +441,27 @@ function ChangeContactStep({
             <input
               type={inputType}
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && void send()}
               placeholder={placeholder}
-              className="w-full flex-1 bg-transparent text-[15px] font-medium text-[#1F2937] placeholder:text-[#9AA5B8] focus:outline-none"
+              className="w-full flex-1 bg-transparent text-[13px] sm:text-[15px] font-medium text-[#1F2937] placeholder:text-[#9AA5B8] focus:outline-none"
             />
           </div>
 
+          {error && <p className="mt-2 text-[13px] sm:text-sm text-red-500">{error}</p>}
+
           <button
             type="button"
-            disabled={!value.trim()}
-            onClick={() => onSend(value.trim())}
-            className={`mt-5 w-full rounded-full py-4 text-base font-bold text-white shadow-sm transition active:scale-[0.99] ${
+            disabled={!value.trim() || isSending}
+            onClick={() => void send()}
+            className={`mt-5 w-full rounded-full py-4 text-sm sm:text-base font-bold text-white shadow-sm transition active:scale-[0.99] ${
               value.trim() ? "bg-[#6E43A3]" : "bg-[#C9B6DE]"
             }`}
           >
-            Send Code
+            {isSending ? "Sending..." : "Send Code"}
           </button>
         </div>
       </div>

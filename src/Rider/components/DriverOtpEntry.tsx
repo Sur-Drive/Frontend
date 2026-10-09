@@ -1,19 +1,27 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, Delete } from "lucide-react";
 
-const OTP_LENGTH = 5;
+const DEFAULT_OTP_LENGTH = 5;
 const COUNTDOWN_SECONDS = 45;
 
 export default function DriverOtpEntry({
   destination,
   onBack,
-  onVerified,
+  onVerify,
+  onResend,
+  length = DEFAULT_OTP_LENGTH,
 }: {
   /** e.g. "Adeniji@gmail.com" or "+234 803 123 4567" */
   destination: string;
   onBack: () => void;
-  onVerified: () => void;
+  /** Called with the full code. Throw to show an error and clear the boxes. */
+  onVerify: (code: string) => Promise<void>;
+  /** Called when "Resend OTP" is tapped. Throw to show an error. */
+  onResend: () => Promise<void>;
+  length?: number;
 }) {
+  const OTP_LENGTH = length;
+  const [error, setError] = useState("");
   const [code, setCode] = useState<string[]>(new Array(OTP_LENGTH).fill(""));
   const [timer, setTimer] = useState(COUNTDOWN_SECONDS);
   const [canResend, setCanResend] = useState(false);
@@ -41,13 +49,21 @@ export default function DriverOtpEntry({
   const activeIndex = code.findIndex((d) => d === "");
   const currentIndex = activeIndex === -1 ? OTP_LENGTH - 1 : activeIndex;
 
-  // No backend: any complete 5-digit code is treated as valid.
-  const submitCode = () => {
+  const submitCode = async (fullCode: string) => {
+    setError("");
     setIsVerifying(true);
-    setTimeout(() => {
+    try {
+      await onVerify(fullCode);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Invalid or expired code. Please try again.",
+      );
+      setCode(new Array(OTP_LENGTH).fill(""));
+    } finally {
       setIsVerifying(false);
-      onVerified();
-    }, 900);
+    }
   };
 
   const handleDigit = (digit: string) => {
@@ -56,8 +72,9 @@ export default function DriverOtpEntry({
     const next = [...code];
     next[activeIndex] = digit;
     setCode(next);
+    setError("");
     if (activeIndex === OTP_LENGTH - 1) {
-      submitCode();
+      void submitCode(next.join(""));
     }
   };
 
@@ -71,15 +88,24 @@ export default function DriverOtpEntry({
     setCode(next);
   };
 
-  const handleResend = () => {
-    if (!canResend) return;
+  const handleResend = async () => {
+    if (!canResend || isResending) return;
+    setError("");
     setIsResending(true);
-    setTimeout(() => {
-      setIsResending(false);
+    try {
+      await onResend();
       setTimer(COUNTDOWN_SECONDS);
       setCanResend(false);
       setCode(new Array(OTP_LENGTH).fill(""));
-    }, 400);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't resend the code. Please try again.",
+      );
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const keypadRows: Array<Array<string | null>> = [
@@ -101,10 +127,10 @@ export default function DriverOtpEntry({
           <ChevronLeft size={22} className="text-[#1F2937]" />
         </button>
 
-        <h1 className="mt-8 text-[28px] font-bold text-[#2b2b2b]">
+        <h1 className="mt-8 text-[22px] sm:text-[28px] font-bold text-[#2b2b2b]">
           OTP Verification
         </h1>
-        <p className="mt-2 text-base text-gray-400">
+        <p className="mt-2 text-sm sm:text-base text-gray-400">
           Enter the OTP sent to{" "}
           <span className="font-semibold text-gray-800">{destination}</span>
         </p>
@@ -113,7 +139,7 @@ export default function DriverOtpEntry({
           {code.map((digit, i) => (
             <div
               key={i}
-              className={`flex h-[60px] w-[60px] flex-1 items-center justify-center rounded-2xl text-2xl font-bold text-gray-800 transition sm:h-[68px] ${
+              className={`flex h-[60px] w-[60px] flex-1 items-center justify-center rounded-2xl text-xl sm:text-2xl font-bold text-gray-800 transition sm:h-[68px] ${
                 digit
                   ? "bg-white shadow-[0_6px_16px_rgba(0,0,0,0.12)]"
                   : i === currentIndex
@@ -126,12 +152,18 @@ export default function DriverOtpEntry({
           ))}
         </div>
 
+        {error && (
+          <p className="mx-auto mt-4 w-full max-w-sm text-[13px] sm:text-sm text-red-500">
+            {error}
+          </p>
+        )}
+
         <div className="mx-auto mt-8 w-full max-w-sm">
           <button
             type="button"
             onClick={handleResend}
             disabled={!canResend || isResending}
-            className={`h-14 w-full rounded-2xl text-lg font-semibold transition ${
+            className={`h-14 w-full rounded-2xl text-[15px] sm:text-lg font-semibold transition ${
               canResend && !isResending
                 ? "bg-[#6E43A3] text-white shadow-lg shadow-[#6E43A3]/30 active:scale-[0.99]"
                 : "cursor-not-allowed bg-[#dcdcdc] text-white/90"
@@ -173,7 +205,7 @@ export default function DriverOtpEntry({
                     key={ki}
                     type="button"
                     onClick={() => handleDigit(key)}
-                    className="h-16 flex-1 rounded-2xl bg-white text-xl font-semibold text-gray-800 shadow-sm active:scale-[0.97]"
+                    className="h-16 flex-1 rounded-2xl bg-white text-[17px] sm:text-xl font-semibold text-gray-800 shadow-sm active:scale-[0.97]"
                   >
                     {key}
                   </button>

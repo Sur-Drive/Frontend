@@ -1,47 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   ChevronLeft,
   ChevronDown,
   Landmark,
-  CreditCard,
   Hash,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   XCircle,
   X,
 } from "lucide-react";
 import BankPickerSheet from "../../components/BankPickerSheet";
-import AccountTypePickerSheet, {
-  type BankAccountType,
-} from "../../components/AccountTypePickerSheet";
+import {
+  useAddPayoutAccount,
+  useDriverId,
+  usePayoutBanks,
+} from "../../hooks/useFinance";
 
 export interface AddedBankAccount {
   bank: string;
-  accountType: BankAccountType;
   accountNumber: string;
-  holder: string;
-}
-
-type LookupStatus = "idle" | "searching" | "resolved" | "error";
-
-// Deterministic mock name-resolution so the same account number always
-// resolves to the same "account holder" name, similar to a real
-// name-enquiry lookup against a bank's records.
-const MOCK_NAMES = [
-  "Adebayo Lateef Abiodun",
-  "Chiamaka Nwosu",
-  "Ibrahim Musa Sani",
-  "Folasade Ogunleye",
-  "Emeka Obinna",
-];
-
-function resolveNameFor(accountNumber: string): string {
-  let hash = 0;
-  for (let i = 0; i < accountNumber.length; i++) {
-    hash = (hash * 31 + accountNumber.charCodeAt(i)) % MOCK_NAMES.length;
-  }
-  return MOCK_NAMES[hash];
 }
 
 interface AddBankAccountPageProps {
@@ -54,83 +31,55 @@ export default function AddBankAccountPage({
   onAdded,
 }: AddBankAccountPageProps) {
   const [bank, setBank] = useState<string | null>(null);
-  const [accountType, setAccountType] = useState<BankAccountType | null>(
-    null,
-  );
   const [accountNumber, setAccountNumber] = useState("");
-
   const [showBankSheet, setShowBankSheet] = useState(false);
-  const [showTypeSheet, setShowTypeSheet] = useState(false);
-
-  const [lookupStatus, setLookupStatus] = useState<LookupStatus>("idle");
-  const [resolvedName, setResolvedName] = useState<string | null>(null);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [showFailModal, setShowFailModal] = useState(false);
+  const [failMessage, setFailMessage] = useState("");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const attemptRef = useRef(0);
 
-  const isReady = Boolean(bank && accountType && accountNumber.length === 10);
+  const { id: providerId, error: profileError } = useDriverId();
+  const { data: banks = [], isLoading: banksLoading, isError: banksError } =
+    usePayoutBanks();
+  const add = useAddPayoutAccount();
 
-  // Run the (mock) account-name lookup whenever all three fields are complete.
-  useEffect(() => {
-    if (!isReady) {
-      setLookupStatus("idle");
-      setResolvedName(null);
-      return;
-    }
+  const selectedBank = banks.find((b) => b.name === bank);
+  const isReady = Boolean(selectedBank && accountNumber.length === 10 && providerId);
 
-    let cancelled = false;
-    setLookupStatus("searching");
-    setResolvedName(null);
-
-    const timer = window.setTimeout(() => {
-      if (cancelled) return;
-      // Mock: every 5th-ending account number simulates a transient
-      // lookup failure so the error state is reachable, same as a real
-      // name-enquiry call occasionally timing out.
-      if (accountNumber.endsWith("0")) {
-        setLookupStatus("error");
-        return;
-      }
-      setResolvedName(resolveNameFor(accountNumber));
-      setLookupStatus("resolved");
-    }, 1100);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bank, accountType, accountNumber, isReady]);
+  // Why the button is disabled, shown under the form.
+  const blocker = !selectedBank
+    ? banksLoading
+      ? "Loading banks…"
+      : "Select a bank"
+    : accountNumber.length !== 10
+      ? `Enter the 10-digit account number (${accountNumber.length}/10)`
+      : !providerId && profileError
+        ? profileError.message
+        : !providerId
+        ? "Couldn't find your driver id from your profile. Sign in again or check the [finance] driver id log."
+        : "";
 
   const handleAddAccount = () => {
-    if (lookupStatus !== "resolved" || !bank || !accountType || !resolvedName)
-      return;
-
-    setSubmitting(true);
-    window.setTimeout(() => {
-      setSubmitting(false);
-      attemptRef.current += 1;
-
-      // First attempt mirrors a name-mismatch rejection from the payout
-      // processor; retrying succeeds, matching the add-account flow.
-      if (attemptRef.current === 1) {
-        setShowFailModal(true);
-        return;
-      }
-
-      onAdded({
-        bank,
-        accountType,
+    if (!isReady || !selectedBank || !providerId) return;
+    add.mutate(
+      {
+        providerId,
+        bankCode: selectedBank.code,
         accountNumber,
-        holder: resolvedName,
-      });
-      setShowSuccessToast(true);
-      window.setTimeout(() => {
-        onBack();
-      }, 1400);
-    }, 1300);
+        bankName: selectedBank.name,
+        makeDefault: true,
+      },
+      {
+        onSuccess: () => {
+          onAdded({ bank: selectedBank.name, accountNumber });
+          setShowSuccessToast(true);
+          window.setTimeout(onBack, 1400);
+        },
+        onError: (e) =>
+          setFailMessage(
+            (e as Error).message ||
+              "The bank account name must match your SUR-DRIVEHT profile name. Please check your details and try again.",
+          ),
+      },
+    );
   };
 
   return (
@@ -145,10 +94,10 @@ export default function AddBankAccountPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
             Add Bank Account
           </h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-[#9AA5B8]">
+          <p className="mt-1.5 text-[13px] sm:text-[15px] leading-relaxed text-[#9AA5B8]">
             The account name must match your SUR-DRIVEHT account name.
           </p>
 
@@ -156,39 +105,18 @@ export default function AddBankAccountPage({
             {/* Select bank */}
             <button
               type="button"
-              onClick={() => setShowBankSheet(true)}
+              onClick={() => banks.length && setShowBankSheet(true)}
               className="flex w-full items-center gap-3 rounded-2xl bg-[#F5F5F7] px-4 py-4 text-left"
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EFE6F7]">
                 <Landmark size={16} className="text-[#6E43A3]" />
               </span>
               <span
-                className={`flex-1 truncate text-[15px] ${
+                className={`flex-1 truncate text-[13px] sm:text-[15px] ${
                   bank ? "font-semibold text-[#1F2937]" : "text-[#9AA5B8]"
                 }`}
               >
-                {bank ?? "Select bank"}
-              </span>
-              <ChevronDown size={18} className="shrink-0 text-[#9AA5B8]" />
-            </button>
-
-            {/* Select account type */}
-            <button
-              type="button"
-              onClick={() => setShowTypeSheet(true)}
-              className="flex w-full items-center gap-3 rounded-2xl bg-[#F5F5F7] px-4 py-4 text-left"
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EFE6F7]">
-                <CreditCard size={16} className="text-[#6E43A3]" />
-              </span>
-              <span
-                className={`flex-1 truncate text-[15px] ${
-                  accountType
-                    ? "font-semibold text-[#1F2937]"
-                    : "text-[#9AA5B8]"
-                }`}
-              >
-                {accountType ?? "Select account type"}
+                {banksLoading ? "Loading banks…" : (bank ?? "Select bank")}
               </span>
               <ChevronDown size={18} className="shrink-0 text-[#9AA5B8]" />
             </button>
@@ -207,43 +135,17 @@ export default function AddBankAccountPage({
                   setAccountNumber(e.target.value.replace(/\D/g, ""))
                 }
                 placeholder="Enter account number"
-                className="w-full min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
+                className="w-full min-w-0 flex-1 bg-transparent text-[13px] sm:text-[15px] font-semibold text-[#1F2937] outline-none placeholder:font-normal placeholder:text-[#9AA5B8]"
               />
             </div>
 
-            {/* Lookup state */}
-            {lookupStatus === "searching" && (
-              <div className="flex w-full items-center gap-3 rounded-2xl bg-[#F5F5F7] px-4 py-4">
-                <Loader2
-                  size={18}
-                  className="shrink-0 animate-spin text-[#9AA5B8]"
-                />
-                <span className="text-[15px] text-[#9AA5B8]">Searching</span>
-              </div>
+            {blocker && (
+              <p className="px-1 text-[13px] text-[#9AA5B8]">{blocker}</p>
             )}
-
-            {lookupStatus === "error" && (
-              <div className="flex w-full items-center gap-3 rounded-2xl bg-[#FDE8E8] px-4 py-4">
-                <AlertCircle
-                  size={18}
-                  className="shrink-0 text-[#E8542F]"
-                />
-                <span className="text-[15px] font-medium text-[#E8542F]">
-                  Unable to fetch account details
-                </span>
-              </div>
-            )}
-
-            {lookupStatus === "resolved" && resolvedName && (
-              <div className="flex w-full items-center gap-3 rounded-2xl bg-[#F5F5F7] px-4 py-4">
-                <CheckCircle2
-                  size={18}
-                  className="shrink-0 text-[#1E9E56]"
-                />
-                <span className="text-[15px] font-semibold text-[#1F2937]">
-                  {resolvedName}
-                </span>
-              </div>
+            {banksError && (
+              <p className="px-1 text-[13px] text-[#E8542F]">
+                Couldn't load banks. Check your connection and reopen this page.
+              </p>
             )}
           </div>
         </div>
@@ -254,11 +156,11 @@ export default function AddBankAccountPage({
         <div className="mx-auto w-full max-w-xl">
           <button
             type="button"
-            disabled={lookupStatus !== "resolved"}
+            disabled={!isReady || add.isPending}
             onClick={handleAddAccount}
-            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-[#D8D2E3] disabled:shadow-none"
+            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-[#D8D2E3] disabled:shadow-none"
           >
-            Add Account
+            {add.isPending ? "Adding..." : "Add Account"}
           </button>
         </div>
       </div>
@@ -270,7 +172,7 @@ export default function AddBankAccountPage({
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DCF5E4]">
               <CheckCircle2 size={14} className="text-[#1E9E56]" />
             </span>
-            <span className="flex-1 text-[14px] font-medium text-[#1F2937]">
+            <span className="flex-1 text-[12.5px] sm:text-[14px] font-medium text-[#1F2937]">
               Bank account successfully added
             </span>
             <button
@@ -286,14 +188,14 @@ export default function AddBankAccountPage({
       )}
 
       {/* Submitting overlay */}
-      {submitting && (
+      {add.isPending && (
         <div className="absolute inset-0 z-[75] flex items-center justify-center bg-black/10">
           <Loader2 size={40} className="animate-spin text-white" />
         </div>
       )}
 
       {/* Failure modal */}
-      {showFailModal && (
+      {failMessage && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-6">
           <div className="w-full max-w-sm rounded-[28px] bg-white px-6 py-8 text-center shadow-xl">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#FCE0DD]">
@@ -301,17 +203,16 @@ export default function AddBankAccountPage({
                 <XCircle size={28} className="text-white" />
               </span>
             </div>
-            <h3 className="mt-5 text-xl font-bold text-[#1F2937]">
+            <h3 className="mt-5 text-[17px] sm:text-xl font-bold text-[#1F2937]">
               Unable to add account
             </h3>
-            <p className="mt-2 text-[14.5px] leading-relaxed text-[#6B7280]">
-              The bank account name must match your SUR-DRIVEHT profile name.
-              Please check your details and try again.
+            <p className="mt-2 text-[12.5px] sm:text-[14.5px] leading-relaxed text-[#6B7280]">
+              {failMessage}
             </p>
             <button
               type="button"
-              onClick={() => setShowFailModal(false)}
-              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              onClick={() => setFailMessage("")}
+              className="mt-6 h-14 w-full rounded-2xl bg-[#6E43A3] text-[13px] sm:text-[15px] font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
               Try again
             </button>
@@ -321,6 +222,7 @@ export default function AddBankAccountPage({
 
       {showBankSheet && (
         <BankPickerSheet
+          banks={banks.map((b) => b.name)}
           initialValue={bank ?? undefined}
           onClose={() => setShowBankSheet(false)}
           onSelect={(value) => {
@@ -330,16 +232,6 @@ export default function AddBankAccountPage({
         />
       )}
 
-      {showTypeSheet && (
-        <AccountTypePickerSheet
-          initialValue={accountType ?? undefined}
-          onClose={() => setShowTypeSheet(false)}
-          onSelect={(value) => {
-            setAccountType(value);
-            setShowTypeSheet(false);
-          }}
-        />
-      )}
     </div>
   );
 }

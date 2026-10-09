@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronDown, Loader2 } from "lucide-react";
+import { useSupportRides } from "../../hooks/useSupport";
 
-const RIDES = [
-  "Ikoyi → Ajah, 5 Nov",
-  "VI → Lekki Phase 1, 3 Nov",
-  "Ikeja → MM Airport, 18 Oct",
-  "None of the above",
-];
+const NONE = "None of the above";
 
 const PRIORITIES = ["Low", "Medium", "High"];
 
 export interface NewTicket {
   summary: string;
+  /** Ride id from GET /support/rides (undefined for "None of the above"). */
+  rideId?: string;
   ride: string;
   priority: string;
   details: string;
@@ -20,12 +18,18 @@ export interface NewTicket {
 export default function RaiseTicketPage({
   onBack,
   onSubmit,
+  submitting = false,
+  serverError = "",
 }: {
   onBack: () => void;
   onSubmit: (ticket: NewTicket) => void;
+  submitting?: boolean;
+  serverError?: string;
 }) {
+  const rides = useSupportRides();
   const [summary, setSummary] = useState("");
   const [ride, setRide] = useState("");
+  const [rideId, setRideId] = useState<string | undefined>();
   const [priority, setPriority] = useState("");
   const [details, setDetails] = useState("");
   const [rideOpen, setRideOpen] = useState(false);
@@ -33,7 +37,7 @@ export default function RaiseTicketPage({
   const [error, setError] = useState("");
 
   const fieldClass =
-    "h-14 w-full rounded-2xl bg-[#f4f4f3] px-4 text-base text-gray-800 outline-none placeholder:text-gray-400";
+    "h-14 w-full rounded-2xl bg-[#f4f4f3] px-4 text-sm sm:text-base text-gray-800 outline-none placeholder:text-gray-400";
 
   const submit = () => {
     if (!summary.trim()) {
@@ -45,7 +49,7 @@ export default function RaiseTicketPage({
       return;
     }
     setError("");
-    onSubmit({ summary: summary.trim(), ride, priority, details: details.trim() });
+    onSubmit({ summary: summary.trim(), rideId, ride, priority, details: details.trim() });
   };
 
   return (
@@ -60,7 +64,7 @@ export default function RaiseTicketPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
             Raise a Support Ticket
           </h1>
 
@@ -95,21 +99,30 @@ export default function RaiseTicketPage({
               </button>
               {rideOpen && (
                 <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 max-h-64 overflow-y-auto rounded-2xl bg-white p-2 shadow-xl">
-                  {RIDES.map((r) => (
+                  {rides.isLoading && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 size={18} className="animate-spin text-[#6E43A3]" />
+                    </div>
+                  )}
+                  {rides.isError && (
+                    <p className="px-4 py-3 text-sm text-red-600">Could not load your rides.</p>
+                  )}
+                  {[...(rides.data ?? []), { id: "", label: NONE }].map((r) => (
                     <button
-                      key={r}
+                      key={r.id || NONE}
                       type="button"
                       onClick={() => {
-                        setRide(r);
+                        setRide(r.label);
+                        setRideId(r.id || undefined);
                         setRideOpen(false);
                       }}
-                      className={`block w-full rounded-xl px-4 py-3 text-left text-base transition ${
-                        ride === r
+                      className={`block w-full rounded-xl px-4 py-3 text-left text-sm sm:text-base transition ${
+                        ride === r.label
                           ? "bg-[#ece4f5] font-semibold text-[#6E43A3]"
                           : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
-                      {r}
+                      {r.label}
                     </button>
                   ))}
                 </div>
@@ -146,7 +159,7 @@ export default function RaiseTicketPage({
                         setPriorityOpen(false);
                         setError("");
                       }}
-                      className={`block w-full rounded-xl px-4 py-3 text-left text-base transition ${
+                      className={`block w-full rounded-xl px-4 py-3 text-left text-sm sm:text-base transition ${
                         priority === p
                           ? "bg-[#ece4f5] font-semibold text-[#6E43A3]"
                           : "text-gray-700 hover:bg-gray-50"
@@ -164,12 +177,12 @@ export default function RaiseTicketPage({
               onChange={(e) => setDetails(e.target.value)}
               placeholder="Tell us more about the issue..."
               rows={5}
-              className="w-full rounded-2xl bg-[#f4f4f3] px-4 py-4 text-base text-gray-800 outline-none placeholder:text-gray-400"
+              className="w-full rounded-2xl bg-[#f4f4f3] px-4 py-4 text-sm sm:text-base text-gray-800 outline-none placeholder:text-gray-400"
             />
           </div>
 
-          {error && (
-            <p className="mt-4 text-center text-sm text-red-600">{error}</p>
+          {(error || serverError) && (
+            <p className="mt-4 text-center text-[13px] sm:text-sm text-red-600">{error || serverError}</p>
           )}
         </div>
       </div>
@@ -178,9 +191,11 @@ export default function RaiseTicketPage({
         <div className="mx-auto w-full max-w-xl">
           <button
             onClick={submit}
-            className="h-14 w-full rounded-2xl bg-[#6E43A3] text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+            disabled={submitting}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99] disabled:opacity-60"
           >
-            Submit Ticket
+            {submitting && <Loader2 size={18} className="animate-spin" />}
+            {submitting ? "Submitting..." : "Submit Ticket"}
           </button>
         </div>
       </div>

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import AddContactPage, { type NewEmergencyContact } from "./AddContactPage";
-
-export interface EmergencyContact extends NewEmergencyContact {
-  id: string;
-}
+import AddContactPage from "./AddContactPage";
+import EditContactPage from "./EditContactPage";
+import { relationshipLabel } from "../../components/RelationshipPickerSheet";
+import type { RideDriverEmergencyContact } from "../../api/emergencyContacts";
+import { useRideDriverEmergencyContacts } from "../../hooks/useEmergencyContacts";
 
 const AVATAR_PALETTE = [
   { bg: "#EFE6F7", color: "#6E43A3" },
@@ -13,29 +13,97 @@ const AVATAR_PALETTE = [
   { bg: "#EAF0F6", color: "#0072BC" },
 ];
 
-type View = "list" | "add";
-
-interface EmergencyContactPageProps {
-  onBack: () => void;
-  contacts: EmergencyContact[];
-  onAddContact: (contact: NewEmergencyContact) => void;
-}
+type View = "list" | "add" | "edit";
 
 export default function EmergencyContactPage({
   onBack,
-  contacts,
-  onAddContact,
-}: EmergencyContactPageProps) {
+}: {
+  onBack: () => void;
+}) {
   const [view, setView] = useState<View>("list");
+  const [selected, setSelected] = useState<RideDriverEmergencyContact | null>(
+    null,
+  );
 
-  const handleAdded = (contact: NewEmergencyContact) => {
-    onAddContact(contact);
-    setView("list");
-  };
+  // GET /ride-drivers/emergency-contacts
+  const { data, isLoading, error, refetch } = useRideDriverEmergencyContacts();
+  const contacts = data ?? [];
 
   if (view === "add") {
     return (
-      <AddContactPage onBack={() => setView("list")} onAdded={handleAdded} />
+      <AddContactPage
+        isFirstContact={contacts.length === 0}
+        onBack={() => setView("list")}
+        onAdded={() => setView("list")}
+      />
+    );
+  }
+
+  if (view === "edit" && selected) {
+    return (
+      <EditContactPage
+        contact={selected}
+        onBack={() => setView("list")}
+        onDone={() => {
+          setSelected(null);
+          setView("list");
+        }}
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="font-outfit flex h-full min-h-0 w-full flex-col bg-white px-6 pt-4">
+        <div className="mx-auto w-full max-w-xl">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-50 shadow-md"
+          >
+            <ChevronLeft size={22} className="text-[#1F2937]" />
+          </button>
+          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+            Emergency contact
+          </h1>
+          <div className="mt-24 flex justify-center">
+            <div className="h-9 w-9 animate-spin rounded-full border-4 border-gray-200 border-t-[#6E43A3]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && contacts.length === 0) {
+    return (
+      <div className="font-outfit flex h-full min-h-0 w-full flex-col bg-white px-6 pt-4">
+        <div className="mx-auto w-full max-w-xl">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-50 shadow-md"
+          >
+            <ChevronLeft size={22} className="text-[#1F2937]" />
+          </button>
+          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
+            Emergency contact
+          </h1>
+          <div className="mt-16 rounded-2xl bg-gray-50 p-5 text-center">
+            <p className="text-[13px] sm:text-[15px] text-[#4B5768]">
+              {error instanceof Error
+                ? error.message
+                : "Couldn't load your emergency contacts."}
+            </p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="mt-3 rounded-full bg-[#1F2937] px-5 py-2 text-[12.5px] sm:text-[14px] font-medium text-white"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -52,7 +120,7 @@ export default function EmergencyContactPage({
               <ChevronLeft size={22} className="text-[#1F2937]" />
             </button>
 
-            <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">
+            <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
               Emergency contact
             </h1>
 
@@ -87,10 +155,10 @@ export default function EmergencyContactPage({
                 />
               </svg>
 
-              <p className="mt-6 text-[19px] font-bold text-[#1F2937]">
+              <p className="mt-6 text-[16px] sm:text-[19px] font-bold text-[#1F2937]">
                 No contacts added
               </p>
-              <p className="mt-2 max-w-[280px] text-[14.5px] leading-relaxed text-[#9AA5B8]">
+              <p className="mt-2 max-w-[280px] text-[12.5px] sm:text-[14.5px] leading-relaxed text-[#9AA5B8]">
                 for your security add at least one person that we can call in
                 an emergency
               </p>
@@ -103,7 +171,7 @@ export default function EmergencyContactPage({
             <button
               type="button"
               onClick={() => setView("add")}
-              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#6E43A3] text-[16px] font-bold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#6E43A3] text-[14px] sm:text-[16px] font-bold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
             >
               <Plus size={18} />
               Add contact
@@ -126,10 +194,10 @@ export default function EmergencyContactPage({
             <ChevronLeft size={22} className="text-[#1F2937]" />
           </button>
 
-          <h1 className="mt-6 text-[28px] font-bold text-[#1F2937]">
+          <h1 className="mt-6 text-[22px] sm:text-[28px] font-bold text-[#1F2937]">
             Emergency contact
           </h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-[#9AA5B8]">
+          <p className="mt-1.5 text-[13px] sm:text-[15px] leading-relaxed text-[#9AA5B8]">
             In an emergency, Sur Drive may contact your emergency contact if
             we're unable to reach you.
           </p>
@@ -141,20 +209,29 @@ export default function EmergencyContactPage({
                 <button
                   key={c.id}
                   type="button"
+                  onClick={() => {
+                    setSelected(c);
+                    setView("edit");
+                  }}
                   className="flex w-full items-center gap-3.5 py-4 text-left"
                 >
                   <span
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[16px] font-bold"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[14px] sm:text-[16px] font-bold"
                     style={{ background: palette.bg, color: palette.color }}
                   >
                     {c.name.trim()[0]?.toUpperCase() ?? "?"}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15.5px] font-semibold text-[#1F2937]">
-                      {c.name}
+                    <p className="flex items-center gap-2 text-[13.5px] sm:text-[15.5px] font-semibold text-[#1F2937]">
+                      <span className="truncate">{c.name}</span>
+                      {c.isPrimary && (
+                        <span className="shrink-0 rounded-full bg-[#EFE6F7] px-2 py-0.5 text-[11px] font-semibold text-[#6E43A3]">
+                          Primary
+                        </span>
+                      )}
                     </p>
-                    <p className="truncate text-[13.5px] text-[#6E43A3]">
-                      +234 {c.phone} · {c.relationship}
+                    <p className="truncate text-[12px] sm:text-[13.5px] text-[#6E43A3]">
+                      {c.phoneNumber} · {relationshipLabel(c.relationship)}
                     </p>
                   </div>
                   <ChevronRight
@@ -173,7 +250,7 @@ export default function EmergencyContactPage({
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1F2F5]">
                 <Plus size={18} className="text-[#4B5768]" />
               </span>
-              <span className="flex-1 text-[15px] font-semibold text-[#1F2937]">
+              <span className="flex-1 text-[13px] sm:text-[15px] font-semibold text-[#1F2937]">
                 Add contact
               </span>
               <ChevronRight size={18} className="shrink-0 text-[#C7CCD6]" />
@@ -187,7 +264,7 @@ export default function EmergencyContactPage({
           <button
             type="button"
             onClick={() => setView("add")}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#6E43A3] text-[16px] font-bold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#6E43A3] text-[14px] sm:text-[16px] font-bold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
           >
             <Plus size={18} />
             Add contact

@@ -1,5 +1,6 @@
 import { Search, Menu } from "lucide-react";
 import type { ReactNode } from "react";
+import SosButton from "./SosButton";
 
 /** Simple top-down car glyph to stand in for the map's vehicle marker. */
 export function CarGlyph({ size = 34 }: { size?: number }) {
@@ -43,12 +44,7 @@ export function TopBar({
           <Menu size={18} className="text-[#1F2937]" />
         </button>
       ) : (
-        <button
-          type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#E53935] text-[11px] font-extrabold text-white shadow-md"
-        >
-          SOS
-        </button>
+        <SosButton />
       )}
     </div>
   );

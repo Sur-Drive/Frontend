@@ -12,6 +12,7 @@ import HomePage from "./pages/HomePage";
 import LandingPage from "./pages/LandingPage";
 import SplashScreen from "./pages/SplashScreen";
 import WelcomePage from "./Rider/pages/WelcomePage";
+import SharedTripPage from "./Rider/pages/SharedTripPage";
 import SignInPage from "./Rider/pages/SiginPage";
 import RegisterPage from "./Rider/pages/RegisterPage";
 import OtpPage from "./Rider/pages/OtpPage";
@@ -224,7 +225,10 @@ function AppRoutes() {
 
   const isPassengerRoute = pathname.startsWith("/passenger");
 
-  const showNav = !isPassengerRoute && !NO_NAV_PAGES.includes(pathname);
+  const showNav =
+    !isPassengerRoute &&
+    !pathname.startsWith("/trip/") &&
+    !NO_NAV_PAGES.includes(pathname);
 
   const ALWAYS_SPLASH_ROUTES = ["/welcome"];
   const alwaysSplash = ALWAYS_SPLASH_ROUTES.includes(pathname);
@@ -295,6 +299,8 @@ function AppRoutes() {
             path="/register/review"
             element={<ApplicationUnderReviewPage />}
           />
+          {/* Public share link, no login: GET /rides/trip/:token */}
+          <Route path="/trip/:token" element={<SharedTripPage />} />
           <Route path="/driver/home" element={<DriverHomePage />} />
           <Route path="/driver/ride" element={<DriverRideFlowPage />} />
           <Route path="/driver/rides" element={<RideHistoryPage />} />
