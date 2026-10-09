@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { backdropMotion, sheetMotion } from "./motion";
 import { Check, Copy, Loader2, Share2, X } from "lucide-react";
 import { useShareRide, useStopSharingRide } from "../hooks/useTripShare";
 import type { TripShare } from "../api/tripShare";
@@ -91,8 +93,13 @@ export default function ShareTripSheet({
   };
 
   return (
-    <div className="absolute inset-0 z-40 flex items-end bg-black/40" onClick={onClose}>
-      <div
+    <motion.div
+      {...backdropMotion}
+      className="absolute inset-0 z-40 flex items-end bg-black/40"
+      onClick={onClose}
+    >
+      <motion.div
+        {...sheetMotion}
         className="max-h-[85%] w-full overflow-y-auto rounded-t-[28px] bg-white p-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -161,7 +168,7 @@ export default function ShareTripSheet({
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

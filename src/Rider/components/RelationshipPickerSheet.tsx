@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { backdropMotion, sheetMotion, tapMotion } from "./motion";
 import WheelPicker from "./WheelPicker";
 
 // Label shown in the picker -> value the API expects.
@@ -37,13 +39,17 @@ export default function RelationshipPickerSheet({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center">
-      <div
+      <motion.div
+        {...backdropMotion}
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-[430px] rounded-t-[32px] bg-white px-6 pb-8 pt-3">
+      <motion.div
+        {...sheetMotion}
+        className="relative w-full max-w-[430px] rounded-t-[32px] bg-white px-6 pb-8 pt-3"
+      >
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
 
         <h2 className="text-center text-xl sm:text-2xl font-bold text-[#2b2b2b]">
@@ -59,14 +65,15 @@ export default function RelationshipPickerSheet({
           className="mt-2"
         />
 
-        <button
+        <motion.button
           type="button"
+          {...tapMotion}
           onClick={() => onSelect(value)}
-          className="mt-4 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30 transition active:scale-[0.99]"
+          className="mt-4 h-14 w-full rounded-2xl bg-[#6E43A3] text-[15px] sm:text-lg font-semibold text-white shadow-lg shadow-[#6E43A3]/30"
         >
           Select
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     </div>
   );
 }
