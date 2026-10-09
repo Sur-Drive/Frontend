@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import LazyGoogleMap from "../components/map/LazyGoogleMap";
 import type { MapMarkerSpec } from "../components/map/GoogleMapView";
 import StreetViewModal, {
-  StreetViewPegman,
+  StreetViewThumbnail,
 } from "../components/map/StreetView";
 import {
   reportPinHtml,
@@ -567,7 +567,9 @@ export default function HomePage() {
     setTimeout(() => setShowVerifyResetOtp(true), 50);
   };
 
-  const handleResetOtpVerifySuccess = () => {
+  const handleResetOtpVerifySuccess = (resetToken?: string) => {
+    // Backend issues a fresh token after OTP verification — use it.
+    if (resetToken) setResetSessionId(resetToken);
     setShowVerifyResetOtp(false);
     setShowCreateNewPassword(true);
   };
@@ -918,11 +920,14 @@ export default function HomePage() {
           follows below — since at z-[500] it would otherwise render ON
           TOP of every auth modal (all z-[60]-z-[100]) and swallow taps. */}
       {!isAnyModalOpen && (
-        <StreetViewPegman
+        <StreetViewThumbnail
+          lat={userLocation ? userLocation[0] : mapCenter[0]}
+          lng={userLocation ? userLocation[1] : mapCenter[1]}
           onClick={() => {
+            const [tLat, tLng] = userLocation ?? mapCenter;
             setStreetViewTarget({
-              lat: mapCenter[0],
-              lng: mapCenter[1],
+              lat: tLat,
+              lng: tLng,
               label: userLocation ? "Current location" : "This area",
             });
             setStreetViewOpen(true);
@@ -1169,6 +1174,7 @@ export default function HomePage() {
               setShowForgotPassword(true);
             }}
             onVerifySuccess={handleResetOtpVerifySuccess}
+            onSessionRefresh={(id) => setResetSessionId(id)}
           />
         )}
       </AnimatePresence>
@@ -1199,7 +1205,10 @@ export default function HomePage() {
 
       <AnimatePresence>
         {showCreateNewPassword && (
-          <CreateNewPassword onComplete={handleCreateNewPasswordComplete} />
+          <CreateNewPassword
+            sessionId={resetSessionId}
+            onComplete={handleCreateNewPasswordComplete}
+          />
         )}
       </AnimatePresence>
 

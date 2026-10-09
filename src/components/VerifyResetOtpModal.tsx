@@ -1046,7 +1046,7 @@ interface VerifyResetOtpModalProps {
   sessionId: string;
   onClose: () => void;
   onBack: () => void;
-  onVerifySuccess: () => void;
+  onVerifySuccess: (resetToken?: string) => void;
   onSessionRefresh?: (sessionId: string) => void;
 }
 
@@ -1119,12 +1119,14 @@ export default function VerifyResetOtpModal({
 
     const otpString = otp.join("");
     try {
-      await verifyResetOtp.mutateAsync({
+      const data = await verifyResetOtp.mutateAsync({
         identifier: phoneNumber,
         otp: otpString,
         sessionId,
       });
-      onVerifySuccess();
+      // Backend issues a fresh token on successful OTP verification; the
+      // old sessionId is no longer valid for reset-password.
+      onVerifySuccess(data?.token);
     } catch (err: any) {
       console.error("Verify reset OTP failed:", err);
       setOtp(["", "", "", "", "", ""]);

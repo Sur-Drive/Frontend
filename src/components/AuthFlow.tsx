@@ -169,7 +169,10 @@ export default function AuthFlow({
           sessionId={resetSessionId}
           onClose={onClose}
           onBack={() => setScreen("forgot")}
-          onVerifySuccess={() => setScreen("new-password")}
+          onVerifySuccess={(resetToken) => {
+            if (resetToken) setResetSessionId(resetToken);
+            setScreen("new-password");
+          }}
           onSessionRefresh={(newSessionId) => setResetSessionId(newSessionId)}
         />
       );
