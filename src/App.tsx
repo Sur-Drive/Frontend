@@ -6,6 +6,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+import { Toaster } from "sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import HomePage from "./pages/HomePage";
@@ -115,7 +116,6 @@ import { PassengerSavedPlacesProvider } from "./context/PassengerSavedPlacesCont
 import SavedPlaces from "./pages/Passenger/Account/SavedPlaces/SavedPlaces";
 import SavedPlaceLocation from "./pages/Passenger/Account/SavedPlaces/SavedPlaceLocation";
 import SavedPlaceMap from "./pages/Passenger/Account/SavedPlaces/SavedPlaceMap";
-import ConfirmSavedPlace from "./pages/Passenger/Account/SavedPlaces/ConfirmSavedPlace";
 import NameSavedPlace from "./pages/Passenger/Account/SavedPlaces/NameSavedPlace";
 import PassengerRateUs from "./pages/Passenger/Account/RateUs/PassengerRateUs";
 import PassengerSupport from "./pages/Passenger/Account/Support/PassengerSupport";
@@ -125,6 +125,9 @@ import Tickets from "./pages/Passenger/Account/Support/Tickets";
 import RaiseTicket from "./pages/Passenger/Account/Support/RaiseTicket";
 import TicketConversation from "./pages/Passenger/Account/Support/TicketConversation";
 import LiveSupportChat from "./pages/Passenger/Account/Support/LiveSupportChat";
+import PassengerProtectedRoute from "./components/passenger/PassengerProtectedRoute";
+import InTrip from "./pages/Passenger/Ride/InTrip";
+import LiveChatConversation from "./pages/Passenger/Account/Support/LiveChatConversation";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -264,6 +267,18 @@ function AppRoutes() {
 
   return (
     <>
+      <Toaster
+        position="top-center"
+        richColors
+        closeButton
+        duration={3500}
+        toastOptions={{
+          style: {
+            borderRadius: "14px",
+            fontSize: "14px",
+          },
+        }}
+      />
       <div className={`min-h-screen bg-gray-50 ${showNav ? "" : ""}`}>
         <Routes>
           <Route path="/" element={<RootEntry />} />
@@ -455,186 +470,213 @@ function AppRoutes() {
           <Route path="/passenger/home" element={<PassengerHome />} />
           <Route path="/passenger/book-ride" element={<BookRide />} />
 
-          <Route path="/passenger/ride/select" element={<SelectRide />} />
-
-          <Route path="/passenger/ride/confirm" element={<ConfirmPickup />} />
-
+          <Route path="/passenger/otp" element={<PassengerOtp />} />
           <Route
-            path="/passenger/ride/searching"
-            element={<SearchingDriver />}
+            path="/passenger/complete-profile"
+            element={<CompletePassengerProfile />}
           />
+          <Route path="/passenger/location" element={<PassengerLocation />} />
+          <Route path="/passenger/biometric" element={<PassengerBiometric />} />
 
-          <Route
-            path="/passenger/ride/driver-assigned"
-            element={<DriverAssigned />}
-          />
+          <Route element={<PassengerProtectedRoute />}>
+            <Route path="/passenger/home" element={<PassengerHome />} />
+            <Route path="/passenger/book-ride" element={<BookRide />} />
 
-          <Route
-            path="/passenger/ride/driver-en-route"
-            element={<DriverEnRoute />}
-          />
-          <Route
-            path="/passenger/ride/driver-arriving"
-            element={<DriverArriving />}
-          />
-          <Route
-            path="/passenger/ride/driver-arrived"
-            element={<DriverArrived />}
-          />
+            <Route path="/passenger/ride/select" element={<SelectRide />} />
 
-          <Route path="/passenger/ride/verify" element={<VerifyRide />} />
+            <Route path="/passenger/ride/confirm" element={<ConfirmPickup />} />
 
-          <Route path="/passenger/ride/trip" element={<ActiveTrip />} />
+            <Route
+              path="/passenger/ride/searching"
+              element={<SearchingDriver />}
+            />
 
-          <Route path="/passenger/ride/safety" element={<RideSafety />} />
+            <Route
+              path="/passenger/ride/driver-assigned"
+              element={<DriverAssigned />}
+            />
 
-          <Route path="/passenger/ride/arrived" element={<TripComplete />} />
+            <Route
+              path="/passenger/ride/driver-en-route"
+              element={<DriverEnRoute />}
+            />
+            <Route
+              path="/passenger/ride/driver-arriving"
+              element={<DriverArriving />}
+            />
 
-          <Route path="/passenger/ride/rate" element={<RateDriver />} />
+            <Route
+              path="/passenger/ride/driver-arrived"
+              element={<DriverArrived />}
+            />
 
-          <Route path="/passenger/ride/chat" element={<RideChat />} />
+            <Route path="/passenger/ride/in-trip" element={<InTrip />} />
 
-          <Route
-            path="/passenger/ride/emergency"
-            element={<EmergencyAlert />}
-          />
+            <Route
+              path="/passenger/ride/trip"
+              element={<Navigate to="/passenger/ride/in-trip" replace />}
+            />
 
-          <Route path="/passenger/activity" element={<PassengerActivity />} />
+            <Route path="/passenger/ride/verify" element={<VerifyRide />} />
 
-          <Route path="/passenger/activity/:rideId" element={<RideDetails />} />
+            <Route path="/passenger/ride/complete" element={<TripComplete />} />
 
-          <Route path="/passenger/alerts" element={<PassengerAlerts />} />
+            <Route path="/passenger/ride/arrived" element={<TripComplete />} />
 
-          <Route path="/passenger/account" element={<PassengerAccount />} />
+            <Route path="/passenger/ride/safety" element={<RideSafety />} />
 
-          <Route
-            path="/passenger/account/profile"
-            element={<PassengerProfile />}
-          />
+            <Route path="/passenger/ride/rate" element={<RateDriver />} />
 
-          <Route
-            path="/passenger/account/profile/change-email"
-            element={<ChangeEmail />}
-          />
+            <Route path="/passenger/ride/chat" element={<RideChat />} />
 
-          <Route
-            path="/passenger/account/profile/change-phone"
-            element={<ChangePhone />}
-          />
+            <Route
+              path="/passenger/ride/emergency"
+              element={<EmergencyAlert />}
+            />
 
-          <Route
-            path="/passenger/account/profile/verify"
-            element={<ProfileOtpVerification />}
-          />
+            <Route path="/passenger/activity" element={<PassengerActivity />} />
 
-          <Route path="/passenger/account/legal" element={<Legal />} />
+            <Route
+              path="/passenger/activity/:rideId"
+              element={<RideDetails />}
+            />
 
-          <Route
-            path="/passenger/account/legal/privacy"
-            element={<PrivacyPolicy />}
-          />
+            <Route path="/passenger/alerts" element={<PassengerAlerts />} />
 
-          <Route
-            path="/passenger/account/legal/terms"
-            element={<TermsConditions />}
-          />
+            <Route path="/passenger/account" element={<PassengerAccount />} />
 
-          <Route
-            path="/passenger/account/payment-methods"
-            element={<PaymentMethods />}
-          />
+            <Route
+              path="/passenger/account/profile"
+              element={<PassengerProfile />}
+            />
 
-          <Route
-            path="/passenger/account/payment-methods/add-card"
-            element={<AddCard />}
-          />
+            <Route
+              path="/passenger/account/profile/change-email"
+              element={<ChangeEmail />}
+            />
 
-          <Route path="/passenger/account/promos" element={<PromosRewards />} />
+            <Route
+              path="/passenger/account/profile/change-phone"
+              element={<ChangePhone />}
+            />
 
-          <Route
-            path="/passenger/account/safety"
-            element={<PassengerSafety />}
-          />
+            <Route
+              path="/passenger/account/profile/verify"
+              element={<ProfileOtpVerification />}
+            />
 
-          <Route
-            path="/passenger/account/safety/pickup-code"
-            element={<PickupCode />}
-          />
+            <Route path="/passenger/account/legal" element={<Legal />} />
 
-          <Route
-            path="/passenger/account/safety/emergency-contacts"
-            element={<EmergencyContacts />}
-          />
+            <Route
+              path="/passenger/account/legal/privacy"
+              element={<PrivacyPolicy />}
+            />
 
-          <Route
-            path="/passenger/account/safety/emergency-contacts/add"
-            element={<AddEmergencyContact />}
-          />
+            <Route
+              path="/passenger/account/legal/terms"
+              element={<TermsConditions />}
+            />
 
-          <Route
-            path="/passenger/account/saved-places"
-            element={<SavedPlaces />}
-          />
+            <Route
+              path="/passenger/account/payment-methods"
+              element={<PaymentMethods />}
+            />
 
-          <Route
-            path="/passenger/account/saved-places/location/:mode"
-            element={<SavedPlaceLocation />}
-          />
+            <Route
+              path="/passenger/account/payment-methods/add-card"
+              element={<AddCard />}
+            />
 
-          <Route
-            path="/passenger/account/saved-places/location/edit/:id"
-            element={<SavedPlaceLocation />}
-          />
+            <Route
+              path="/passenger/account/promos"
+              element={<PromosRewards />}
+            />
 
-          <Route
-            path="/passenger/account/saved-places/map"
-            element={<SavedPlaceMap />}
-          />
+            <Route
+              path="/passenger/account/safety"
+              element={<PassengerSafety />}
+            />
 
-          <Route
-            path="/passenger/account/saved-places/confirm"
-            element={<ConfirmSavedPlace />}
-          />
+            <Route
+              path="/passenger/account/safety/pickup-code"
+              element={<PickupCode />}
+            />
 
-          <Route
-            path="/passenger/account/saved-places/name"
-            element={<NameSavedPlace />}
-          />
+            <Route
+              path="/passenger/account/safety/emergency-contacts"
+              element={<EmergencyContacts />}
+            />
 
-          <Route
-            path="/passenger/account/rate-us"
-            element={<PassengerRateUs />}
-          />
+            <Route
+              path="/passenger/account/safety/emergency-contacts/add"
+              element={<AddEmergencyContact />}
+            />
 
-          <Route
-            path="/passenger/account/support"
-            element={<PassengerSupport />}
-          />
+            <Route
+              path="/passenger/account/saved-places"
+              element={<SavedPlaces />}
+            />
 
-          <Route
-            path="/passenger/account/support/articles"
-            element={<SupportArticles />}
-          />
+            <Route
+              path="/passenger/account/saved-places/location/:mode"
+              element={<SavedPlaceLocation />}
+            />
 
-          <Route
-            path="/passenger/account/support/live-chat"
-            element={<LiveSupportChat />}
-          />
+            <Route
+              path="/passenger/account/saved-places/location/edit/:id"
+              element={<SavedPlaceLocation />}
+            />
 
-          <Route
-            path="/passenger/account/support/tickets"
-            element={<Tickets />}
-          />
+            <Route
+              path="/passenger/account/saved-places/map"
+              element={<SavedPlaceMap />}
+            />
 
-          <Route
-            path="/passenger/account/support/tickets/new"
-            element={<RaiseTicket />}
-          />
+            <Route
+              path="/passenger/account/saved-places/name"
+              element={<NameSavedPlace />}
+            />
 
-          <Route
-            path="/passenger/account/support/tickets/:ticketId"
-            element={<TicketConversation />}
-          />
+            <Route
+              path="/passenger/account/rate-us"
+              element={<PassengerRateUs />}
+            />
+
+            <Route
+              path="/passenger/account/support"
+              element={<PassengerSupport />}
+            />
+
+            <Route
+              path="/passenger/account/support/articles"
+              element={<SupportArticles />}
+            />
+
+            <Route
+              path="/passenger/account/support/live-chat"
+              element={<LiveSupportChat />}
+            />
+
+            <Route
+              path="/passenger/account/support/live-chat/:conversationId"
+              element={<LiveChatConversation />}
+            />
+
+            <Route
+              path="/passenger/account/support/tickets"
+              element={<Tickets />}
+            />
+
+            <Route
+              path="/passenger/account/support/tickets/new"
+              element={<RaiseTicket />}
+            />
+
+            <Route
+              path="/passenger/account/support/tickets/:ticketId"
+              element={<TicketConversation />}
+            />
+          </Route>
         </Routes>
       </div>
 

@@ -1,49 +1,109 @@
 import type {
   SupportTicketPriority,
   SupportTicketStatus,
-} from "../../../types/passengerSupport";
+} from "../../../api/passenger/support";
 
-interface TicketStatusBadgeProps {
-  type:
-    | "status"
-    | "priority";
+type TicketStatusBadgeProps =
+  | {
+      type: "status";
+      value:
+        SupportTicketStatus;
+    }
+  | {
+      type: "priority";
+      value:
+        SupportTicketPriority;
+    };
 
-  value:
-    | SupportTicketStatus
-    | SupportTicketPriority;
+function getStatusStyles(
+  status:
+    SupportTicketStatus,
+) {
+  switch (status) {
+    case "open":
+      return {
+        label: "Open",
+        className:
+          "bg-[#F1E9FA] text-[#7442AD]",
+      };
+
+    case "resolved":
+      return {
+        label:
+          "Resolved",
+        className:
+          "bg-[#EAF7EF] text-[#2F8F57]",
+      };
+
+    case "closed":
+      return {
+        label:
+          "Closed",
+        className:
+          "bg-[#F0EFF1] text-[#716B75]",
+      };
+  }
 }
 
-export default function TicketStatusBadge({
-  type,
-  value,
-}: TicketStatusBadgeProps) {
-  const styles =
-    type === "status"
-      ? value === "open"
-        ? "bg-[#F1E8FA] text-[#7442AD]"
-        : "bg-[#E8F7EE] text-[#2E9B62]"
-      : value === "high"
-        ? "bg-[#FFE8E8] text-[#E25353]"
-        : value === "medium"
-          ? "bg-[#FFF4D8] text-[#C99517]"
-          : "bg-[#F2F1F3] text-[#817A85]";
+function getPriorityStyles(
+  priority:
+    SupportTicketPriority,
+) {
+  switch (priority) {
+    case "low":
+      return {
+        label: "Low",
+        className:
+          "bg-[#EEF7F1] text-[#43845A]",
+      };
+
+    case "medium":
+      return {
+        label:
+          "Medium",
+        className:
+          "bg-[#FFF5E6] text-[#C47A16]",
+      };
+
+    case "high":
+      return {
+        label: "High",
+        className:
+          "bg-[#FDECEC] text-[#D14C4C]",
+      };
+  }
+}
+
+export default function TicketStatusBadge(
+  props:
+    TicketStatusBadgeProps,
+) {
+  const config =
+    props.type ===
+    "status"
+      ? getStatusStyles(
+          props.value,
+        )
+      : getPriorityStyles(
+          props.value,
+        );
 
   return (
     <span
       className={`
         inline-flex
-        h-[25px]
         items-center
-        justify-center
         rounded-full
         px-2.5
+        py-1
         text-[11px]
-        font-medium
+        font-semibold
         capitalize
-        ${styles}
+        ${config.className}
       `}
     >
-      {value}
+      {config.label}
     </span>
   );
 }
+

@@ -911,9 +911,10 @@ export default function WelcomePage() {
             title="Book a Ride"
             desc="Request a ride and get matched with a nearby driver."
             glyph="car"
-            onClick={
-              openRideComingSoon
-            }
+            onClick={() => navigate("/passenger/signup")}
+            // onClick={
+            //   openRideComingSoon
+            // }
           />
 
           {/* ---------------------------------------------
@@ -926,9 +927,10 @@ export default function WelcomePage() {
             title="Earn as a Driver"
             desc="Join our driver community and start earning today."
             glyph="driver"
-            onClick={
-              openDriverComingSoon
-            }
+            onClick={() => navigate("/signin")}
+            // onClick={
+            //   openDriverComingSoon
+            // }
           />
         </div>
 
