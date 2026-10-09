@@ -129,3 +129,22 @@ export interface PassengerOnboardingStatusResponse {
 
   [key: string]: unknown;
 }
+
+export interface PassengerGoogleAuthResponse {
+  user: {
+    id: string;
+    identifier: string;
+    email: string | null;
+    phoneNumber: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    hasCompletedOnboarding: boolean;
+    role: string;
+  };
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+  } | null;
+  isNewUser: boolean;
+  requiresPersonalInfo: boolean;
+}

@@ -468,16 +468,6 @@ function AppRoutes() {
           />
           <Route path="/passenger/location" element={<PassengerLocation />} />
           <Route path="/passenger/biometric" element={<PassengerBiometric />} />
-          <Route path="/passenger/home" element={<PassengerHome />} />
-          <Route path="/passenger/book-ride" element={<BookRide />} />
-
-          <Route path="/passenger/otp" element={<PassengerOtp />} />
-          <Route
-            path="/passenger/complete-profile"
-            element={<CompletePassengerProfile />}
-          />
-          <Route path="/passenger/location" element={<PassengerLocation />} />
-          <Route path="/passenger/biometric" element={<PassengerBiometric />} />
 
           <Route element={<PassengerProtectedRoute />}>
             <Route path="/passenger/home" element={<PassengerHome />} />
