@@ -77,7 +77,8 @@ export interface CreateSupportTicketInput {
 export interface TicketFilters {
   status:
     | "all"
-    | SupportTicketStatus;
+    | "open"
+    | "closed";
 
   priority:
     | "all"

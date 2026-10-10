@@ -1,35 +1,60 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Star } from "lucide-react";
+import {
+  NEGATIVE_RIDER_RATING_TAGS,
+  RIDER_RATING_TAGS,
+  type RiderRatingTag,
+} from "../api/ratings";
+import { useCanRate, useRateRider } from "../hooks/useRatings";
+import { useDriverRideDetails } from "../hooks/useDriverRideDetails";
 
-const TAGS = [
-  "Pleasant ride",
-  "Respectful",
-  "Professional",
-  "Great conversation",
-  "No issues",
-  "On time",
-  "Friendly",
-  "Polite",
-  "Damaged the vehicle",
-  "Aggressive behaviour",
-  "Payment issue",
-];
-
-const PASSENGER = {
-  name: "Abiodun A.",
-  id: "ABC-123456",
-  pickup: "14 Admiralty Way Lekki",
-  distance: "8 mins",
-};
+const TAGS = RIDER_RATING_TAGS;
 
 export default function RatePassengerPage() {
   const navigate = useNavigate();
   const [rating, setRating] = useState(0);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<RiderRatingTag[]>([]);
   const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const location = useLocation();
+  const [params] = useSearchParams();
+  const rideId: string | undefined =
+    (location.state as any)?.rideId ?? params.get("rideId") ?? undefined;
+  const canRate = useCanRate(rideId);
+  const rate = useRateRider();
+  const ride = useDriverRideDetails(rideId).data;
+  const passenger = {
+    name: ride?.passengerName ?? "Passenger",
+    initials: ride?.passengerInitials ?? "P",
+    id: ride?.id ?? rideId ?? "",
+    dropoff: ride?.dropoffAddress && ride.dropoffAddress !== "—" ? ride.dropoffAddress : "—",
+    distance: ride?.tripDistance ?? ride?.tripDuration ?? "—",
+  };
+  const cannotRate = (canRate.data as any)?.canRate === false || (canRate.data as any)?.data?.canRate === false;
+  const reason = (canRate.data as any)?.reason ?? (canRate.data as any)?.data?.reason;
 
-  const toggleTag = (tag: string) =>
+  const submit = () => {
+    if (!rideId) {
+      navigate("/driver/home");
+      return;
+    }
+    setError(null);
+    rate.mutate(
+      {
+        rideId,
+        stars: rating,
+        ...(note.trim() ? { comment: note.trim() } : {}),
+        ...(selected.length ? { tags: selected } : {}),
+      },
+      {
+        onSuccess: () => navigate("/driver/home"),
+        onError: (e: any) => setError(e.message),
+      },
+    );
+  };
+
+  const toggleTag = (tag: RiderRatingTag) =>
     setSelected((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
@@ -48,34 +73,34 @@ export default function RatePassengerPage() {
         <h1 className="text-base font-bold text-[#1F2937]">Rate Passenger</h1>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+      <div className="flex-1 min-h-0 px-5 pb-6 overflow-y-auto">
         {/* Avatar + name */}
         <div className="flex flex-col items-center pt-2">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6E43A3] text-lg font-bold text-white">
-            AA
+            {passenger.initials}
           </div>
           <p className="mt-2 text-base font-bold text-[#1F2937]">
-            {PASSENGER.name}
+            {passenger.name}
           </p>
-          <p className="text-[11px] text-[#9AA5B8]">{PASSENGER.id}</p>
+          <p className="text-xs text-[#9AA5B8]">{passenger.id}</p>
         </div>
 
         {/* Trip summary */}
         <div className="mt-3 flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-3 text-xs text-[#4B5768]">
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-[#9AA5B8]">
+            <p className="text-xs uppercase tracking-wide text-[#9AA5B8]">
               Destination
             </p>
             <p className="mt-0.5 font-semibold text-[#1F2937]">
-              {PASSENGER.pickup}
+              {passenger.dropoff}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wide text-[#9AA5B8]">
+            <p className="text-xs uppercase tracking-wide text-[#9AA5B8]">
               Distance
             </p>
             <p className="mt-0.5 font-semibold text-[#1F2937]">
-              {PASSENGER.distance}
+              {passenger.distance}
             </p>
           </div>
         </div>
@@ -86,7 +111,7 @@ export default function RatePassengerPage() {
         </p>
 
         {/* Stars */}
-        <div className="mt-3 flex justify-center gap-2">
+        <div className="flex justify-center gap-2 mt-3">
           {[1, 2, 3, 4, 5].map((n) => (
             <button key={n} type="button" onClick={() => setRating(n)}>
               <Star
@@ -110,25 +135,20 @@ export default function RatePassengerPage() {
           onChange={(e) => setNote(e.target.value)}
           placeholder="Write your comment"
           rows={2}
-          className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-xs text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
+          className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-base text-[#1F2937] placeholder:text-[#9AA5B8] focus:border-[#6E43A3] focus:outline-none"
         />
 
-        <p className="mt-3 text-[11px] text-[#9AA5B8]">
-          Or select feedback
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <p className="mt-3 text-xs text-[#9AA5B8]">Or select feedback</p>
+        <div className="flex flex-wrap gap-2 mt-2">
           {TAGS.map((tag) => {
-            const isBad =
-              tag === "Damaged the vehicle" ||
-              tag === "Aggressive behaviour" ||
-              tag === "Payment issue";
+            const isBad = NEGATIVE_RIDER_RATING_TAGS.includes(tag);
             const isSelected = selected.includes(tag);
             return (
               <button
                 key={tag}
                 type="button"
                 onClick={() => toggleTag(tag)}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   isSelected
                     ? isBad
                       ? "border-[#E53935] bg-[#E53935]/10 text-[#E53935]"
@@ -146,12 +166,17 @@ export default function RatePassengerPage() {
       <div className="shrink-0 px-5 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pt-2">
         <button
           type="button"
-          disabled={rating === 0}
-          onClick={() => navigate("/driver/home")}
+          disabled={rating === 0 || rate.isPending || cannotRate}
+          onClick={submit}
           className="w-full rounded-2xl bg-[#6E43A3] py-3.5 text-sm font-bold text-white shadow-sm disabled:opacity-40"
         >
-          Submit
+          {rate.isPending ? "Submitting..." : "Submit"}
         </button>
+        {(error || cannotRate) && (
+          <p className="mt-2 text-center text-xs font-semibold text-[#E53935]">
+            {error ?? reason ?? "This ride can't be rated."}
+          </p>
+        )}
       </div>
     </div>
   );

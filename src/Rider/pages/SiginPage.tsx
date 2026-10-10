@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useLoginRideDriver } from "../hooks/useAuth";
+import { saveDriverSession } from "../lib/driverSession";
 
 type Mode = "phone" | "email";
 
@@ -45,9 +46,12 @@ export default function SignInPage() {
       { identifier, password },
       {
         onSuccess: (data) => {
-          const token = data.token || data.accessToken;
-          if (token) {
-            localStorage.setItem("token", token);
+          // Replaces any stale token from an earlier passenger/fleet login.
+          if (!saveDriverSession(data)) {
+            setError(
+              "Signed in, but the server didn't return an access token. Please try again.",
+            );
+            return;
           }
           navigate("/driver/home", { replace: true });
         },

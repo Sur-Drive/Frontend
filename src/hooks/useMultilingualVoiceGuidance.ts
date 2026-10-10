@@ -24,7 +24,10 @@ function readStoredLocale(): VoiceLocale {
   if (typeof window === "undefined") return "en-NG";
   try {
     const raw = window.localStorage.getItem(LOCALE_STORAGE_KEY);
-    return (VOICE_LOCALES.find((l) => l.code === raw)?.code as VoiceLocale) || "en-NG";
+    return (
+      (VOICE_LOCALES.find((l) => l.code === raw)?.code as VoiceLocale) ||
+      "en-NG"
+    );
   } catch {
     return "en-NG";
   }
@@ -93,7 +96,10 @@ export function useMultilingualVoiceGuidance() {
   }, [native]);
 
   const enqueue = useCallback(
-    (task: (gen: number) => Promise<void>, interrupt?: boolean): Promise<void> => {
+    (
+      task: (gen: number) => Promise<void>,
+      interrupt?: boolean,
+    ): Promise<void> => {
       if (interrupt) {
         genRef.current += 1;
         stopAll();
@@ -132,8 +138,12 @@ export function useMultilingualVoiceGuidance() {
   }, []);
 
   const cacheKeyFor = useCallback(
-    (loc: VoiceLocale, key: PhraseKey, params: Record<string, string>, gender?: VoiceGender) =>
-      `${loc}|${key}|${JSON.stringify(params)}|${gender ?? ""}`,
+    (
+      loc: VoiceLocale,
+      key: PhraseKey,
+      params: Record<string, string>,
+      gender?: VoiceGender,
+    ) => `${loc}|${key}|${JSON.stringify(params)}|${gender ?? ""}`,
     [],
   );
 
@@ -197,19 +207,26 @@ export function useMultilingualVoiceGuidance() {
         // is the browser's autoplay policy rejecting play() because it
         // wasn't called synchronously within a user gesture (we call it
         // after an awaited network fetch), which unlock() below guards against.
-        console.warn("[voice] clip failed to play, falling back to native English:", reason);
+        console.warn(
+          "[voice] clip failed to play, falling back to native English:",
+          reason,
+        );
         reject(reason instanceof Error ? reason : new Error(String(reason)));
       };
 
       audio.onended = succeed;
-      audio.onerror = () => fail(audio.error ?? new Error("audio element error"));
+      audio.onerror = () =>
+        fail(audio.error ?? new Error("audio element error"));
       setSpeaking(true);
 
       const playPromise = audio.play();
       if (playPromise?.catch) {
         playPromise.catch(fail);
       }
-      window.setTimeout(() => fail(new Error("playback timed out")), CLIP_TIMEOUT_MS);
+      window.setTimeout(
+        () => fail(new Error("playback timed out")),
+        CLIP_TIMEOUT_MS,
+      );
     });
   }, []);
 
@@ -285,21 +302,35 @@ export function useMultilingualVoiceGuidance() {
           return;
         }
         try {
-          const maneuverClip = await fetchClip(locale, maneuverKey, maneuverParams, opts.gender);
+          const maneuverClip = await fetchClip(
+            locale,
+            maneuverKey,
+            maneuverParams,
+            opts.gender,
+          );
           if (gen !== genRef.current) return;
           const distKey: PhraseKey =
-            distanceMeters < 1000 ? "distance.in_meters" : "distance.in_kilometers";
+            distanceMeters < 1000
+              ? "distance.in_meters"
+              : "distance.in_kilometers";
           const distParams =
             distanceMeters < 1000
               ? {
-                  meters: String(Math.max(0, Math.round(distanceMeters / 10) * 10)),
+                  meters: String(
+                    Math.max(0, Math.round(distanceMeters / 10) * 10),
+                  ),
                   instruction: maneuverClip.text,
                 }
               : {
                   km: (distanceMeters / 1000).toFixed(1),
                   instruction: maneuverClip.text,
                 };
-          const distClip = await fetchClip(locale, distKey, distParams, opts.gender);
+          const distClip = await fetchClip(
+            locale,
+            distKey,
+            distParams,
+            opts.gender,
+          );
           if (gen !== genRef.current) return;
           await playClip(distClip.audio);
         } catch {
@@ -324,7 +355,11 @@ export function useMultilingualVoiceGuidance() {
 
   /** Preload a clip in the background without playing it (call this for the next couple of upcoming maneuvers). */
   const warm = useCallback(
-    (key: PhraseKey, params: Record<string, string> = {}, gender?: VoiceGender) => {
+    (
+      key: PhraseKey,
+      params: Record<string, string> = {},
+      gender?: VoiceGender,
+    ) => {
       if (locale === "en-NG") return;
       fetchClip(locale, key, params, gender).catch(() => {
         // best-effort — a failed preload just means the real call falls back later

@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   CarFront,
 } from "lucide-react";
 
@@ -21,14 +22,73 @@ type Props = {
   ) => void;
 };
 
+function getStatusMeta(
+  status: PassengerTrip["status"],
+) {
+  switch (status) {
+    case "completed":
+      return {
+        label: "Completed",
+        className:
+          "text-[#35A960]",
+      };
+
+    case "cancelled":
+      return {
+        label: "Cancelled",
+        className:
+          "text-[#F05B4D]",
+      };
+
+    case "no_drivers_found":
+      return {
+        label: "No drivers found",
+        className:
+          "text-[#D88A24]",
+      };
+
+    default:
+      return {
+        label: "Unavailable",
+        className:
+          "text-[#8F8994]",
+      };
+  }
+}
+
 export default function TripCard({
   trip,
   onRebook,
 }: Props) {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const completed =
-    trip.status === "completed";
+  const status =
+    getStatusMeta(
+      trip.status,
+    );
+
+  /*
+   * RideDetails is still using the old
+   * passengerTrips mock data.
+   *
+   * Until we connect that page to the backend,
+   * only open details for rides it can support.
+   */
+  const canOpenDetails =
+    trip.status === "completed" ||
+    trip.status === "cancelled";
+
+  const handleCardClick =
+    () => {
+      if (!canOpenDetails) {
+        return;
+      }
+
+      navigate(
+        `/passenger/activity/${trip.id}`,
+      );
+    };
 
   return (
     <motion.article
@@ -41,25 +101,33 @@ export default function TripCard({
         opacity: 1,
         y: 0,
       }}
-      whileTap={{
-        scale: 0.995,
-      }}
-      onClick={() =>
-        navigate(
-          `/passenger/activity/${trip.id}`,
-        )
+      whileTap={
+        canOpenDetails
+          ? {
+              scale: 0.995,
+            }
+          : undefined
       }
-      className="
-        cursor-pointer
+      onClick={
+        handleCardClick
+      }
+      className={`
         rounded-[18px]
         border
         border-[#F0EDF2]
         bg-white
         p-4
         shadow-[0_6px_24px_rgba(30,20,38,0.05)]
-      "
+        ${
+          canOpenDetails
+            ? "cursor-pointer"
+            : "cursor-default"
+        }
+      `}
     >
       <div className="flex items-start gap-3">
+        {/* CAR ICON */}
+
         <span
           className="
             mt-0.5
@@ -74,21 +142,74 @@ export default function TripCard({
             text-[#57515B]
           "
         >
-          <CarFront size={18} />
+          <CarFront
+            size={18}
+          />
         </span>
 
-        <div className="min-w-0 flex-1">
-          <p
+        <div className="flex-1 min-w-0">
+          {/* ROUTE */}
+
+          <div
             className="
-              truncate
-              text-[15px]
-              font-semibold
-              text-[#302B34]
+              flex
+              min-w-0
+              items-center
+              gap-1.5
             "
           >
-            {trip.pickup.label},{" "}
-            {trip.destination.label}
-          </p>
+            <p
+              className="
+                min-w-0
+                truncate
+                text-[15px]
+                font-semibold
+                text-[#302B34]
+              "
+              title={
+                trip.pickup
+                  .label
+              }
+            >
+              {
+                trip.pickup
+                  .label
+              }
+            </p>
+
+            <ArrowRight
+              size={14}
+              strokeWidth={2.2}
+              className="
+                shrink-0
+                text-[#7442AD]
+              "
+            />
+
+            <p
+              className="
+                min-w-0
+                flex-1
+                truncate
+                text-[15px]
+                font-semibold
+                text-[#302B34]
+              "
+              title={
+                trip
+                  .destination
+                  .label
+              }
+            >
+              {
+                trip
+                  .destination
+                  .label
+              }
+            </p>
+          </div>
+
+          {/* DATE + STATUS */}
 
           <div
             className="
@@ -105,22 +226,34 @@ export default function TripCard({
               {trip.date}
             </span>
 
-            <span>•</span>
+            {trip.time && (
+              <>
+                <span>
+                  •
+                </span>
+
+                <span>
+                  {trip.time}
+                </span>
+              </>
+            )}
+
+            <span>
+              •
+            </span>
 
             <span
               className={
-                completed
-                  ? "text-[#35A960]"
-                  : "text-[#F05B4D]"
+                status.className
               }
             >
-              {completed
-                ? "Completed"
-                : "Cancelled"}
+              {status.label}
             </span>
           </div>
         </div>
       </div>
+
+      {/* FOOTER */}
 
       <div
         className="
@@ -133,6 +266,8 @@ export default function TripCard({
           pt-3
         "
       >
+        {/* AMOUNT */}
+
         <p
           className="
             text-[16px]
@@ -149,14 +284,21 @@ export default function TripCard({
           )}
         </p>
 
+        {/* REBOOK */}
+
         <motion.button
           type="button"
           whileTap={{
             scale: 0.94,
           }}
-          onClick={(event) => {
+          onClick={(
+            event,
+          ) => {
             event.stopPropagation();
-            onRebook(trip);
+
+            onRebook(
+              trip,
+            );
           }}
           className="
             rounded-full
@@ -166,6 +308,8 @@ export default function TripCard({
             text-[13px]
             font-semibold
             text-white
+            transition-colors
+            hover:bg-[#66389A]
           "
         >
           Rebook

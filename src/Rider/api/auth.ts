@@ -190,3 +190,30 @@ export async function verifyRideDriverForgotPasswordOtp(
 
   return parseResponse(res, "Failed to verify code");
 }
+
+export interface RideDriverResetPasswordPayload {
+  newPassword: string;
+  confirmPassword: string;
+}
+
+/**
+ * POST /ride-drivers/reset-password — final step of forgot-password.
+ * The body has no email/otp, so identity comes from the token returned by
+ * /forgot-password/verify-otp, sent as a Bearer token.
+ */
+export async function resetRideDriverPassword(
+  payload: RideDriverResetPasswordPayload & { resetToken?: string },
+): Promise<{ message?: string; [key: string]: any }> {
+  const { resetToken, ...body } = payload;
+  const res = await fetch(`${API_BASE}/ride-drivers/reset-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(resetToken ? { Authorization: `Bearer ${resetToken}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  return parseResponse(res, "Failed to reset password");
+}

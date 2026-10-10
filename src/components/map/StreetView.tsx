@@ -167,6 +167,86 @@ export function StreetViewPegman({ onClick, className = '' }: StreetViewPegmanPr
   )
 }
 
+interface StreetViewThumbnailProps {
+  lat: number
+  lng: number
+  onClick: () => void
+  className?: string
+}
+
+const STREETVIEW_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
+
+/**
+ * Small street photo shown on the map (like the bottom-left picture in
+ * Google Maps). Tap it to open the full Street View. If there is no
+ * Street View imagery near the point, it falls back to the regular
+ * StreetViewPegman button so the feature never disappears.
+ */
+export function StreetViewThumbnail({ lat, lng, onClick, className = '' }: StreetViewThumbnailProps) {
+  const { isLoaded } = useGoogleMaps()
+  const [panoId, setPanoId] = useState<string | null>(null)
+  const [status, setStatus] = useState<'checking' | 'available' | 'unavailable'>('checking')
+  const [imgFailed, setImgFailed] = useState(false)
+  const lastChecked = useRef<{ lat: number; lng: number } | null>(null)
+
+  useEffect(() => {
+    if (!isLoaded) return
+
+    // Only re-check when the position moved ~25m+ (avoids a request on every GPS tick)
+    const prev = lastChecked.current
+    if (prev) {
+      const dLat = (lat - prev.lat) * 111000
+      const dLng = (lng - prev.lng) * 111000 * Math.cos((lat * Math.PI) / 180)
+      if (Math.hypot(dLat, dLng) < 25) return
+    }
+    let cancelled = false
+    const svc = new google.maps.StreetViewService()
+    svc.getPanorama(
+      { location: { lat, lng }, radius: 75, source: google.maps.StreetViewSource.OUTDOOR },
+      (data, st) => {
+        if (cancelled) return
+        lastChecked.current = { lat, lng }
+        if (st === google.maps.StreetViewStatus.OK && data?.location?.pano) {
+          setPanoId(data.location.pano)
+          setImgFailed(false)
+          setStatus('available')
+        } else {
+          setPanoId(null)
+          setStatus('unavailable')
+        }
+      }
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [isLoaded, lat, lng])
+
+  if (status === 'unavailable' || imgFailed || !STREETVIEW_KEY) {
+    return <StreetViewPegman onClick={onClick} className={className} />
+  }
+  if (status === 'checking' || !panoId) return null
+
+  const src =
+    `https://maps.googleapis.com/maps/api/streetview?size=300x220&pano=${encodeURIComponent(panoId)}` +
+    `&fov=90&key=${STREETVIEW_KEY}`
+
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Open Street View"
+      title="Street View"
+      className={`w-[88px] h-[68px] rounded-xl overflow-hidden border-2 border-white shadow-lg bg-gray-200 active:scale-95 transition ${className}`}
+    >
+      <img
+        src={src}
+        alt="Street View preview"
+        className="w-full h-full object-cover"
+        onError={() => setImgFailed(true)}
+      />
+    </button>
+  )
+}
+
 function PegmanGlyph({ size = 24, color = 'white' }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">

@@ -6,6 +6,7 @@ import {
   loginRideDriver,
   forgotRideDriverPassword,
   verifyRideDriverForgotPasswordOtp,
+  resetRideDriverPassword,
 } from "../api/auth";
 
 export function useSendRideDriverOtp() {
@@ -30,4 +31,8 @@ export function useForgotRideDriverPassword() {
 
 export function useVerifyRideDriverForgotPasswordOtp() {
   return useMutation({ mutationFn: verifyRideDriverForgotPasswordOtp });
+}
+
+export function useResetRideDriverPassword() {
+  return useMutation({ mutationFn: resetRideDriverPassword });
 }

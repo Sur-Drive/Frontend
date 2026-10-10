@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -18,6 +19,10 @@ import {
 import RideHeader from "../../../../components/passenger/ride/RideHeader";
 
 import SupportRow from "../../../../components/passenger/support/SupportRow";
+
+import {
+  passengerSupportApi,
+} from "../../../../api/passenger/support";
 
 export default function PassengerSupport() {
   const navigate =
@@ -30,11 +35,11 @@ export default function PassengerSupport() {
     "phone" | "email" | null
   >(null);
 
-  /*
-   * Replace these with the real
-   * Sur-Drive support contacts
-   * when provided by the backend/team.
-   */
+  const [
+    unreadCount,
+    setUnreadCount,
+  ] = useState(0);
+
   const phone =
     "+234800SURDRIVE";
 
@@ -42,7 +47,41 @@ export default function PassengerSupport() {
     "+23480078737483";
 
   const email =
-    "support@surdrive.com";
+    "contact@surdrive.org";
+
+  useEffect(() => {
+    let active =
+      true;
+
+    const loadUnread =
+      async () => {
+        try {
+          const response =
+            await passengerSupportApi.getUnreadSummary();
+
+          if (!active) {
+            return;
+          }
+
+          setUnreadCount(
+            response.total ??
+              0,
+          );
+        } catch (error) {
+          console.error(
+            "Unable to load support unread count:",
+            error,
+          );
+        }
+      };
+
+    void loadUnread();
+
+    return () => {
+      active =
+        false;
+    };
+  }, []);
 
   const copyToClipboard =
     async (
@@ -59,16 +98,14 @@ export default function PassengerSupport() {
         setCopied(type);
 
         window.setTimeout(
-          () => {
+          () =>
             setCopied(
               null,
-            );
-          },
+            ),
           1800,
         );
       } catch {
-        // Clipboard can be unavailable
-        // depending on browser permissions.
+        // Clipboard permission denied.
       }
     };
 
@@ -84,7 +121,7 @@ export default function PassengerSupport() {
       />
 
       <main className="mx-auto w-full max-w-[680px] px-5 pb-12 pt-3 sm:px-7">
-        <p className="mt-1 text-[14px] text-[#918B95]">
+        <p className="mt-1 text-[16px] text-[#918B95]">
           How can we help you?
         </p>
 
@@ -120,7 +157,17 @@ export default function PassengerSupport() {
               Headphones
             }
             title="Tickets"
-            description="See the status of every ticket raised here"
+            description={
+              unreadCount >
+              0
+                ? `${unreadCount} unread ${
+                    unreadCount ===
+                    1
+                      ? "update"
+                      : "updates"
+                  }`
+                : "See the status of every ticket raised here"
+            }
             onClick={() =>
               navigate(
                 "/passenger/account/support/tickets",
@@ -151,23 +198,12 @@ export default function PassengerSupport() {
                 ) => {
                   event.stopPropagation();
 
-                  copyToClipboard(
+                  void copyToClipboard(
                     phone,
                     "phone",
                   );
                 }}
-                className="
-                  flex
-                  h-9
-                  w-9
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-full
-                  text-[#817A85]
-                  transition
-                  hover:bg-[#F5F2F7]
-                "
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#817A85] transition hover:bg-[#F5F2F7]"
               >
                 <Copy
                   size={17}
@@ -203,23 +239,12 @@ export default function PassengerSupport() {
                 ) => {
                   event.stopPropagation();
 
-                  copyToClipboard(
+                  void copyToClipboard(
                     email,
                     "email",
                   );
                 }}
-                className="
-                  flex
-                  h-9
-                  w-9
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-full
-                  text-[#817A85]
-                  transition
-                  hover:bg-[#F5F2F7]
-                "
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#817A85] transition hover:bg-[#F5F2F7]"
               >
                 <Copy
                   size={17}
@@ -236,3 +261,4 @@ export default function PassengerSupport() {
     </div>
   );
 }
+

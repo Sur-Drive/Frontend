@@ -33,7 +33,7 @@ export default function DriverBottomNav({
               className={isActive ? "text-[#6E43A3]" : "text-[#9AA5B8]"}
             />
             <span
-              className={`text-[11px] ${
+              className={`text-xs ${
                 isActive
                   ? "font-semibold text-[#6E43A3]"
                   : "text-[#9AA5B8]"

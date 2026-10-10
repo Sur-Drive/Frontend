@@ -5,8 +5,10 @@ import "./styles/index.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { registerSW } from "virtual:pwa-register";
 
+// const GOOGLE_CLIENT_ID =
+//     "772967267581-348l2doisksrjpn9j60lhgtk3lfbrsbc.apps.googleusercontent.com";
 const GOOGLE_CLIENT_ID =
-    "772967267581-348l2doisksrjpn9j60lhgtk3lfbrsbc.apps.googleusercontent.com";
+  import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 registerSW({
     immediate: true,

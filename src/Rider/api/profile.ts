@@ -1,3 +1,5 @@
+import { describeToken } from "../lib/driverSession";
+
 const API_BASE = "https://backend-production-01de.up.railway.app";
 
 export interface RideDriverProfile {
@@ -43,6 +45,7 @@ export async function getRideDriverProfile(): Promise<RideDriverProfile> {
 
   // TEMP DEBUG LOGGING — remove once the response shape is confirmed.
   console.log("[profile] GET /ride-drivers/profile", {
+    token: describeToken(token),
     status: res.status,
     body,
   });

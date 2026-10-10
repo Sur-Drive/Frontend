@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import RouteMapView from "../components/map/RouteMapView";
 import StreetViewModal, {
-  StreetViewPegman,
+  StreetViewThumbnail,
 } from "../components/map/StreetView";
 import TurnByTurnCard from "../components/map/TurnByTurnCard";
 import VoiceGuidanceControl from "../components/map/VoiceGuidanceControl";
@@ -352,7 +352,9 @@ export default function RouteResultsPage() {
       </div>
 
       {destinationPoint && (
-        <StreetViewPegman
+        <StreetViewThumbnail
+          lat={destinationPoint.lat}
+          lng={destinationPoint.lng}
           onClick={() => setStreetViewOpen(true)}
           className="absolute z-30 bottom-[calc(env(safe-area-inset-bottom)+7rem)] left-4 lg:left-6"
         />

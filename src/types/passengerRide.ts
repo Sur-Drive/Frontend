@@ -3,15 +3,18 @@ export type RideStatus =
   | "planning"
   | "selecting"
   | "confirming"
+  | "requested"
   | "searching"
   | "driver-assigned"
   | "driver-en-route"
-  | "driver-arriving"
   | "driver-arrived"
   | "verifying"
   | "in-progress"
   | "arrived"
   | "completed"
+  | "payment-pending"
+  | "paid"
+  | "closed"
   | "cancelled";
 
 export type RideCategory =
@@ -26,8 +29,21 @@ export interface Coordinates {
 
 export interface RideLocation {
   id?: string;
+
+  /**
+   * Google Place ID when selected from Google Places.
+   */
+  placeId?: string;
+
+  /**
+   * SurDrive saved-place ID when selected from
+   * /riders/saved-places.
+   */
+  savedPlaceId?: string;
+
   label: string;
   address?: string;
+
   coordinates: Coordinates | null;
 }
 
@@ -40,25 +56,42 @@ export interface RideOption {
   name: string;
   description?: string;
   seats: number;
-  eta: string;
+  eta?: string;
   image?: string;
   capacity?: number;
-  price: number;
+  price?: number;
   originalPrice?: number;
 }
 
+/**
+ * UI representation of a payment method.
+ *
+ * The backend ride-booking API sends the `type`
+ * value ("cash" | "card" | "wallet"), while the UI
+ * keeps the full object for labels/details.
+ */
 export interface PaymentMethod {
   id: string;
-  type: "cash" | "card" | "wallet";
+
+  type:
+    | "cash"
+    | "card"
+    | "wallet";
+
   label: string;
+
   detail?: string;
 }
 
 export interface RideDriver {
   id: string;
+
   firstName: string;
+
   rating: number;
+
   totalTrips: number;
+
   phone?: string;
 
   vehicle: {
@@ -72,14 +105,21 @@ export interface RideDriver {
 }
 
 export interface PassengerRideState {
+  /**
+   * Backend ride ID after POST /rides/book succeeds.
+   */
+  rideId: string | null;
+
   status: RideStatus;
 
   pickup: RideLocation | null;
+
   destination: RideLocation | null;
 
   stops: RideStop[];
 
   selectedRide: RideCategory | null;
+
   paymentMethod: PaymentMethod;
 
   promoCode: string | null;
@@ -87,9 +127,11 @@ export interface PassengerRideState {
   driver: RideDriver | null;
 
   estimatedFare: number | null;
+
   finalFare: number | null;
 
   distance: string | null;
+
   duration: string | null;
 
   verificationCode: string | null;

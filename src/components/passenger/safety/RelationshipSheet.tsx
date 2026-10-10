@@ -5,10 +5,11 @@ import {
 
 import type {
   EmergencyRelationship,
-} from "../../../context/PassengerSafetyContext";
+} from "../../../api/passenger/safety";
 
 interface Props {
   open: boolean;
+
   selected:
     | EmergencyRelationship
     | null;
@@ -20,14 +21,45 @@ interface Props {
   ) => void;
 }
 
-const relationships: EmergencyRelationship[] =
-  [
-    "Parent",
-    "Sibling",
-    "Spouse or partner",
-    "Family member",
-    "Friend or colleague",
-  ];
+interface RelationshipOption {
+  label: string;
+  value: EmergencyRelationship;
+}
+
+const relationships: RelationshipOption[] = [
+  {
+    label: "Spouse",
+    value: "spouse",
+  },
+  {
+    label: "Parent",
+    value: "parent",
+  },
+  {
+    label: "Sibling",
+    value: "sibling",
+  },
+  {
+    label: "Child",
+    value: "child",
+  },
+  {
+    label: "Friend",
+    value: "friend",
+  },
+  {
+    label: "Relative",
+    value: "relative",
+  },
+  {
+    label: "Colleague",
+    value: "colleague",
+  },
+  {
+    label: "Other",
+    value: "other",
+  },
+];
 
 export default function RelationshipSheet({
   open,
@@ -38,7 +70,10 @@ export default function RelationshipSheet({
   const choose = (
     relationship: EmergencyRelationship,
   ) => {
-    onSelect(relationship);
+    onSelect(
+      relationship,
+    );
+
     onClose();
   };
 
@@ -94,12 +129,12 @@ export default function RelationshipSheet({
                 ) => {
                   const active =
                     selected ===
-                    relationship;
+                    relationship.value;
 
                   return (
                     <motion.button
                       key={
-                        relationship
+                        relationship.value
                       }
                       type="button"
                       whileTap={{
@@ -107,7 +142,7 @@ export default function RelationshipSheet({
                       }}
                       onClick={() =>
                         choose(
-                          relationship,
+                          relationship.value,
                         )
                       }
                       className={`block w-full py-2 text-center transition ${
@@ -117,7 +152,7 @@ export default function RelationshipSheet({
                       }`}
                     >
                       {
-                        relationship
+                        relationship.label
                       }
                     </motion.button>
                   );
