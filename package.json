@@ -19,7 +19,7 @@
         "firebase": "^12.19.0",
         "framer-motion": "^10.16.4",
         "leaflet": "^1.9.4",
-        "lucide-react": "^1.47.0",
+        "lucide-react": "^1.55.0",
         "maplibre-gl": "^6.11.1",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
