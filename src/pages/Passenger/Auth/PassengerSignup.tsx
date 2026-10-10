@@ -7,9 +7,9 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  GoogleLogin,
   type CredentialResponse,
 } from "@react-oauth/google";
+import FitGoogleLogin from "../../../components/FitGoogleLogin";
 import { toast } from "sonner";
 import { FcGoogle } from "react-icons/fc";
 import LegalModal, {
@@ -298,7 +298,7 @@ const handleGoogleCredential = (
                 opacity-[0.01]
               "
             >
-              <GoogleLogin
+              <FitGoogleLogin
                 onSuccess={
                   handleGoogleCredential
                 }
@@ -308,7 +308,6 @@ const handleGoogleCredential = (
                   );
                 }}
                 useOneTap={false}
-                width="480"
               />
             </div>
           )}
