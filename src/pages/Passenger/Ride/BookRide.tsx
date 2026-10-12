@@ -17,6 +17,7 @@ import {
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -81,6 +82,9 @@ export default function BookRide() {
   const locationQuery =
     usePassengerLocation();
 
+    const pickupEditedRef = useRef(false);
+const pickupHydratedRef = useRef(false);
+
   const [
     activeField,
     setActiveField,
@@ -141,35 +145,73 @@ export default function BookRide() {
    * We intentionally do not request
    * browser GPS on page load.
    */
-  useEffect(() => {
-    if (ride.pickup) {
-      return;
-    }
+  // useEffect(() => {
+  //   if (ride.pickup) {
+  //     return;
+  //   }
 
-    if (!locationQuery.data) {
-      return;
-    }
+  //   if (!locationQuery.data) {
+  //     return;
+  //   }
 
-    const currentLocation =
-      passengerLocationToRideLocation(
-        locationQuery.data,
-      );
+  //   const currentLocation =
+  //     passengerLocationToRideLocation(
+  //       locationQuery.data,
+  //     );
 
-    if (!currentLocation) {
-      return;
-    }
+  //   if (!currentLocation) {
+  //     return;
+  //   }
 
-    setPickup(currentLocation);
+  //   setPickup(currentLocation);
 
-    setPickupQuery(
-      currentLocation.label,
+  //   setPickupQuery(
+  //     currentLocation.label,
+  //   );
+  // }, [
+  //   locationQuery.data,
+  //   ride.pickup,
+  //   setPickup,
+  // ]);
+useEffect(() => {
+  // Don't restore the saved location after manual editing.
+  if (pickupEditedRef.current) {
+    return;
+  }
+
+  // Only hydrate once per mounted booking screen.
+  if (pickupHydratedRef.current) {
+    return;
+  }
+
+  // An existing ride pickup already takes priority.
+  if (ride.pickup) {
+    pickupHydratedRef.current = true;
+    return;
+  }
+
+  if (!locationQuery.data) {
+    return;
+  }
+
+  const currentLocation =
+    passengerLocationToRideLocation(
+      locationQuery.data,
     );
-  }, [
-    locationQuery.data,
-    ride.pickup,
-    setPickup,
-  ]);
 
+  if (!currentLocation) {
+    return;
+  }
+
+  pickupHydratedRef.current = true;
+
+  setPickup(currentLocation);
+  setPickupQuery(currentLocation.label);
+}, [
+  locationQuery.data,
+  ride.pickup,
+  setPickup,
+]);
   /**
    * Keep text fields in sync when another
    * ride screen changes the ride context.
@@ -783,7 +825,7 @@ export default function BookRide() {
                   "
                 />
 
-                <input
+                {/* <input
                   value={
                     pickupQuery
                   }
@@ -820,13 +862,47 @@ export default function BookRide() {
                     outline-none
                     placeholder:text-[#AAA5AE]
                   "
-                />
+                /> */}
+                <input
+  value={pickupQuery}
+  onFocus={() => {
+    setActiveField("pickup");
+    setSuggestions([]);
+  }}
+  onChange={(event) => {
+    const value = event.target.value;
+
+    // Mark pickup as manually edited.
+    pickupEditedRef.current = true;
+
+    // Prevent automatic hydration from running again.
+    pickupHydratedRef.current = true;
+
+    setPickupQuery(value);
+    setPickup(null);
+    setActiveField("pickup");
+    setSuggestions([]);
+  }}
+  placeholder="Enter pickup location"
+  autoComplete="off"
+  className="
+    min-w-0
+    flex-1
+    bg-transparent
+    text-[16px]
+    text-[#302B34]
+    outline-none
+    placeholder:text-[#AAA5AE]
+  "
+/>
 
                 {pickupQuery && (
                   <button
                     type="button"
                     aria-label="Clear pickup"
                     onClick={() => {
+                      pickupEditedRef.current = true;
+                       pickupHydratedRef.current = true;
                       setPickupQuery(
                         "",
                       );
