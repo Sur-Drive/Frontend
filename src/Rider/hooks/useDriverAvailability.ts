@@ -12,7 +12,12 @@ export const AVAILABILITY_KEY = ["driver-availability"];
 export function useAvailabilityStatus() {
   return useQuery({
     queryKey: AVAILABILITY_KEY,
-    queryFn: async () => isStatusOnline(await getAvailabilityStatus()),
+    queryFn: async () => {
+      const raw = await getAvailabilityStatus();
+      const online = isStatusOnline(raw);
+      console.log("[availability] status poll ->", online, raw); // debug: why did we go offline?
+      return online;
+    },
     retry: false,
   });
 }
