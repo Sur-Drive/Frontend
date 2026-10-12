@@ -259,17 +259,6 @@ export const EarlyAccessAdmin: React.FC = () => {
                                 className="w-full h-11 pl-11 pr-4 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all text-sm"
                             />
                         </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="h-11 px-4 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all text-sm bg-white"
-                        >
-                            <option value="">All statuses</option>
-                            <option value="new">New</option>
-                            <option value="contacted">Contacted</option>
-                            <option value="converted">Converted</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
                     </div>
                     {(search || statusFilter || cityFilter) && (
                         <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
@@ -403,12 +392,13 @@ export const EarlyAccessAdmin: React.FC = () => {
                             </div>
 
                             {/* Mobile cards */}
+                            {/* Mobile cards */}
                             <div className="md:hidden divide-y divide-gray-100">
                                 {list?.items.map((d) => (
                                     <button
                                         key={d.id}
                                         onClick={() => setSelected(d)}
-                                        className="w-full text-left p-4 hover:bg-purple-50/30 transition-colors"
+                                        className="w-full text-left p-4 hover:bg-purple-50/40 active:bg-purple-50 transition-colors"
                                     >
                                         <div className="flex items-start justify-between gap-3 mb-2">
                                             <div className="min-w-0 flex-1">
@@ -419,7 +409,10 @@ export const EarlyAccessAdmin: React.FC = () => {
                                                     {d.phoneNumber}
                                                 </div>
                                             </div>
-                                            <StatusPill status={d.status} />
+                                            <div className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 text-xs font-medium flex-shrink-0">
+                                                <Eye className="w-3.5 h-3.5" />
+                                                View
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3 text-xs text-gray-500">
                                             <span className="inline-flex items-center gap-1">
