@@ -139,6 +139,7 @@ import PassengerProtectedRoute from "./components/passenger/PassengerProtectedRo
 import InTrip from "./pages/Passenger/Ride/InTrip";
 import LiveChatConversation from "./pages/Passenger/Account/Support/LiveChatConversation";
 import EarlyAccessForm from "./components/sections/EarlyAccessForm";
+import EarlyAccessAdmin from "./components/sections/EarlyAccessAdmin";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -215,6 +216,7 @@ const NO_NAV_PAGES = [
     "/privacy",
     "/delete-account",
     "/drivers",
+    "/early-access-list",
 ];
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -485,6 +487,10 @@ function AppRoutes() {
                     {/* MISC PUBLIC */}
                     <Route path="/access-list" element={<WaitlistPage />} />
                     <Route path="/drivers" element={<EarlyAccessForm />} />
+                    <Route
+                        path="/early-access-list"
+                        element={<EarlyAccessAdmin />}
+                    />
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/feed" element={<FeedPage />} />
                     <Route path="/report" element={<ReportPage />} />
