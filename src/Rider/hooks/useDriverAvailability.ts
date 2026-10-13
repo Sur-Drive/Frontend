@@ -15,10 +15,15 @@ export function useAvailabilityStatus() {
     queryFn: async () => {
       const raw = await getAvailabilityStatus();
       const online = isStatusOnline(raw);
-      console.log("[availability] status poll ->", online, raw); // debug: why did we go offline?
+      console.log("[availability] status ->", online, raw);
       return online;
     },
     retry: false,
+    // Don't let a background refetch overwrite the state we just set from the
+    // Go Online / Go Offline response (that made the toggle flip back).
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

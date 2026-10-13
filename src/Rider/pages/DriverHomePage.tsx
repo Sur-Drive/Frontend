@@ -51,7 +51,8 @@ export default function DriverHomePage() {
   const [availError, setAvailError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(true);
   // Live ride offers over Socket.IO (events.html: ride.offer_sent).
-  const { offer, secondsLeft, connected, clearOffer } = useRideOffers(isOnline);
+  const { offer, secondsLeft, connected, socketError, clearOffer } =
+    useRideOffers(isOnline);
   const declineOffer = useDeclineMatch();
   // A ride already assigned to this driver (e.g. after a refresh).
   const active = useActiveDriverRide(isOnline);
@@ -128,7 +129,7 @@ export default function DriverHomePage() {
 
           {/* Online -> Offline toggle pill (top bar), only shown while online */}
           {isOnline && (
-            <div className="absolute left-1/2 top-[calc(env(safe-area-inset-top,0px)+16px)] z-10 w-[calc(100%-96px)] max-w-[260px] -translate-x-1/2">
+            <div className="absolute left-1/2 top-[calc(env(safe-area-inset-top,0px)+16px)] z-30 w-[calc(100%-96px)] max-w-[260px] -translate-x-1/2">
               <button
                 type="button"
                 onClick={handleOffline}
@@ -141,6 +142,11 @@ export default function DriverHomePage() {
                   <ChevronsLeft size={14} />
                 </span>
               </button>
+              {availError && (
+                <p className="mt-2 rounded-lg bg-white px-2 py-1 text-center text-xs font-semibold text-[#E53935] shadow">
+                  {availError}
+                </p>
+              )}
             </div>
           )}
         </RiderMap>
@@ -178,6 +184,21 @@ export default function DriverHomePage() {
               <ChevronsRight size={18} />
             </button>
           </>
+        )}
+
+        {isOnline && (
+          <div className="mt-2 text-center text-xs text-[#4B5768]">
+            <p>
+              Live requests:{" "}
+              {connected ? (
+                <span className="font-semibold text-[#12B76A]">connected, waiting for rides</span>
+              ) : (
+                <span className="font-semibold text-[#E53935]">
+                  not connected{socketError ? ` (${socketError})` : "…"}
+                </span>
+              )}
+            </p>
+          </div>
         )}
 
         {availError && (

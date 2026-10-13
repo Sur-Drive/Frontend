@@ -24,25 +24,48 @@ export function useRideOffers(enabled: boolean) {
   const [offer, setOffer] = useState<RideOffer | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [connected, setConnected] = useState(false);
+  const [socketError, setSocketError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled) {
       setOffer(null);
       setConnected(false);
+      setSocketError(null);
       return;
     }
     const socket = acquireRideSocket();
-    const onConnect = () => setConnected(true);
+    const onConnect = () => {
+      setConnected(true);
+      setSocketError(null);
+    };
+    const onError = (e: Error) => setSocketError(e.message);
     const onDisconnect = () => setConnected(false);
     const onOffer = (p: RideOffer) => {
       console.log("[socket] ride.offer_sent", p);
       setOffer(p);
+      // Make the request noticeable even if the screen is dimmed / app in background.
+      try {
+        navigator.vibrate?.([300, 150, 300]);
+        if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
+          navigator.serviceWorker?.ready
+            .then((reg) =>
+              reg.showNotification("New ride request", {
+                body: p.pickupAddress ?? `${p.distanceKm} km away`,
+                tag: `offer-${p.rideId}`,
+              }),
+            )
+            .catch(() => {});
+        }
+      } catch {
+        /* ignore */
+      }
     };
     const onGone = (p: { rideId?: string }) =>
       setOffer((cur) => (cur && cur.rideId === p?.rideId ? null : cur));
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onError);
     socket.on("ride.offer_sent", onOffer);
     socket.on("ride.cancelled", onGone);
     socket.on("ride.driver_assigned", onGone);
@@ -51,6 +74,7 @@ export function useRideOffers(enabled: boolean) {
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onError);
       socket.off("ride.offer_sent", onOffer);
       socket.off("ride.cancelled", onGone);
       socket.off("ride.driver_assigned", onGone);
@@ -71,7 +95,13 @@ export function useRideOffers(enabled: boolean) {
     return () => window.clearInterval(id);
   }, [offer]);
 
-  return { offer, secondsLeft, connected, clearOffer: () => setOffer(null) };
+  return {
+    offer,
+    secondsLeft,
+    connected,
+    socketError,
+    clearOffer: () => setOffer(null),
+  };
 }
 
 type Handler = (payload: any) => void;
