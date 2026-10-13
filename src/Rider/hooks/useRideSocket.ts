@@ -25,6 +25,7 @@ export function useRideOffers(enabled: boolean) {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [connected, setConnected] = useState(false);
   const [socketError, setSocketError] = useState<string | null>(null);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -66,6 +67,10 @@ export function useRideOffers(enabled: boolean) {
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onError);
+    const onAnyEvent = (name: string) => {
+      if (name !== "pong") setLastEvent(`${name} @ ${new Date().toLocaleTimeString()}`);
+    };
+    socket.onAny(onAnyEvent);
     socket.on("ride.offer_sent", onOffer);
     socket.on("ride.cancelled", onGone);
     socket.on("ride.driver_assigned", onGone);
@@ -75,6 +80,7 @@ export function useRideOffers(enabled: boolean) {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onError);
+      socket.offAny(onAnyEvent);
       socket.off("ride.offer_sent", onOffer);
       socket.off("ride.cancelled", onGone);
       socket.off("ride.driver_assigned", onGone);
@@ -100,6 +106,7 @@ export function useRideOffers(enabled: boolean) {
     secondsLeft,
     connected,
     socketError,
+    lastEvent,
     clearOffer: () => setOffer(null),
   };
 }

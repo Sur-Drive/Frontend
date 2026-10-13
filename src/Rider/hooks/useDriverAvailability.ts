@@ -9,11 +9,24 @@ import {
 
 export const AVAILABILITY_KEY = ["driver-availability"];
 
+export const AVAILABILITY_RAW_KEY = ["driver-availability-raw"];
+
+/** Raw status object from the backend (isOnline, isAvailable, lat, lng ...). */
+export function useAvailabilityRaw() {
+  return useQuery<any>({
+    queryKey: AVAILABILITY_RAW_KEY,
+    queryFn: () => null,
+    enabled: false,
+  });
+}
+
 export function useAvailabilityStatus() {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: AVAILABILITY_KEY,
     queryFn: async () => {
       const raw = await getAvailabilityStatus();
+      qc.setQueryData(AVAILABILITY_RAW_KEY, raw?.data ?? raw);
       const online = isStatusOnline(raw);
       console.log("[availability] status ->", online, raw);
       return online;
