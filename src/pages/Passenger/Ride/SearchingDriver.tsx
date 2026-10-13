@@ -2,6 +2,7 @@ import {
   Clock3,
   MapPin,
   Route,
+  SearchX,
   Wifi,
 } from "lucide-react";
 
@@ -206,6 +207,11 @@ export default function SearchingDriver() {
     setStopPolling,
   ] = useState(false);
 
+  const [noDriversFound, setNoDriversFound] = useState(
+  () => getStoredRide()?.status === "no_drivers_found"
+);
+
+
   /* =======================================================
      ACTIVE RIDE ID
   ======================================================= */
@@ -220,13 +226,10 @@ export default function SearchingDriver() {
      POLL REAL RIDE STATUS
   ======================================================= */
 
-  useEffect(() => {
-    if (
-      !rideId ||
-      stopPolling
-    ) {
-      return;
-    }
+    useEffect(() => {
+  if (!rideId || stopPolling || noDriversFound) {
+    return;
+  }
 
     let mounted = true;
 
@@ -264,6 +267,13 @@ export default function SearchingDriver() {
           saveActiveRide(
             response,
           );
+
+          if (response.status === "no_drivers_found") {
+  setNoDriversFound(true);
+  setStopPolling(true);
+  setCancelOpen(false);
+  return;
+}
 
           if (
             typeof response.estimatedFare ===
@@ -501,134 +511,162 @@ export default function SearchingDriver() {
      CANCEL
   ======================================================= */
 
-  const requestCancel = () => {
-    if (isCancelling) {
+ const requestCancel = () => {
+  if (noDriversFound) {
+    goHome();
+    return;
+  }
+
+  if (isCancelling) return;
+
+  setCancelOpen(true);
+};
+
+
+const confirmCancel = async (
+  reason: string,
+  comment?: string,
+) => {
+  if (!rideId || isCancelling || noDriversFound) {
+    return;
+  }
+
+  setIsCancelling(true);
+  setStopPolling(true);
+
+  const handleNoDriversFound = (
+    latestRide: PassengerRideResponse,
+  ) => {
+    if (latestRide.status !== "no_drivers_found") {
+      return false;
+    }
+
+    setBackendRide(latestRide);
+    saveActiveRide(latestRide);
+
+    if (typeof latestRide.estimatedFare === "number") {
+      setEstimatedFare(latestRide.estimatedFare);
+    }
+
+    setNoDriversFound(true);
+    setStopPolling(true);
+    setCancelOpen(false);
+
+    return true;
+  };
+
+  try {
+    // Check the current backend status before cancellation.
+    const latestRide = await passengerRideApi.getRide(rideId);
+
+    if (handleNoDriversFound(latestRide)) {
       return;
     }
 
-    setCancelOpen(true);
-  };
+    // Do not attempt cancellation if the ride has
+    // already moved out of the searching stage.
+    if (
+      latestRide.status !== "requested" &&
+      latestRide.status !== "searching"
+    ) {
+      setBackendRide(latestRide);
+      saveActiveRide(latestRide);
+      setCancelOpen(false);
+      setStopPolling(false);
 
-  const confirmCancel =
-    async (
-      reason: string,
-      comment?: string,
-    ) => {
-      if (
-        !rideId ||
-        isCancelling
-      ) {
+      toast.info(
+        "Your ride status has changed. Updating ride details...",
+      );
+
+      return;
+    }
+
+    console.log("CANCELLING RIDE:", {
+      rideId,
+      reason,
+      comment,
+    });
+
+    const response = await passengerRideApi.cancelRide(
+      rideId,
+      reason,
+    );
+
+    if (handleNoDriversFound(response)) {
+      return;
+    }
+
+    if (response.status !== "cancelled") {
+      throw new Error(
+        `Cancellation was not confirmed. Current ride status: ${response.status}`,
+      );
+    }
+
+    setBackendRide(response);
+    setCancelOpen(false);
+    clearActiveRide();
+    setRideStatus("idle");
+
+    toast.success(
+      response.cancellationFee > 0
+        ? `Ride cancelled. Cancellation fee: ₦${formatMoney(
+            response.cancellationFee,
+          )}`
+        : "Ride cancelled successfully.",
+    );
+
+    navigate("/passenger/home", {
+      replace: true,
+    });
+  } catch (error) {
+    console.error("CANCEL RIDE ERROR:", error);
+
+    // The backend might have changed the ride to
+    // no_drivers_found during the cancellation request.
+    try {
+      const latestRide = await passengerRideApi.getRide(rideId);
+
+      if (handleNoDriversFound(latestRide)) {
         return;
       }
 
-      setIsCancelling(true);
+      // Let the normal polling logic process any
+      // other updated status.
+      setBackendRide(latestRide);
+      saveActiveRide(latestRide);
+    } catch (refreshError) {
+      console.error(
+        "RIDE STATUS REFRESH ERROR:",
+        refreshError,
+      );
+    }
 
-      /*
-       * Prevent the polling request from moving us to
-       * another ride screen while cancellation is being
-       * processed.
-       */
-      setStopPolling(true);
+    setStopPolling(false);
 
-      try {
-        /*
-         * Your current API method accepts only:
-         *
-         * cancelRide(rideId, reason)
-         *
-         * We therefore do NOT send `comment` until the
-         * backend cancellation DTO confirms that it accepts
-         * a comment field.
-         */
-        console.log(
-          "CANCELLING RIDE:",
-          {
-            rideId,
-            reason,
-            comment,
-          },
-        );
+    toast.error(getErrorMessage(error));
+  } finally {
+    setIsCancelling(false);
+  }
+};
 
-        const response =
-          await passengerRideApi.cancelRide(
-            rideId,
-            reason,
-          );
 
-        console.log(
-          "CANCEL RIDE RESPONSE:",
-          response,
-        );
+    const goHome = () => {
+  clearActiveRide();
+  setRideStatus("idle");
 
-        /*
-         * The backend should normally return the ride with
-         * status "cancelled".
-         *
-         * Save the response momentarily so debugging remains
-         * easy before clearing active ride state.
-         */
-        setBackendRide(
-          response,
-        );
+  navigate("/passenger/home", {
+    replace: true,
+  });
+};
 
-        /*
-         * If the backend returns another status, don't lie
-         * to the UI and claim cancellation succeeded.
-         */
-        if (
-          response.status !==
-          "cancelled"
-        ) {
-          throw new Error(
-            `Cancellation was not confirmed. Current ride status: ${response.status}`,
-          );
-        }
+const tryAnotherRide = () => {
+  clearActiveRide();
+  setRideStatus("selecting");
 
-        setCancelOpen(false);
-
-        clearActiveRide();
-
-        setRideStatus(
-          "idle",
-        );
-
-        toast.success(
-          response.cancellationFee > 0
-            ? `Ride cancelled. Cancellation fee: ₦${formatMoney(
-                response.cancellationFee,
-              )}`
-            : "Ride cancelled successfully.",
-        );
-
-        navigate(
-          "/passenger/home",
-          {
-            replace: true,
-          },
-        );
-      } catch (error) {
-        console.error(
-          "CANCEL RIDE ERROR:",
-          error,
-        );
-
-        /*
-         * Resume polling because the server did not
-         * successfully confirm cancellation.
-         */
-        setStopPolling(false);
-
-        toast.error(
-          getErrorMessage(
-            error,
-          ),
-        );
-      } finally {
-        setIsCancelling(
-          false,
-        );
-      }
-    };
+  navigate("/passenger/ride/select", {
+    replace: true,
+  });
+};
 
   /* =======================================================
      GUARDS
@@ -720,16 +758,14 @@ export default function SearchingDriver() {
       =============================================== */}
 
       <RideMapHeader
-        title="Finding a driver"
-        onBack={
-          requestCancel
-        }
-      />
+  title={noDriversFound ? "No drivers available" : "Finding a driver"}
+  onBack={noDriversFound ? goHome : requestCancel}
+/>
 
       {/* ===============================================
           RADAR
       =============================================== */}
-
+{!noDriversFound && (
       <div className="pointer-events-none absolute left-1/2 top-[35%] z-[300] -translate-x-1/2 -translate-y-1/2">
         {[0, 0.65, 1.3].map(
           (delay) => (
@@ -792,12 +828,60 @@ export default function SearchingDriver() {
           <div className="h-[13px] w-[13px] rounded-full bg-white" />
         </motion.div>
       </div>
+)}
 
       {/* ===============================================
           BOTTOM SHEET
       =============================================== */}
 
       <RideBottomSheet>
+         {noDriversFound ? (
+    <div className="text-center">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F3EDF8] text-[#7442AD]">
+        <SearchX size={30} />
+      </div>
+
+      <h1 className="mt-5 text-[22px] font-semibold text-[#302B34]">
+        No drivers available
+      </h1>
+
+      <p className="mt-2 text-[14px] leading-6 text-[#938D97]">
+        We couldn't find an available driver nearby.
+        Please try another ride or come back later.
+      </p>
+
+      <div className="mt-6 rounded-[17px] bg-[#F8F6F9] p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[14px] text-[#8F8994]">
+            Estimated fare
+          </span>
+
+          <span className="text-[18px] font-semibold text-[#302B34]">
+            {typeof estimatedFare === "number"
+              ? `₦${formatMoney(estimatedFare)}`
+              : "—"}
+          </span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={tryAnotherRide}
+        className="mt-6 h-[54px] w-full rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white"
+      >
+        Try another ride
+      </button>
+
+      <button
+        type="button"
+        onClick={goHome}
+        className="mt-3 h-[54px] w-full rounded-[14px] border border-[#E1D9E7] bg-white text-[16px] font-semibold text-[#7442AD]"
+      >
+        Back to home
+      </button>
+    </div>
+  ) : (
+    <>
         <div className="text-center">
           <motion.div
             animate={{
@@ -994,6 +1078,8 @@ export default function SearchingDriver() {
             ? "Cancelling..."
             : "Cancel Ride"}
         </motion.button>
+        </>
+  )}
       </RideBottomSheet>
 
       {/* ===============================================
@@ -1002,7 +1088,7 @@ export default function SearchingDriver() {
 
       <CancelRideSheet
         open={
-          cancelOpen
+          cancelOpen && !noDriversFound
         }
         onClose={() => {
           if (
