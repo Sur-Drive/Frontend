@@ -1,668 +1,336 @@
-import {
-  Banknote,
-  Clock3,
-  LoaderCircle,
-  MapPin,
-  Navigation,
-  Route,
-} from "lucide-react";
-
-import {
-  motion,
-} from "framer-motion";
-
-import {
-  useState,
-} from "react";
-
-import {
-  Navigate,
-  useNavigate,
-} from "react-router-dom";
-
-import {
-  toast,
-} from "sonner";
+import { Banknote, Clock3, LoaderCircle, MapPin, Navigation, RefreshCw, Route } from "lucide-react";
+import { motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import PassengerMap from "../../../components/passenger/ride/PassengerMap";
 import RideBottomSheet from "../../../components/passenger/ride/RideBottomSheet";
 import RideMapHeader from "../../../components/passenger/ride/RideMapHeader";
-
+import { usePassengerRide } from "../../../context/PassengerRideContext";
+import { rideOptions } from "../../../data/passengerRide";
 import {
-  usePassengerRide,
-} from "../../../context/PassengerRideContext";
-
-import {
-  rideOptions,
-} from "../../../data/passengerRide";
-
-import {
-  passengerRideApi,
+  locationToBackendPoint,
+  stopToBackendPoint,
+  type BookRideRequest,
+  type EstimateRideRequest,
+  type EstimateRideResponse,
 } from "../../../api/passenger/rides";
+import { useBookPassengerRide, useEstimatePassengerRide } from "../../../hooks/passenger/usePassengerRideBooking";
 
-/* =========================================================
-   TYPES
-========================================================= */
 
-type BackendRidePoint =
-  | {
-      lat: number;
-      lng: number;
-    }
-  | {
-      address: string;
-    }
-  | {
-      savedPlaceId: string;
-    };
-
-type RidePointLike = {
-  coordinates?: {
-    lat: number;
-    lng: number;
-  } | null;
-
-  address?: string | null;
-
-  savedPlaceId?: string | null;
-};
-
-type BackendRideLocation = {
-  lat: number;
-  lng: number;
-  address: string;
-};
-
-type FareBreakdown = {
-  baseFare: number;
-  distanceCharge: number;
-  timeCharge: number;
-  bookingFee: number;
-  surgeMultiplier: number;
-  surgeCharge: number;
-  waitingFee: number;
-  waitingMinutes: number;
-  waitingGraceMin: number;
-  cancellationFee: number;
-  approvedFees: number;
-  discount: number;
-  promoDiscount: number;
-  subtotal: number;
-  total: number;
-  isEstimate: boolean;
-};
-
-export type BookedRideResponse = {
-  id: string;
-
-  riderId: string;
-
-  driverId: string | null;
-
-  status:
-    | "requested"
-    | "searching"
-    | "driver_assigned"
-    | "driver_en_route"
-    | "driver_arrived"
-    | "ride_started"
-    | "ride_in_progress"
-    | "ride_completed"
-    | "payment_pending"
-    | "paid"
-    | "closed"
-    | "cancelled";
-
-  rideType:
-    | "economy"
-    | "comfort"
-    | "suv";
-
-  paymentMethod:
-    | "cash"
-    | "card"
-    | "wallet";
-
-  pickup: BackendRideLocation;
-
-  dropoff: BackendRideLocation;
-
-  stops: BackendRideLocation[];
-
-  vehicle: unknown | null;
-
-  estimatedDistanceKm: number;
-
-  estimatedDurationMin: number;
-
-  actualDistanceKm: number | null;
-
-  actualDurationMin: number | null;
-
-  estimatedFare: number;
-
-  finalFare: number | null;
-
-  cancellationFee: number;
-
-  cancellationReason: string | null;
-
-  cancelledBy: string | null;
-
-  promoCode: string | null;
-
-  promoDiscount: number;
-
-  pricingVersion: string;
-
-  fareBreakdown: FareBreakdown;
-
-  timestamps: {
-    requestedAt: string | null;
-    searchingAt: string | null;
-    driverAssignedAt: string | null;
-    driverArrivedAt: string | null;
-    rideStartedAt: string | null;
-    rideCompletedAt: string | null;
-    paidAt: string | null;
-    cancelledAt: string | null;
-  };
-
-  createdAt: string;
-
-  updatedAt: string;
-};
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function toBackendRidePoint(
-  location: RidePointLike,
-): BackendRidePoint {
-  if (
-    location.savedPlaceId
-  ) {
-    return {
-      savedPlaceId:
-        location.savedPlaceId,
-    };
-  }
-
-  if (
-    location.coordinates &&
-    Number.isFinite(
-      location.coordinates.lat,
-    ) &&
-    Number.isFinite(
-      location.coordinates.lng,
-    )
-  ) {
-    return {
-      lat:
-        location.coordinates.lat,
-
-      lng:
-        location.coordinates.lng,
-    };
-  }
-
-  if (
-    location.address?.trim()
-  ) {
-    return {
-      address:
-        location.address.trim(),
-    };
-  }
-
-  throw new Error(
-    "Location does not contain coordinates, an address, or a saved place ID.",
-  );
+function formatMoney(amount: number) {
+  return amount.toLocaleString("en-NG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 }
 
-function formatMoney(
-  amount: number,
-) {
-  return amount.toLocaleString(
-    "en-NG",
-    {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    },
-  );
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object") {
+    const candidate = error as {
+      message?: unknown;
+      response?: { data?: { message?: unknown } };
+      data?: { message?: unknown };
+    };
+    const message =
+      candidate.response?.data?.message ??
+      candidate.data?.message ??
+      candidate.message;
+    if (typeof message === "string" && message.trim()) return message;
+    if (Array.isArray(message)) return message.join(", ");
+  }
+  return fallback;
 }
 
-/* =========================================================
-   PAGE
-========================================================= */
+function validNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+type EstimateSnapshot = {
+  key: string;
+  response: EstimateRideResponse;
+};
 
 export default function ConfirmPickup() {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
+  const { ride, setRideStatus, setEstimatedFare } = usePassengerRide();
+  const booking = useBookPassengerRide();
+  const estimate = useEstimatePassengerRide();
 
-  const {
-    ride,
-    setRideStatus,
-    setEstimatedFare,
-  } =
-    usePassengerRide();
+  const [estimateSnapshot, setEstimateSnapshot] = useState<EstimateSnapshot | null>(null);
+  const [estimateErrorKey, setEstimateErrorKey] = useState<string | null>(null);
+  const [pendingEstimateKey, setPendingEstimateKey] = useState<string | null>(null);
+  const latestEstimateKey = useRef<string | null>(null);
+  const bookingLock = useRef(false);
 
-  const [
-    isBooking,
-    setIsBooking,
-  ] = useState(false);
+  // Only route/pricing inputs determine the estimate. Do not include estimatedFare
+  // here, because setEstimatedFare updates the context after a successful quote.
+  const estimateKey = JSON.stringify({
+    pickup: ride.pickup,
+    destination: ride.destination,
+    stops: ride.stops,
+    rideType: ride.selectedRide,
+  });
 
-  /* =======================================================
-     GUARD
-  ======================================================= */
+  const estimatePayload = useMemo<EstimateRideRequest | null>(() => {
+    if (!ride.pickup || !ride.destination || !ride.selectedRide) return null;
+    try {
+      return {
+        pickup: locationToBackendPoint(ride.pickup),
+        dropoff: locationToBackendPoint(ride.destination),
+        ...(ride.stops.length
+          ? { stops: ride.stops.map(stopToBackendPoint) }
+          : {}),
+        rideType: ride.selectedRide,
+      };
+    } catch {
+      return null;
+    }
+    // The key captures all inputs, including stops and their coordinates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimateKey]);
 
-  if (
-    !ride.pickup ||
-    !ride.destination ||
-    !ride.selectedRide
-  ) {
-    return (
-      <Navigate
-        to="/passenger/book-ride"
-        replace
-      />
-    );
-  }
+  const requestEstimate = (key: string, payload: EstimateRideRequest) => {
+    latestEstimateKey.current = key;
+    setEstimateErrorKey(null);
+    setPendingEstimateKey(key);
 
-  const pickup =
-    ride.pickup;
-
-  const destination =
-    ride.destination;
-
-  const selectedRide =
-    ride.selectedRide;
-
-  const option =
-    rideOptions.find(
-      (item) =>
-        item.id ===
-        selectedRide,
-    );
-
-  const center =
-    pickup.coordinates ??
-    destination.coordinates;
-
-  if (!center) {
-    return (
-      <Navigate
-        to="/passenger/book-ride"
-        replace
-      />
-    );
-  }
-
-  /* =======================================================
-     BOOK
-  ======================================================= */
-
-  const confirm =
-    async () => {
-      if (isBooking) {
-        return;
-      }
-
-      try {
-        setIsBooking(true);
-
-        const pickupPoint =
-          toBackendRidePoint(
-            pickup,
-          );
-
-        const dropoffPoint =
-          toBackendRidePoint(
-            destination,
-          );
-
-        const stops =
-          ride.stops.length > 0
-            ? ride.stops.map(
-                (stop) =>
-                  toBackendRidePoint(
-                    stop,
-                  ),
-              )
-            : undefined;
-
-        const payload = {
-          pickup:
-            pickupPoint,
-
-          dropoff:
-            dropoffPoint,
-
-          ...(stops
-            ? {
-                stops,
-              }
-            : {}),
-
-          rideType:
-            selectedRide,
-
-          paymentMethod:
-            ride.paymentMethod
-              .type,
-        };
-
-        console.log(
-          "BOOK RIDE PAYLOAD:",
-          payload,
-        );
-
-        const rawResponse =
-          await passengerRideApi.bookRide(
-            payload,
-          );
-
-        const response =
-          rawResponse as BookedRideResponse;
-
-        console.log(
-          "BOOK RIDE RESPONSE:",
-          response,
-        );
-
-        if (!response?.id) {
-          throw new Error(
-            "Ride booking response did not contain a ride ID.",
-          );
+    estimate.mutate(payload, {
+      onSuccess: (response) => {
+        if (latestEstimateKey.current !== key) return;
+        setPendingEstimateKey(null);
+        const fare = validNumber(response.estimatedFare)
+  ? response.estimatedFare
+  : response.fare?.total;
+        if (!validNumber(fare)) {
+          setEstimateErrorKey(key);
+          return;
         }
+        setEstimateSnapshot({ key, response });
+        setEstimatedFare(fare);
+      },
+      onError: (error) => {
+        if (latestEstimateKey.current !== key) return;
+        console.error("FARE ESTIMATE ERROR:", error);
+        setPendingEstimateKey(null);
+        setEstimateErrorKey(key);
+      },
+    });
+  };
 
-        /**
-         * Keep active backend ride
-         * available across route changes
-         * and page refreshes.
-         */
-        sessionStorage.setItem(
-          "surdrive_active_ride_id",
-          response.id,
-        );
+  useEffect(() => {
+    latestEstimateKey.current = estimateKey;
+    if (!estimatePayload) {
+      setPendingEstimateKey(null);
+      return;
+    }
+    requestEstimate(estimateKey, estimatePayload);
+    // Run only when actual route/pricing inputs change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimateKey, estimatePayload]);
 
-        sessionStorage.setItem(
-          "surdrive_active_ride",
-          JSON.stringify(
-            response,
-          ),
-        );
+  const quote = estimateSnapshot?.key === estimateKey
+    ? estimateSnapshot.response
+    : null;
+  const quotedFare = quote && validNumber(quote.estimatedFare)
+  ? quote.estimatedFare
+  : quote?.fare?.total;
+  const hasQuote = validNumber(quotedFare);
+  const isEstimating = pendingEstimateKey === estimateKey;
+  const estimateFailed = estimateErrorKey === estimateKey;
+  const canBook = Boolean(estimatePayload && hasQuote && !isEstimating && !booking.isPending);
 
-        /**
-         * Backend now gives us the
-         * authoritative estimated fare.
-         */
-        if (
-          typeof response.estimatedFare ===
-            "number" &&
-          Number.isFinite(
-            response.estimatedFare,
-          )
-        ) {
-          setEstimatedFare(
-            response.estimatedFare,
-          );
-        }
-
-        setRideStatus(
-          "searching",
-        );
-
-        navigate(
-          "/passenger/ride/searching",
-          {
-            replace: true,
-          },
-        );
-      } catch (error) {
-        console.error(
-          "BOOK RIDE ERROR:",
-          error,
-        );
-
-        toast.error(
-          "Unable to book your ride. Please try again.",
-        );
-      } finally {
-        setIsBooking(false);
+  const confirm = async () => {
+    if (bookingLock.current || !canBook || !estimatePayload || !ride.paymentMethod) return;
+    bookingLock.current = true;
+    try {
+      const payload: BookRideRequest = {
+        ...estimatePayload,
+        paymentMethod: ride.paymentMethod.type,
+      };
+      const response = await booking.mutateAsync(payload);
+      if (!response?.id) {
+        throw new Error("Ride booking response did not contain a ride ID.");
       }
-    };
+      sessionStorage.setItem("surdrive_active_ride_id", response.id);
+      sessionStorage.setItem("surdrive_active_ride", JSON.stringify(response));
+      if (validNumber(response.estimatedFare)) {
+        setEstimatedFare(response.estimatedFare);
+      }
+      setRideStatus("searching");
+      navigate("/passenger/ride/searching", { replace: true });
+    } catch (error) {
+      console.error("BOOK RIDE ERROR:", error);
+      toast.error(getErrorMessage(error, "Unable to book your ride. Please try again."));
+    } finally {
+      bookingLock.current = false;
+    }
+  };
+
+  // Hooks above are unconditional; guards belong below them.
+  if (!ride.pickup || !ride.destination || !ride.selectedRide) {
+    return <Navigate to="/passenger/book-ride" replace />;
+  }
+  const pickup = ride.pickup;
+  const destination = ride.destination;
+  const center = pickup.coordinates ?? destination.coordinates;
+  if (!center) return <Navigate to="/passenger/book-ride" replace />;
+  const option = rideOptions.find((item) => item.id === ride.selectedRide);
 
   return (
     <div className="relative h-[100dvh] overflow-hidden bg-[#F4F4F4]">
-      <PassengerMap
-        center={center}
-        pickup={pickup}
-        destination={
-          destination
-        }
-        zoom={16}
-      />
-
-      <RideMapHeader
-        title="Confirm ride"
-      />
+      <PassengerMap center={center} pickup={pickup} destination={destination} zoom={16} />
+      <RideMapHeader title="Confirm ride" />
 
       <RideBottomSheet>
         <div>
           <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#302B34]">
             Confirm your ride
           </h1>
-
           <p className="mt-1 text-[14px] leading-5 text-[#99939D]">
-            Review your trip
-            details before we
-            start searching for
-            a driver.
+            Review your trip and estimated fare before we find your driver.
           </p>
         </div>
-
-        {/* ROUTE */}
 
         <div className="mt-5 rounded-[16px] bg-[#F7F5F8] p-4">
           <div className="flex gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EDE4F6] text-[#7442AD]">
-              <Navigation
-                size={18}
-              />
+              <Navigation size={18} />
             </span>
-
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">
-                Pickup
-              </p>
-
+              <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">Pickup</p>
               <p className="mt-1 truncate text-[16px] font-semibold text-[#302B34]">
-                {pickup.label ||
-                  pickup.address ||
-                  "Pickup"}
+                {pickup.label || pickup.address || "Pickup"}
               </p>
-
-              {pickup.address &&
-                pickup.address !==
-                  pickup.label && (
-                  <p className="mt-1 truncate text-[13px] text-[#908A94]">
-                    {
-                      pickup.address
-                    }
-                  </p>
-                )}
+              {pickup.address && pickup.address !== pickup.label && (
+                <p className="mt-1 truncate text-[13px] text-[#908A94]">{pickup.address}</p>
+              )}
             </div>
           </div>
 
-          {/* STOPS */}
-
-          {ride.stops.map(
-            (
-              stop,
-              index,
-            ) => (
-              <div
-                key={
-                  stop.id
-                }
-              >
-                <div className="my-3 ml-5 h-4 border-l-2 border-dotted border-[#C9C2CF]" />
-
-                <div className="flex gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F0ECF3] text-[#7442AD]">
-                    <MapPin
-                      size={17}
-                    />
-                  </span>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">
-                      Stop{" "}
-                      {index +
-                        1}
-                    </p>
-
-                    <p className="mt-1 truncate text-[15px] font-semibold text-[#302B34]">
-                      {stop.label ||
-                        stop.address ||
-                        "Stop"}
-                    </p>
-                  </div>
+          {ride.stops.map((stop, index) => (
+            <div key={stop.id}>
+              <div className="my-3 ml-5 h-4 border-l-2 border-dotted border-[#C9C2CF]" />
+              <div className="flex gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F0ECF3] text-[#7442AD]">
+                  <MapPin size={17} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">Stop {index + 1}</p>
+                  <p className="mt-1 truncate text-[15px] font-semibold text-[#302B34]">
+                    {stop.label || stop.address || "Stop"}
+                  </p>
                 </div>
               </div>
-            ),
-          )}
+            </div>
+          ))}
 
           <div className="my-3 ml-5 h-4 border-l-2 border-dotted border-[#C9C2CF]" />
-
           <div className="flex gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EFEDEF] text-[#302B34]">
-              <MapPin
-                size={18}
-              />
+              <MapPin size={18} />
             </span>
-
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">
-                Destination
-              </p>
-
+              <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">Destination</p>
               <p className="mt-1 truncate text-[16px] font-semibold text-[#302B34]">
-                {destination.label ||
-                  destination.address ||
-                  "Destination"}
+                {destination.label || destination.address || "Destination"}
               </p>
             </div>
           </div>
         </div>
 
-        {/* RIDE */}
-
-        <div className="mt-4 rounded-[15px] border border-[#EEEAF1] p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[13px] text-[#99939D]">
-                Ride type
-              </p>
-
+        <div className="mt-4 rounded-[15px] border border-[#EEEAF1] bg-white p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[13px] text-[#99939D]">Ride type</p>
               <p className="mt-1 text-[17px] font-semibold text-[#302B34]">
-                {option?.name ??
-                  selectedRide}
+                {option?.name ?? ride.selectedRide}
               </p>
             </div>
-
-            {typeof ride.estimatedFare ===
-              "number" && (
-              <div className="text-right">
-                <p className="text-[12px] text-[#99939D]">
-                  Estimated fare
+            <div className="text-right">
+              <p className="text-[12px] text-[#99939D]">Estimated fare</p>
+              {isEstimating ? (
+                <div className="mt-2 flex items-center justify-end gap-2 text-[#7442AD]">
+                  <LoaderCircle size={16} className="animate-spin" />
+                  <span className="text-[13px]">Calculating...</span>
+                </div>
+              ) : hasQuote ? (
+                <p className="mt-1 text-[21px] font-bold text-[#7442AD]">
+                  ₦{formatMoney(quotedFare)}
                 </p>
-
-                <p className="mt-1 text-[18px] font-semibold text-[#302B34]">
-                  ₦
-                  {formatMoney(
-                    ride.estimatedFare,
-                  )}
-                </p>
-              </div>
-            )}
+              ) : (
+                <p className="mt-1 text-[13px] text-[#9A949E]">Unavailable</p>
+              )}
+            </div>
           </div>
+
+          {estimateFailed && (
+            <div className="mt-3 rounded-xl bg-[#FFF5F2] px-3 py-3 text-[13px] text-[#A34B35]">
+              We couldn't calculate your fare right now.
+              {estimatePayload && (
+                <button
+                  type="button"
+                  onClick={() => requestEstimate(estimateKey, estimatePayload)}
+                  className="mt-2 flex items-center gap-1 font-semibold text-[#7442AD]"
+                >
+                  <RefreshCw size={14} /> Retry estimate
+                </button>
+              )}
+            </div>
+          )}
+          
+{quote?.route && (
+  <div className="mt-4 flex flex-wrap items-center gap-5 border-t border-[#EEEAF0] pt-3 text-[13px] text-[#756F79]">
+    {validNumber(quote.route.distanceKm) && (
+      <span className="flex items-center gap-1.5">
+        <Route size={16} />
+        {quote.route.distanceKm.toFixed(1)} km
+      </span>
+    )}
+
+    {validNumber(quote.route.durationMin) && (
+      <span className="flex items-center gap-1.5">
+        <Clock3 size={16} />
+        {Math.round(quote.route.durationMin)} min
+      </span>
+    )}
+  </div>
+)}
+
 
           <div className="my-4 h-px bg-[#EEEAF0]" />
-
           <div className="flex items-center gap-2">
-            <Banknote
-              size={18}
-              className="text-[#7442AD]"
-            />
-
+            <Banknote size={18} className="text-[#7442AD]" />
             <div>
-              <p className="text-[12px] text-[#99939D]">
-                Payment
-              </p>
-
+              <p className="text-[12px] text-[#99939D]">Payment</p>
               <p className="mt-0.5 text-[14px] font-medium text-[#625C66]">
-                {
-                  ride
-                    .paymentMethod
-                    .label
-                }
+                {ride.paymentMethod.label}
               </p>
             </div>
           </div>
         </div>
 
-        {/* INFO */}
-
-        <div className="mt-4 flex items-center gap-5 rounded-[14px] bg-[#FAF8FC] px-4 py-3">
-          <div className="flex items-center gap-2 text-[#756F79]">
-            <Route
-              size={16}
-            />
-
-            <span className="text-[13px]">
-              Fare calculated
-              after confirmation
-            </span>
-          </div>
-
-          <div className="ml-auto flex items-center gap-1 text-[#756F79]">
-            <Clock3
-              size={15}
-            />
-
-            <span className="text-[13px]">
-              Live estimate
-            </span>
-          </div>
+        <div className="mt-4 flex items-center gap-2 rounded-[14px] bg-[#FAF8FC] px-4 py-3 text-[#756F79]">
+          <Route size={16} className="shrink-0" />
+          <p className="text-[13px]">
+            {hasQuote
+              ? "This is an estimate. The final fare may change based on your trip."
+              : "A fare estimate is required before confirming your ride."}
+          </p>
         </div>
 
         <motion.button
           type="button"
-          disabled={
-            isBooking
-          }
-          whileTap={
-            isBooking
-              ? undefined
-              : {
-                  scale: 0.98,
-                }
-          }
+          disabled={!canBook}
+          whileTap={canBook ? { scale: 0.98 } : undefined}
           onClick={confirm}
           className="mt-5 flex h-[56px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_10px_30px_rgba(116,66,173,0.24)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isBooking ? (
-            <>
-              <LoaderCircle
-                size={19}
-                className="animate-spin"
-              />
-
-              Creating ride...
-            </>
+          {booking.isPending ? (
+            <><LoaderCircle size={19} className="animate-spin" /> Creating ride...</>
+          ) : isEstimating ? (
+            <><LoaderCircle size={19} className="animate-spin" /> Calculating fare...</>
           ) : (
             "Confirm ride"
           )}
@@ -672,137 +340,678 @@ export default function ConfirmPickup() {
   );
 }
 
+
 // import {
 //   Banknote,
+//   Clock3,
+//   LoaderCircle,
 //   MapPin,
 //   Navigation,
+//   Route,
 // } from "lucide-react";
-// import { motion } from "framer-motion";
-// import { Navigate, useNavigate } from "react-router-dom";
+
+// import {
+//   motion,
+// } from "framer-motion";
+
+// import {
+//   useState,
+// } from "react";
+
+// import {
+//   Navigate,
+//   useNavigate,
+// } from "react-router-dom";
+
+// import {
+//   toast,
+// } from "sonner";
 
 // import PassengerMap from "../../../components/passenger/ride/PassengerMap";
 // import RideBottomSheet from "../../../components/passenger/ride/RideBottomSheet";
 // import RideMapHeader from "../../../components/passenger/ride/RideMapHeader";
 
-// import { usePassengerRide } from "../../../context/PassengerRideContext";
-// import { rideOptions } from "../../../data/passengerRide";
+// import {
+//   usePassengerRide,
+// } from "../../../context/PassengerRideContext";
+
+// import {
+//   rideOptions,
+// } from "../../../data/passengerRide";
+
+// import {
+//   passengerRideApi,
+// } from "../../../api/passenger/rides";
+
+// /* =========================================================
+//    TYPES
+// ========================================================= */
+
+// type BackendRidePoint =
+//   | {
+//       lat: number;
+//       lng: number;
+//     }
+//   | {
+//       address: string;
+//     }
+//   | {
+//       savedPlaceId: string;
+//     };
+
+// type RidePointLike = {
+//   coordinates?: {
+//     lat: number;
+//     lng: number;
+//   } | null;
+
+//   address?: string | null;
+
+//   savedPlaceId?: string | null;
+// };
+
+// type BackendRideLocation = {
+//   lat: number;
+//   lng: number;
+//   address: string;
+// };
+
+// type FareBreakdown = {
+//   baseFare: number;
+//   distanceCharge: number;
+//   timeCharge: number;
+//   bookingFee: number;
+//   surgeMultiplier: number;
+//   surgeCharge: number;
+//   waitingFee: number;
+//   waitingMinutes: number;
+//   waitingGraceMin: number;
+//   cancellationFee: number;
+//   approvedFees: number;
+//   discount: number;
+//   promoDiscount: number;
+//   subtotal: number;
+//   total: number;
+//   isEstimate: boolean;
+// };
+
+// export type BookedRideResponse = {
+//   id: string;
+
+//   riderId: string;
+
+//   driverId: string | null;
+
+//   status:
+//     | "requested"
+//     | "searching"
+//     | "driver_assigned"
+//     | "driver_en_route"
+//     | "driver_arrived"
+//     | "ride_started"
+//     | "ride_in_progress"
+//     | "ride_completed"
+//     | "payment_pending"
+//     | "paid"
+//     | "closed"
+//     | "cancelled";
+
+//   rideType:
+//     | "economy"
+//     | "comfort"
+//     | "suv";
+
+//   paymentMethod:
+//     | "cash"
+//     | "card"
+//     | "wallet";
+
+//   pickup: BackendRideLocation;
+
+//   dropoff: BackendRideLocation;
+
+//   stops: BackendRideLocation[];
+
+//   vehicle: unknown | null;
+
+//   estimatedDistanceKm: number;
+
+//   estimatedDurationMin: number;
+
+//   actualDistanceKm: number | null;
+
+//   actualDurationMin: number | null;
+
+//   estimatedFare: number;
+
+//   finalFare: number | null;
+
+//   cancellationFee: number;
+
+//   cancellationReason: string | null;
+
+//   cancelledBy: string | null;
+
+//   promoCode: string | null;
+
+//   promoDiscount: number;
+
+//   pricingVersion: string;
+
+//   fareBreakdown: FareBreakdown;
+
+//   timestamps: {
+//     requestedAt: string | null;
+//     searchingAt: string | null;
+//     driverAssignedAt: string | null;
+//     driverArrivedAt: string | null;
+//     rideStartedAt: string | null;
+//     rideCompletedAt: string | null;
+//     paidAt: string | null;
+//     cancelledAt: string | null;
+//   };
+
+//   createdAt: string;
+
+//   updatedAt: string;
+// };
+
+// /* =========================================================
+//    HELPERS
+// ========================================================= */
+
+// function toBackendRidePoint(
+//   location: RidePointLike,
+// ): BackendRidePoint {
+//   if (
+//     location.savedPlaceId
+//   ) {
+//     return {
+//       savedPlaceId:
+//         location.savedPlaceId,
+//     };
+//   }
+
+//   if (
+//     location.coordinates &&
+//     Number.isFinite(
+//       location.coordinates.lat,
+//     ) &&
+//     Number.isFinite(
+//       location.coordinates.lng,
+//     )
+//   ) {
+//     return {
+//       lat:
+//         location.coordinates.lat,
+
+//       lng:
+//         location.coordinates.lng,
+//     };
+//   }
+
+//   if (
+//     location.address?.trim()
+//   ) {
+//     return {
+//       address:
+//         location.address.trim(),
+//     };
+//   }
+
+//   throw new Error(
+//     "Location does not contain coordinates, an address, or a saved place ID.",
+//   );
+// }
+
+// function formatMoney(
+//   amount: number,
+// ) {
+//   return amount.toLocaleString(
+//     "en-NG",
+//     {
+//       minimumFractionDigits: 0,
+//       maximumFractionDigits: 2,
+//     },
+//   );
+// }
+
+// /* =========================================================
+//    PAGE
+// ========================================================= */
 
 // export default function ConfirmPickup() {
-//   const navigate = useNavigate();
+//   const navigate =
+//     useNavigate();
 
 //   const {
 //     ride,
 //     setRideStatus,
-//   } = usePassengerRide();
+//     setEstimatedFare,
+//   } =
+//     usePassengerRide();
 
-//   if (!ride.pickup || !ride.destination || !ride.selectedRide) {
-//     return <Navigate to="/passenger/book-ride" replace />;
+//   const [
+//     isBooking,
+//     setIsBooking,
+//   ] = useState(false);
+
+//   /* =======================================================
+//      GUARD
+//   ======================================================= */
+
+//   if (
+//     !ride.pickup ||
+//     !ride.destination ||
+//     !ride.selectedRide
+//   ) {
+//     return (
+//       <Navigate
+//         to="/passenger/book-ride"
+//         replace
+//       />
+//     );
 //   }
 
-//   const option = rideOptions.find(
-//     (item) => item.id === ride.selectedRide,
-//   );
+//   const pickup =
+//     ride.pickup;
+
+//   const destination =
+//     ride.destination;
+
+//   const selectedRide =
+//     ride.selectedRide;
+
+//   const option =
+//     rideOptions.find(
+//       (item) =>
+//         item.id ===
+//         selectedRide,
+//     );
 
 //   const center =
-//     ride.pickup.coordinates ??
-//     ride.destination.coordinates ?? {
-//       lat: 6.5244,
-//       lng: 3.3792,
-//     };
+//     pickup.coordinates ??
+//     destination.coordinates;
 
-//   const confirm = () => {
-//     setRideStatus("searching");
-//     navigate("/passenger/ride/searching");
-//   };
+//   if (!center) {
+//     return (
+//       <Navigate
+//         to="/passenger/book-ride"
+//         replace
+//       />
+//     );
+//   }
+
+//   /* =======================================================
+//      BOOK
+//   ======================================================= */
+
+//   const confirm =
+//     async () => {
+//       if (isBooking) {
+//         return;
+//       }
+
+//       try {
+//         setIsBooking(true);
+
+//         const pickupPoint =
+//           toBackendRidePoint(
+//             pickup,
+//           );
+
+//         const dropoffPoint =
+//           toBackendRidePoint(
+//             destination,
+//           );
+
+//         const stops =
+//           ride.stops.length > 0
+//             ? ride.stops.map(
+//                 (stop) =>
+//                   toBackendRidePoint(
+//                     stop,
+//                   ),
+//               )
+//             : undefined;
+
+//         const payload = {
+//           pickup:
+//             pickupPoint,
+
+//           dropoff:
+//             dropoffPoint,
+
+//           ...(stops
+//             ? {
+//                 stops,
+//               }
+//             : {}),
+
+//           rideType:
+//             selectedRide,
+
+//           paymentMethod:
+//             ride.paymentMethod
+//               .type,
+//         };
+
+//         console.log(
+//           "BOOK RIDE PAYLOAD:",
+//           payload,
+//         );
+
+//         const rawResponse =
+//           await passengerRideApi.bookRide(
+//             payload,
+//           );
+
+//         const response =
+//           rawResponse as BookedRideResponse;
+
+//         console.log(
+//           "BOOK RIDE RESPONSE:",
+//           response,
+//         );
+
+//         if (!response?.id) {
+//           throw new Error(
+//             "Ride booking response did not contain a ride ID.",
+//           );
+//         }
+
+//         /**
+//          * Keep active backend ride
+//          * available across route changes
+//          * and page refreshes.
+//          */
+//         sessionStorage.setItem(
+//           "surdrive_active_ride_id",
+//           response.id,
+//         );
+
+//         sessionStorage.setItem(
+//           "surdrive_active_ride",
+//           JSON.stringify(
+//             response,
+//           ),
+//         );
+
+//         /**
+//          * Backend now gives us the
+//          * authoritative estimated fare.
+//          */
+//         if (
+//           typeof response.estimatedFare ===
+//             "number" &&
+//           Number.isFinite(
+//             response.estimatedFare,
+//           )
+//         ) {
+//           setEstimatedFare(
+//             response.estimatedFare,
+//           );
+//         }
+
+//         setRideStatus(
+//           "searching",
+//         );
+
+//         navigate(
+//           "/passenger/ride/searching",
+//           {
+//             replace: true,
+//           },
+//         );
+//       } catch (error) {
+//         console.error(
+//           "BOOK RIDE ERROR:",
+//           error,
+//         );
+
+//         toast.error(
+//           "Unable to book your ride. Please try again.",
+//         );
+//       } finally {
+//         setIsBooking(false);
+//       }
+//     };
 
 //   return (
 //     <div className="relative h-[100dvh] overflow-hidden bg-[#F4F4F4]">
 //       <PassengerMap
 //         center={center}
-//         pickup={ride.pickup}
-//         destination={ride.destination}
+//         pickup={pickup}
+//         destination={
+//           destination
+//         }
 //         zoom={16}
 //       />
 
-//       <RideMapHeader title="Confirm pickup" />
+//       <RideMapHeader
+//         title="Confirm ride"
+//       />
 
 //       <RideBottomSheet>
-//         <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#302B34]">
-//           Confirm your pickup
-//         </h1>
+//         <div>
+//           <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#302B34]">
+//             Confirm your ride
+//           </h1>
 
-//         <p className="mt-1 text-[14px] text-[#99939D]">
-//           Make sure the pickup point is correct.
-//         </p>
+//           <p className="mt-1 text-[14px] leading-5 text-[#99939D]">
+//             Review your trip
+//             details before we
+//             start searching for
+//             a driver.
+//           </p>
+//         </div>
+
+//         {/* ROUTE */}
 
 //         <div className="mt-5 rounded-[16px] bg-[#F7F5F8] p-4">
 //           <div className="flex gap-3">
 //             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EDE4F6] text-[#7442AD]">
-//               <Navigation size={18} />
+//               <Navigation
+//                 size={18}
+//               />
 //             </span>
 
-//             <div className="min-w-0">
-//               <p className="text-[12px] font-medium text-[#9A949E]">
-//                 PICKUP
+//             <div className="flex-1 min-w-0">
+//               <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">
+//                 Pickup
 //               </p>
 
 //               <p className="mt-1 truncate text-[16px] font-semibold text-[#302B34]">
-//                 {ride.pickup.label}
+//                 {pickup.label ||
+//                   pickup.address ||
+//                   "Pickup"}
 //               </p>
 
-//               {ride.pickup.address && (
-//                 <p className="mt-1 truncate text-[13px] text-[#908A94]">
-//                   {ride.pickup.address}
-//                 </p>
-//               )}
+//               {pickup.address &&
+//                 pickup.address !==
+//                   pickup.label && (
+//                   <p className="mt-1 truncate text-[13px] text-[#908A94]">
+//                     {
+//                       pickup.address
+//                     }
+//                   </p>
+//                 )}
 //             </div>
 //           </div>
 
-//           <div className="my-4 ml-5 h-5 border-l-2 border-dotted border-[#C9C2CF]" />
+//           {/* STOPS */}
+
+//           {ride.stops.map(
+//             (
+//               stop,
+//               index,
+//             ) => (
+//               <div
+//                 key={
+//                   stop.id
+//                 }
+//               >
+//                 <div className="my-3 ml-5 h-4 border-l-2 border-dotted border-[#C9C2CF]" />
+
+//                 <div className="flex gap-3">
+//                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F0ECF3] text-[#7442AD]">
+//                     <MapPin
+//                       size={17}
+//                     />
+//                   </span>
+
+//                   <div className="flex-1 min-w-0">
+//                     <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">
+//                       Stop{" "}
+//                       {index +
+//                         1}
+//                     </p>
+
+//                     <p className="mt-1 truncate text-[15px] font-semibold text-[#302B34]">
+//                       {stop.label ||
+//                         stop.address ||
+//                         "Stop"}
+//                     </p>
+//                   </div>
+//                 </div>
+//               </div>
+//             ),
+//           )}
+
+//           <div className="my-3 ml-5 h-4 border-l-2 border-dotted border-[#C9C2CF]" />
 
 //           <div className="flex gap-3">
 //             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EFEDEF] text-[#302B34]">
-//               <MapPin size={18} />
+//               <MapPin
+//                 size={18}
+//               />
 //             </span>
 
-//             <div className="min-w-0">
-//               <p className="text-[12px] font-medium text-[#9A949E]">
-//                 DESTINATION
+//             <div className="flex-1 min-w-0">
+//               <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-[#9A949E]">
+//                 Destination
 //               </p>
 
 //               <p className="mt-1 truncate text-[16px] font-semibold text-[#302B34]">
-//                 {ride.destination.label}
+//                 {destination.label ||
+//                   destination.address ||
+//                   "Destination"}
 //               </p>
 //             </div>
 //           </div>
 //         </div>
 
-//         <div className="mt-4 flex items-center justify-between rounded-[15px] border border-[#EEEAF1] p-4">
-//           <div>
-//             <p className="text-[13px] text-[#99939D]">
-//               {option?.name}
-//             </p>
+//         {/* RIDE */}
 
-//             <p className="mt-1 text-[18px] font-semibold text-[#302B34]">
-//               ₦{(ride.estimatedFare ?? option?.price ?? 0).toLocaleString()}
-//             </p>
+//         <div className="mt-4 rounded-[15px] border border-[#EEEAF1] p-4">
+//           <div className="flex items-center justify-between gap-4">
+//             <div>
+//               <p className="text-[13px] text-[#99939D]">
+//                 Ride type
+//               </p>
+
+//               <p className="mt-1 text-[17px] font-semibold text-[#302B34]">
+//                 {option?.name ??
+//                   selectedRide}
+//               </p>
+//             </div>
+
+//             {typeof ride.estimatedFare ===
+//               "number" && (
+//               <div className="text-right">
+//                 <p className="text-[12px] text-[#99939D]">
+//                   Estimated fare
+//                 </p>
+
+//                 <p className="mt-1 text-[18px] font-semibold text-[#302B34]">
+//                   ₦
+//                   {formatMoney(
+//                     ride.estimatedFare,
+//                   )}
+//                 </p>
+//               </div>
+//             )}
 //           </div>
 
-//           <div className="flex items-center gap-2 text-[14px] text-[#625C66]">
-//             <Banknote size={18} />
-//             {ride.paymentMethod.label}
+//           <div className="my-4 h-px bg-[#EEEAF0]" />
+
+//           <div className="flex items-center gap-2">
+//             <Banknote
+//               size={18}
+//               className="text-[#7442AD]"
+//             />
+
+//             <div>
+//               <p className="text-[12px] text-[#99939D]">
+//                 Payment
+//               </p>
+
+//               <p className="mt-0.5 text-[14px] font-medium text-[#625C66]">
+//                 {
+//                   ride
+//                     .paymentMethod
+//                     .label
+//                 }
+//               </p>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* INFO */}
+
+//         <div className="mt-4 flex items-center gap-5 rounded-[14px] bg-[#FAF8FC] px-4 py-3">
+//           <div className="flex items-center gap-2 text-[#756F79]">
+//             <Route
+//               size={16}
+//             />
+
+//             <span className="text-[13px]">
+//               Fare calculated
+//               after confirmation
+//             </span>
+//           </div>
+
+//           <div className="ml-auto flex items-center gap-1 text-[#756F79]">
+//             <Clock3
+//               size={15}
+//             />
+
+//             <span className="text-[13px]">
+//               Live estimate
+//             </span>
 //           </div>
 //         </div>
 
 //         <motion.button
 //           type="button"
-//           whileTap={{ scale: 0.98 }}
+//           disabled={
+//             isBooking
+//           }
+//           whileTap={
+//             isBooking
+//               ? undefined
+//               : {
+//                   scale: 0.98,
+//                 }
+//           }
 //           onClick={confirm}
-//           className="mt-5 flex h-[56px] w-full items-center justify-center rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_10px_30px_rgba(116,66,173,0.24)]"
+//           className="mt-5 flex h-[56px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_10px_30px_rgba(116,66,173,0.24)] disabled:cursor-not-allowed disabled:opacity-60"
 //         >
-//           Confirm Order
+//           {isBooking ? (
+//             <>
+//               <LoaderCircle
+//                 size={19}
+//                 className="animate-spin"
+//               />
+
+//               Creating ride...
+//             </>
+//           ) : (
+//             "Confirm ride"
+//           )}
 //         </motion.button>
 //       </RideBottomSheet>
 //     </div>
 //   );
 // }
+

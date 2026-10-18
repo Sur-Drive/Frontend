@@ -6,6 +6,7 @@ import {
 import {
   passengerRideApi,
   type BookRideRequest,
+  type EstimateRideRequest,
 } from "../../api/passenger/rides";
 
 export function useBookPassengerRide() {
@@ -44,5 +45,12 @@ export function usePassengerRideDetails(
     enabled: Boolean(rideId),
 
     refetchInterval: 5_000,
+  });
+}
+
+export function useEstimatePassengerRide() {
+  return useMutation({
+    mutationFn: (payload: EstimateRideRequest) =>
+      passengerRideApi.estimateRide(payload),
   });
 }

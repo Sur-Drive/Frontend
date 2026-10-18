@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { GoogleLogin } from "@react-oauth/google";
+import FitGoogleLogin from "./FitGoogleLogin";
 import { useLogin } from "../hooks/useAuth";
 import {
   setStoredRole,
@@ -418,47 +418,27 @@ export default function SignInModal({
             </motion.div>
 
             {/* ─── Google Button ───
-                  Same trick as CreateAccountModal: an invisible, real
-                  GoogleLogin iframe sits on top (z-10) and captures the
-                  click, so we get a real popup instead of the fragile
-                  One Tap prompt() flow. Your styled button stays visible
-                  underneath (z-0).                                      */}
-            <div className="relative mt-4">
-              {!isGoogleLoading && onGoogleCredential && (
-                <div className="absolute inset-0 z-10 opacity-0">
-                  <GoogleLogin
-                    onSuccess={onGoogleCredential}
+                  Same approach as the fleet sign-in: Google's real, visible
+                  button. (The old hidden-overlay trick could silently stop
+                  receiving clicks.) While the sign-in request is running we
+                  show a simple "Signing in…" state instead.            */}
+            <div className="flex items-center justify-center mt-4 min-h-[44px]">
+              {isGoogleLoading ? (
+                <div className="flex items-center justify-center w-full h-12 gap-3 text-sm font-medium text-gray-900 border border-gray-200 opacity-70 sm:h-14 rounded-xl bg-gray-50 sm:text-base">
+                  Signing in…
+                </div>
+              ) : (
+                <div className="w-full">
+                  <FitGoogleLogin
+                    onSuccess={onGoogleCredential ?? (() => {})}
                     onError={onGoogleError}
-                    type="standard"
                     theme="outline"
                     size="large"
                     text="continue_with"
-                    shape="rectangular"
-                    width="100%"
+                    shape="pill"
                   />
                 </div>
               )}
-
-              <motion.button
-                type="button"
-                disabled={isGoogleLoading}
-                className={`relative z-0 flex items-center justify-center w-full h-12 gap-3 font-medium text-gray-900 border border-gray-200 sm:h-14 rounded-xl bg-gray-50 ${
-                  isGoogleLoading ? "opacity-70 cursor-not-allowed" : ""
-                }`}
-                whileTap={!isGoogleLoading ? { scale: 0.97 } : {}}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: 0.4,
-                  duration: 0.35,
-                  ease: [0.25, 0.46, 0.45, 0.94],
-                }}
-              >
-                <GoogleIcon />
-                <span className="text-sm sm:text-base">
-                  {isGoogleLoading ? "Signing in…" : "Continue with Google"}
-                </span>
-              </motion.button>
             </div>
 
             <AnimatePresence>
@@ -597,25 +577,3 @@ function NigeriaFlagIcon() {
   );
 }
 
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5">
-      <path
-        fill="#4285F4"
-        d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3.01h3.87c2.27-2.09 3.58-5.17 3.58-8.66z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.87-3.01c-1.07.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.11C3.25 21.3 7.31 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.27 14.28A7.14 7.14 0 0 1 4.9 12c0-.79.14-1.56.37-2.28V6.61H1.27A11.98 11.98 0 0 0 0 12c0 1.93.46 3.76 1.27 5.39z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.61l4 3.11C6.22 6.86 8.87 4.75 12 4.75z"
-      />
-    </svg>
-  );
-}

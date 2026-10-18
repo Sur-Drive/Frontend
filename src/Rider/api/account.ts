@@ -18,6 +18,7 @@ export async function driverFetch(
 
   // TEMP DEBUG LOGGING — shows whether the stored token is the right one.
   console.log(`[account] token for ${method} ${path}:`, describeToken(token));
+  if (body !== undefined && !isForm) console.log(`[account] payload for ${method} ${path}: ${JSON.stringify(body)}`);
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,

@@ -28,6 +28,7 @@ export type BackendRidePoint =
 export type BackendRideStatus =
   | "requested"
   | "searching"
+  | "no_drivers_found"
   | "driver_assigned"
   | "driver_en_route"
   | "driver_arrived"
@@ -368,6 +369,73 @@ export function stopToBackendPoint(
   );
 }
 
+
+export type EstimateRidePoint =
+  | { lat: number; lng: number }
+  | { address: string }
+  | { savedPlaceId: string };
+
+export interface EstimateRideRequest {
+  pickup: EstimateRidePoint;
+  dropoff: EstimateRidePoint;
+  stops?: EstimateRidePoint[];
+  rideType: "economy" | "comfort" | "suv";
+}
+
+// Provisional until the backend response is confirmed.
+
+export interface EstimateRideResponse {
+  pickup: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+
+  dropoff: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+
+  stops: Array<{
+    lat?: number;
+    lng?: number;
+    address?: string;
+  }>;
+
+  rideType: string;
+
+  route: {
+    distanceKm: number;
+    durationMin: number;
+    polyline: string;
+    // Backend supplies [longitude, latitude] pairs.
+    path: [number, number][];
+  };
+
+  fare: {
+    baseFare: number;
+    distanceCharge: number;
+    timeCharge: number;
+    bookingFee: number;
+    surgeMultiplier: number;
+    surgeCharge: number;
+    waitingFee: number;
+    approvedFees: number;
+    discount: number;
+    promoDiscount: number;
+    subtotal: number;
+    total: number;
+    pricingVersion: string;
+    waitingMinutes: number;
+    waitingGraceMin: number;
+    commissionPercent: number;
+  };
+
+  estimatedFare: number;
+}
+
+
 /* =========================================================
    PASSENGER RIDE API
 ========================================================= */
@@ -525,5 +593,15 @@ export const passengerRideApi = {
       },
     );
   },
+
+  estimateRide(payload: EstimateRideRequest) {
+  return passengerApi.post<EstimateRideResponse>(
+    "/rides/estimate",
+    payload,
+    {
+      authMode: "access",
+    },
+  );
+},
 };
 

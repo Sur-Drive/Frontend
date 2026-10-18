@@ -23,14 +23,14 @@ export function TopBar({
   showBack?: ReactNode;
 }) {
   return (
-    <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+16px)]">
       {showBack ? (
-        showBack
+        <div className="pointer-events-auto">{showBack}</div>
       ) : (
         <button
           type="button"
           onClick={onSearch}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md"
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md"
         >
           <Search size={18} className="text-[#1F2937]" />
         </button>
@@ -39,12 +39,14 @@ export function TopBar({
         <button
           type="button"
           onClick={onMenu}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md"
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-md"
         >
           <Menu size={18} className="text-[#1F2937]" />
         </button>
       ) : (
-        <SosButton />
+        <div className="pointer-events-auto">
+          <SosButton />
+        </div>
       )}
     </div>
   );

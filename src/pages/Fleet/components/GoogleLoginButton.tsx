@@ -1,7 +1,7 @@
 // src/components/GoogleLoginButton.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
+import FitGoogleLogin from "../../../components/FitGoogleLogin";
 import { getKYCStatus, type KYCStatusResponse } from "../../../api/auth";
 
 interface GoogleLoginButtonProps {
@@ -147,13 +147,12 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
                 </button>
             ) : (
                 <div className="w-full">
-                    <GoogleLogin
+                    <FitGoogleLogin
                         onSuccess={handleSuccess}
                         onError={handleError}
                         theme="outline"
                         shape="pill"
                         size="large"
-                        width="100%"
                         text="continue_with"
                         logo_alignment="center"
                     />
