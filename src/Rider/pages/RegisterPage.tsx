@@ -2,26 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronLeft, Mail, MapPin } from "lucide-react";
 import { useSendRideDriverOtp } from "../hooks/useAuth";
+import { useCities, useStates } from "../hooks/useLocations";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const CITIES = [
-  "Lagos",
-  "Abuja",
-  "Port Harcourt",
-  "Ibadan",
-  "Kano",
-  "Benin City",
-  "Enugu",
-  "Kaduna",
-  "Warri",
-  "Abeokuta",
-  "Owerri",
-  "Uyo",
-  "Calabar",
-  "Jos",
-  "Ilorin",
-];
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -29,24 +12,31 @@ export default function RegisterPage() {
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [stateId, setStateId] = useState("");
+  const [stateName, setStateName] = useState("");
+  const [stateOpen, setStateOpen] = useState(false);
   const [city, setCity] = useState("");
   const [cityOpen, setCityOpen] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
   const cityRef = useRef<HTMLDivElement | null>(null);
+  const stateRef = useRef<HTMLDivElement | null>(null);
+
+  const statesQ = useStates();
+  const citiesQ = useCities(stateId);
 
   const digits = phone.replace(/\D/g, "");
   const emailValid = EMAIL_RE.test(email.trim());
   useEffect(() => {
-    if (!cityOpen) return;
+    if (!cityOpen && !stateOpen) return;
     const onClickOutside = (e: MouseEvent) => {
-      if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
-        setCityOpen(false);
-      }
+      const t = e.target as Node;
+      if (cityRef.current && !cityRef.current.contains(t)) setCityOpen(false);
+      if (stateRef.current && !stateRef.current.contains(t)) setStateOpen(false);
     };
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [cityOpen]);
+  }, [cityOpen, stateOpen]);
 
   const submit = () => {
     if (isSubmitting) return;
@@ -57,6 +47,10 @@ export default function RegisterPage() {
     }
     if (digits.length < 10) {
       setError("Enter a valid phone number.");
+      return;
+    }
+    if (!stateId) {
+      setError("Select your state.");
       return;
     }
     if (!city) {
@@ -83,6 +77,7 @@ export default function RegisterPage() {
               identifier: email.trim(),
               phone: `+234${digits.slice(-10)}`,
               city,
+              state: stateName,
               role: "driver",
               userId: data.userId,
             },
@@ -164,12 +159,71 @@ export default function RegisterPage() {
           />
         </div>
 
+        {/* State */}
+        <div className="relative" ref={stateRef}>
+          <button
+            type="button"
+            disabled={false}
+            onClick={() => setStateOpen((o) => !o)}
+            className={`${field} w-full justify-between disabled:opacity-60`}
+          >
+            <span className="flex items-center gap-[clamp(6px,1.8dvh,10px)]">
+              <span className={iconBubble}>
+                <MapPin className="h-[55%] w-[55%]" />
+              </span>
+              <span
+                className={`text-[clamp(12.5px,2.8dvh,15px)] ${
+                  stateName ? "text-gray-800" : "text-gray-400"
+                }`}
+              >
+                {stateName || "Select state"}
+              </span>
+            </span>
+            <ChevronDown
+              className={`h-[clamp(14px,3.2dvh,18px)] w-[clamp(14px,3.2dvh,18px)] text-gray-500 transition-transform ${
+                stateOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {stateOpen && (
+            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 max-h-64 overflow-y-auto rounded-2xl bg-white p-2 shadow-xl">
+              {statesQ.isLoading ? (
+                <p className="px-4 py-3 text-sm text-gray-400">Loading...</p>
+              ) : (statesQ.isError ? "Failed to load states." : "") ? (
+                <p className="px-4 py-3 text-sm text-red-500">{(statesQ.isError ? "Failed to load states." : "")}</p>
+              ) : (statesQ.data ?? []).length === 0 ? (
+                <p className="px-4 py-3 text-sm text-gray-400">No states found.</p>
+              ) : (
+                (statesQ.data ?? []).map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => {
+                      setStateId(o.id); setStateName(o.name); setCity(""); setStateOpen(false);
+                      setError("");
+                    }}
+                    className={`block w-full rounded-xl px-[clamp(10px,2.6dvh,16px)] py-[clamp(8px,2dvh,12px)] text-left text-[clamp(12.5px,2.8dvh,15px)] transition ${
+                      stateId === o.id
+                        ? "bg-[#ece4f5] font-semibold text-[#6E43A3]"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {o.name}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         {/* City */}
         <div className="relative" ref={cityRef}>
           <button
             type="button"
+            disabled={!stateId}
             onClick={() => setCityOpen((o) => !o)}
-            className={`${field} w-full justify-between`}
+            className={`${field} w-full justify-between disabled:opacity-60`}
           >
             <span className="flex items-center gap-[clamp(6px,1.8dvh,10px)]">
               <span className={iconBubble}>
@@ -180,7 +234,7 @@ export default function RegisterPage() {
                   city ? "text-gray-800" : "text-gray-400"
                 }`}
               >
-                {city || "Select city"}
+                {city || (stateId ? "Select city" : "Select state first")}
               </span>
             </span>
             <ChevronDown
@@ -192,24 +246,31 @@ export default function RegisterPage() {
 
           {cityOpen && (
             <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 max-h-64 overflow-y-auto rounded-2xl bg-white p-2 shadow-xl">
-              {CITIES.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setCity(c);
-                    setCityOpen(false);
-                    setError("");
-                  }}
-                  className={`block w-full rounded-xl px-[clamp(10px,2.6dvh,16px)] py-[clamp(8px,2dvh,12px)] text-left text-[clamp(12.5px,2.8dvh,15px)] transition ${
-                    city === c
-                      ? "bg-[#ece4f5] font-semibold text-[#6E43A3]"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
+              {citiesQ.isLoading ? (
+                <p className="px-4 py-3 text-sm text-gray-400">Loading...</p>
+              ) : (citiesQ.isError ? "Failed to load cities." : "") ? (
+                <p className="px-4 py-3 text-sm text-red-500">{(citiesQ.isError ? "Failed to load cities." : "")}</p>
+              ) : (citiesQ.data ?? []).length === 0 ? (
+                <p className="px-4 py-3 text-sm text-gray-400">No cities found.</p>
+              ) : (
+                (citiesQ.data ?? []).map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => {
+                      setCity(o.name); setCityOpen(false);
+                      setError("");
+                    }}
+                    className={`block w-full rounded-xl px-[clamp(10px,2.6dvh,16px)] py-[clamp(8px,2dvh,12px)] text-left text-[clamp(12.5px,2.8dvh,15px)] transition ${
+                      city === o.name
+                        ? "bg-[#ece4f5] font-semibold text-[#6E43A3]"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {o.name}
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>

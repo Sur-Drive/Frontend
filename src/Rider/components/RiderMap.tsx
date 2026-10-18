@@ -4,6 +4,8 @@ import type { MapMarkerSpec } from "../../components/map/GoogleMapView";
 import {
   userLocationPinHtml,
   USER_LOCATION_ANCHOR,
+  destinationPinHtml,
+  DESTINATION_PIN_ANCHOR,
 } from "../../components/map/mapMarkerIcons";
 import { useCurrentLocation } from "../../hooks/useCurrentLocation";
 import { useDriverLiveLocation } from "../hooks/useDriverLiveLocation";
@@ -16,36 +18,46 @@ import { useDriverLiveLocation } from "../hooks/useDriverLiveLocation";
 export default function RiderMap({
   children,
   zoom = 15,
+  focus,
 }: {
   children?: ReactNode;
   zoom?: number;
+  /** A searched place: the map centers on it and drops a pin there. */
+  focus?: { lat: number; lng: number } | null;
 }) {
   const { coords: firstFix, error } = useCurrentLocation();
   const live = useDriverLiveLocation();
   const coords = live ?? firstFix;
 
-  const markers = useMemo<MapMarkerSpec[]>(
-    () =>
-      coords
-        ? [
-            {
-              id: "__driver_location__",
-              lat: coords.latitude,
-              lng: coords.longitude,
-              html: userLocationPinHtml,
-              anchor: USER_LOCATION_ANCHOR,
-            },
-          ]
-        : [],
-    [coords],
-  );
+  const markers = useMemo<MapMarkerSpec[]>(() => {
+    const list: MapMarkerSpec[] = [];
+    if (coords) {
+      list.push({
+        id: "__driver_location__",
+        lat: coords.latitude,
+        lng: coords.longitude,
+        html: userLocationPinHtml,
+        anchor: USER_LOCATION_ANCHOR,
+      });
+    }
+    if (focus) {
+      list.push({
+        id: "__searched_place__",
+        lat: focus.lat,
+        lng: focus.lng,
+        html: destinationPinHtml(),
+        anchor: DESTINATION_PIN_ANCHOR,
+      });
+    }
+    return list;
+  }, [coords, focus]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-gray-100">
+    <div className="relative w-full h-full overflow-hidden bg-gray-100">
       {coords ? (
         <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
           <LazyGoogleMap
-            center={{ lat: coords.latitude, lng: coords.longitude }}
+            center={focus ?? { lat: coords.latitude, lng: coords.longitude }}
             zoom={zoom}
             markers={markers}
           />

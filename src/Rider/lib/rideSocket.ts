@@ -1,9 +1,45 @@
+// import { io, type Socket } from "socket.io-client";
+
+// const SOCKET_URL = "https://backend-production-01de.up.railway.app/rides";
+
+// let socket: Socket | null = null;
+// let users = 0;
+
+// /**
+//  * One shared Socket.IO connection to the /rides namespace.
+//  * Auth is the driver's login token ("token" in localStorage).
+//  * Call releaseRideSocket() when a screen is done with it.
+//  */
+// export function acquireRideSocket(): Socket {
+//   users += 1;
+//   if (!socket) {
+//     socket = io(SOCKET_URL, {
+//       auth: (cb) => cb({ token: localStorage.getItem("token") }), // fresh token on every reconnect
+//       transports: ["websocket"],
+//       reconnection: true,
+//     });
+//     socket.on("connected", (p) => console.log("[socket] authenticated", p));
+//     socket.on("connect_error", (e) => console.warn("[socket] connect_error", e.message));
+//     socket.on("disconnect", (r) => console.warn("[socket] disconnected:", r));
+//   }
+//   return socket;
+// }
+
+// export function releaseRideSocket() {
+//   users = Math.max(0, users - 1);
+//   if (users === 0 && socket) {
+//     socket.disconnect();
+//     socket = null;
+//   }
+// }
+
 import { io, type Socket } from "socket.io-client";
 
 const SOCKET_URL = "https://backend-production-01de.up.railway.app/rides";
 
 let socket: Socket | null = null;
 let users = 0;
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * One shared Socket.IO connection to the /rides namespace.
@@ -12,14 +48,27 @@ let users = 0;
  */
 export function acquireRideSocket(): Socket {
   users += 1;
+  // A screen re-acquired us (StrictMode remount, page change): cancel the pending close.
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
   if (!socket) {
     socket = io(SOCKET_URL, {
       auth: (cb) => cb({ token: localStorage.getItem("token") }), // fresh token on every reconnect
       transports: ["websocket"],
       reconnection: true,
     });
+    socket.on("connect", () =>
+      console.log("[socket] connected, id:", socket?.id),
+    );
+    socket.onAny((event, ...args) =>
+      console.log("[socket] <-", event, ...args),
+    ); // debug: every event from server
     socket.on("connected", (p) => console.log("[socket] authenticated", p));
-    socket.on("connect_error", (e) => console.warn("[socket] connect_error", e.message));
+    socket.on("connect_error", (e) =>
+      console.warn("[socket] connect_error", e.message),
+    );
     socket.on("disconnect", (r) => console.warn("[socket] disconnected:", r));
   }
   return socket;
@@ -27,8 +76,16 @@ export function acquireRideSocket(): Socket {
 
 export function releaseRideSocket() {
   users = Math.max(0, users - 1);
-  if (users === 0 && socket) {
-    socket.disconnect();
-    socket = null;
-  }
+  if (users > 0 || !socket) return;
+  // Don't close immediately: React StrictMode (dev) and page transitions unmount and
+  // remount straight away, which would kill the socket mid-handshake
+  // ("WebSocket is closed before the connection is established").
+  if (closeTimer) clearTimeout(closeTimer);
+  closeTimer = setTimeout(() => {
+    closeTimer = null;
+    if (users === 0 && socket) {
+      socket.disconnect();
+      socket = null;
+    }
+  }, 1500);
 }
