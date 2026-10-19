@@ -1,128 +1,199 @@
-// import React from "react";
-// import { ChevronLeft } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { AlertCircle, ChevronLeft, LoaderCircle, RefreshCw } from "lucide-react";
 
-// const TermsPrivacyPage: React.FC = () => {
-//   return (
-//     <div className="min-h-screen bg-white">
-//       <div className="max-w-md px-8 mx-auto">
-//         {/* Back button */}
-//         <div className="pt-10 pb-6">
-//           <button
-//             type="button"
-//             aria-label="Go back"
-//             className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2b0f3a] text-white"
-//           >
-//             <ChevronLeft size={22} strokeWidth={2.5} />
-//           </button>
-//         </div>
+import { getLegalDocument, type LegalDocKind } from "../api/legal";
 
-//         {/* Page title */}
-//         <h1 className="text-[2.1rem] font-extrabold leading-tight text-[#161221]">
-//           Terms &amp; privacy
-//         </h1>
+const TABS: { kind: LegalDocKind; label: string }[] = [
+  { kind: "privacy", label: "Privacy Policy" },
+  { kind: "terms", label: "Terms & Conditions" },
+];
 
-//         {/* Introduction */}
-//         <h2 className="mt-9 text-[2.4rem] font-extrabold leading-tight text-[#161221]">
-//           Introduction
-//         </h2>
+/** Strip anything executable from backend HTML and open external links safely. */
+function prepareHtml(html: string): string {
+  if (!html.trim()) return "";
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    doc
+      .querySelectorAll("script, style, iframe, object, embed, link, meta")
+      .forEach((el) => el.remove());
 
-//         <p className="mt-5 text-[1.35rem] leading-[1.85rem] text-[#3d3750]">
-//           Lorem Ipsum is simply dummy text of the printing and typesetting
-//           industry. Lorem Ipsum has been the industry&rsquo;s standard dummy
-//           text ever since 1966, when designers at Letraset and James Mosley, the
-//           librarian at St Bride Printing Library in London, took a 1914 Cicero
-//           translation and scrambled it to make dummy text for Letraset&rsquo;s
-//           Body Type sheets. It has survived not only many decades, but also the
-//           leap into electronic typesetting, remaining essentially unchanged. It
-//           was popularised thanks to these sheets and more recently with desktop
-//           publishing software including versions of Lorem Ipsum.
-//         </p>
+    doc.body.querySelectorAll("*").forEach((el) => {
+      Array.from(el.attributes).forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        const value = attr.value.trim().toLowerCase();
+        if (
+          name.startsWith("on") ||
+          ((name === "href" || name === "src") && value.startsWith("javascript:"))
+        ) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    });
 
-//         {/* Subheading */}
-//         <h3 className="mt-10 text-[1.6rem] font-bold text-[#161221]">
-//           Where does it come from?
-//         </h3>
+    doc.body.querySelectorAll("a").forEach((link) => {
+      if (link.getAttribute("href")?.startsWith("http")) {
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+      }
+    });
 
-//         <p className="mt-5 pb-12 text-[1.35rem] leading-[1.85rem] text-[#3d3750]">
-//           Contrary to popular belief, Lorem Ipsum is not simply random text. It
-//           has roots in a piece of classical Latin literature from 45 BC, making
-//           it over 2000 years old. Richard McClintock, a Latin professor at
-//           Hampden&ndash;Sydney College in Virginia, looked up one of the more
-//           obscure Latin words, consectetur, from a Lorem Ipsum passage, and
-//           going through the cites of the word in classical literature,
-//           discovered the undoubtable source. Lorem Ipsum comes from sections
-//           1.10.32 and
-//         </p>
-//       </div>
-//     </div>
-//   );
-// };
+    return doc.body.innerHTML;
+  } catch {
+    return "";
+  }
+}
 
-// export default TermsPrivacyPage;
+const PrivacyPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-import React from "react";
-import { ChevronLeft } from "lucide-react";
+  const active: LegalDocKind =
+    searchParams.get("tab") === "terms" ? "terms" : "privacy";
 
-const TermsPrivacyPage: React.FC = () => {
+  const [html, setHtml] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(
+    async (kind: LegalDocKind, signal?: AbortSignal) => {
+      try {
+        setLoading(true);
+        setError(null);
+        setHtml(await getLegalDocument(kind, signal));
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+        setHtml("");
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : "We couldn't load this document. Please try again.",
+        );
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void load(active, controller.signal);
+    return () => controller.abort();
+  }, [active, load]);
+
+  const content = useMemo(() => prepareHtml(html), [html]);
+
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/");
+  };
+
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-md px-5 mx-auto sm:max-w-lg sm:px-8 md:max-w-xl lg:max-w-2xl">
-        {/* Back button */}
-        <div className="pt-6 pb-4 sm:pt-10 sm:pb-6">
+    <div className="min-h-screen bg-[#F8F7FA]">
+      {/* Sticky header */}
+      <header className="sticky top-0 z-20 border-b border-[#EEEAF1] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-3 sm:px-6 sm:py-4">
           <button
             type="button"
             aria-label="Go back"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2b0f3a] text-white sm:h-12 sm:w-12"
+            onClick={goBack}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2b0f3a] text-white transition active:scale-95 sm:h-11 sm:w-11"
           >
-            <ChevronLeft size={18} strokeWidth={2.5} className="sm:hidden" />
-            <ChevronLeft
-              size={22}
-              strokeWidth={2.5}
-              className="hidden sm:block"
-            />
+            <ChevronLeft size={20} strokeWidth={2.5} />
           </button>
+          <h1 className="truncate text-lg font-extrabold leading-tight text-[#161221] sm:text-2xl">
+            Terms &amp; privacy
+          </h1>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-3xl px-4 pb-12 pt-5 sm:px-6 sm:pt-8">
+        {/* Tabs */}
+        <div
+          role="tablist"
+          aria-label="Legal documents"
+          className="mb-5 grid grid-cols-2 gap-1 rounded-full bg-[#ECE8EF] p-1 sm:mb-6 sm:inline-grid sm:min-w-[420px]"
+        >
+          {TABS.map(({ kind, label }) => {
+            const selected = kind === active;
+            return (
+              <button
+                key={kind}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() =>
+                  setSearchParams(kind === "privacy" ? {} : { tab: kind }, {
+                    replace: true,
+                  })
+                }
+                className={`rounded-full px-3 py-2 text-xs font-semibold transition sm:text-sm ${
+                  selected
+                    ? "bg-white text-[#7442AD] shadow-sm"
+                    : "text-[#6B6470] hover:text-[#302B34]"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Page title */}
-        <h1 className="text-xl font-extrabold leading-tight text-[#161221] sm:text-2xl md:text-3xl">
-          Terms &amp; privacy
-        </h1>
+        {/* Loading */}
+        {loading && (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F1EAF8] text-[#7442AD]">
+              <LoaderCircle size={25} className="animate-spin" />
+            </div>
+            <p className="mt-4 text-sm font-medium text-[#625B66]">
+              Loading {active === "privacy" ? "privacy policy" : "terms"}…
+            </p>
+          </div>
+        )}
 
-        {/* Introduction */}
-        <h2 className="mt-6 text-2xl font-extrabold leading-tight text-[#161221] sm:mt-9 sm:text-3xl md:text-4xl">
-          Introduction
-        </h2>
+        {/* Error */}
+        {!loading && error && (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center px-2 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF1F1] text-[#C62828]">
+              <AlertCircle size={25} />
+            </div>
+            <h2 className="mt-4 text-base font-semibold text-[#302B34] sm:text-lg">
+              Unable to load document
+            </h2>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-[#96909A]">
+              {error}
+            </p>
+            <button
+              type="button"
+              onClick={() => void load(active)}
+              className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#7442AD] px-5 text-sm font-semibold text-white transition hover:bg-[#65379A] active:scale-[0.98]"
+            >
+              <RefreshCw size={16} />
+              Try again
+            </button>
+          </div>
+        )}
 
-        <p className="mt-3 text-sm leading-relaxed text-[#3d3750] sm:mt-5 sm:text-base md:text-lg">
-          Lorem Ipsum is simply dummy text of the printing and typesetting
-          industry. Lorem Ipsum has been the industry&rsquo;s standard dummy
-          text ever since 1966, when designers at Letraset and James Mosley, the
-          librarian at St Bride Printing Library in London, took a 1914 Cicero
-          translation and scrambled it to make dummy text for Letraset&rsquo;s
-          Body Type sheets. It has survived not only many decades, but also the
-          leap into electronic typesetting, remaining essentially unchanged. It
-          was popularised thanks to these sheets and more recently with desktop
-          publishing software including versions of Lorem Ipsum.
-        </p>
+        {/* Empty */}
+        {!loading && !error && !content && (
+          <div className="flex min-h-[50vh] items-center justify-center px-4 text-center">
+            <p className="max-w-xs text-sm leading-6 text-[#96909A]">
+              This document is currently unavailable.
+            </p>
+          </div>
+        )}
 
-        {/* Subheading */}
-        <h3 className="mt-6 text-base font-bold text-[#161221] sm:mt-10 sm:text-xl md:text-2xl">
-          Where does it come from?
-        </h3>
-
-        <p className="mt-3 pb-8 text-sm leading-relaxed text-[#3d3750] sm:mt-5 sm:pb-12 sm:text-base md:text-lg">
-          Contrary to popular belief, Lorem Ipsum is not simply random text. It
-          has roots in a piece of classical Latin literature from 45 BC, making
-          it over 2000 years old. Richard McClintock, a Latin professor at
-          Hampden&ndash;Sydney College in Virginia, looked up one of the more
-          obscure Latin words, consectetur, from a Lorem Ipsum passage, and
-          going through the cites of the word in classical literature,
-          discovered the undoubtable source. Lorem Ipsum comes from sections
-          1.10.32 and
-        </p>
-      </div>
+        {/* Content */}
+        {!loading && !error && content && (
+          <article
+            className="legal-document overflow-hidden rounded-3xl border border-[#ECE8EF] bg-white px-5 py-6 shadow-[0_12px_45px_rgba(44,30,58,0.055)] sm:px-8 sm:py-8 md:px-10"
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        )}
+      </main>
     </div>
   );
 };
 
-export default TermsPrivacyPage;
+export default PrivacyPage;
