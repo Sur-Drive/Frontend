@@ -154,13 +154,13 @@ export const Footer: React.FC = () => {
                     <p>&copy; Powered by Honeytreat Global Services Ltd</p>
                     <div className="flex space-x-6 mt-4 md:mt-0">
                         <a
-                            href="#"
+                            href="/privacy"
                             className="hover:text-white transition-colors hover:underline"
                         >
                             Privacy Policy
                         </a>
                         <a
-                            href="#"
+                            href="/privacy?tab=terms"
                             className="hover:text-white transition-colors hover:underline"
                         >
                             Terms of Service
