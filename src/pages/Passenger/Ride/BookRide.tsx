@@ -825,44 +825,6 @@ useEffect(() => {
                   "
                 />
 
-                {/* <input
-                  value={
-                    pickupQuery
-                  }
-                  onFocus={() => {
-                    setActiveField(
-                      "pickup",
-                    );
-
-                    setSuggestions(
-                      [],
-                    );
-                  }}
-                  onChange={(
-                    event,
-                  ) => {
-                    setPickupQuery(
-                      event.target
-                        .value,
-                    );
-
-                    setPickup(null);
-
-                    setActiveField(
-                      "pickup",
-                    );
-                  }}
-                  placeholder="Pickup location"
-                  className="
-                    min-w-0
-                    flex-1
-                    bg-transparent
-                    text-[16px]
-                    text-[#302B34]
-                    outline-none
-                    placeholder:text-[#AAA5AE]
-                  "
-                /> */}
                 <input
   value={pickupQuery}
   onFocus={() => {

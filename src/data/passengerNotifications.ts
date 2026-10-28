@@ -24,7 +24,7 @@ export const passengerNotifications: PassengerNotification[] = [
     group: "today",
 
     route:
-      "/passenger/ride/driver-arriving",
+      "/passenger/ride/driver-en-route",
   },
 
   {

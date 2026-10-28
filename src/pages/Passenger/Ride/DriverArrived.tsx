@@ -1,15 +1,23 @@
+"use client";
+
 import {
   CheckCircle2,
-  LoaderCircle,
+  ChevronRight,
+  MapPin,
+  ShieldCheck,
+  Wifi,
+  WifiOff,
   RefreshCw,
+  UserRound,
+  CarFront,
 } from "lucide-react";
 
-import {
-  motion,
-} from "framer-motion";
+import { motion } from "framer-motion";
 
 import {
+  useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -18,22 +26,18 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import {
-  toast,
-} from "sonner";
+import { toast } from "sonner";
 
 import PassengerMap from "../../../components/passenger/ride/PassengerMap";
 import RideBottomSheet from "../../../components/passenger/ride/RideBottomSheet";
 import RideMapHeader from "../../../components/passenger/ride/RideMapHeader";
+import DriverCard from "../../../components/passenger/ride/DriverCard";
 
-import {
-  usePassengerRide,
-} from "../../../context/PassengerRideContext";
+import { usePassengerRide } from "../../../context/PassengerRideContext";
 
 import {
   passengerRideApi,
   type PassengerRideResponse,
-  type PickupDetailsResponse,
 } from "../../../api/passenger/rides";
 
 import {
@@ -43,31 +47,33 @@ import {
   storeActiveRide,
 } from "../../../utils/passengerActiveRide";
 
-function extractPickupCode(
-  response: PickupDetailsResponse | null,
-) {
-  if (!response) {
+import type { RideDriver } from "../../../types/passengerRide";
+
+import { useRideSocket } from "../../../hooks/passenger/useRideSocket";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const FALLBACK_POLL_INTERVAL = 5000;
+
+const PASSENGER_TOKEN_KEY = "passenger_access_token";
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getPassengerToken(): string | null {
+  if (typeof window === "undefined") {
     return null;
   }
 
-  const possibleValues = [
-    response.code,
-    response.pickupCode,
-    response.verificationCode,
-    response.pin,
-  ];
-
-  const value =
-    possibleValues.find(
-      (item) =>
-        typeof item === "string" ||
-        typeof item === "number",
-    );
-
-  return value == null
-    ? null
-    : String(value);
+  return localStorage.getItem(PASSENGER_TOKEN_KEY);
 }
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function DriverArrived() {
   const navigate = useNavigate();
@@ -75,114 +81,153 @@ export default function DriverArrived() {
   const {
     ride,
     setRideStatus,
-    setVerificationCode,
   } = usePassengerRide();
 
-  const [
-    backendRide,
-    setBackendRide,
-  ] =
+  /* =======================================================
+     STATE
+  ======================================================= */
+
+  const [backendRide, setBackendRide] =
     useState<PassengerRideResponse | null>(
       () => getStoredActiveRide(),
     );
 
-  const [
-    pickupDetails,
-    setPickupDetails,
-  ] =
-    useState<PickupDetailsResponse | null>(
-      null,
-    );
+  const [token, setToken] = useState<string | null>(
+    getPassengerToken,
+  );
 
-  const [
-    loadingCode,
-    setLoadingCode,
-  ] = useState(true);
+  const [refreshError, setRefreshError] = useState(false);
 
-  const [
-    regenerating,
-    setRegenerating,
-  ] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [initialLoading, setInitialLoading] = useState(
+    () => !getStoredActiveRide(),
+  );
+
+  /* =======================================================
+     REFS
+  ======================================================= */
+
+  const navigatingRef = useRef(false);
+
+  const pollingRef = useRef(false);
+
+  const mountedRef = useRef(true);
+
+  /* =======================================================
+     RIDE ID
+  ======================================================= */
 
   const rideId =
     backendRide?.id ??
     getStoredActiveRideId();
 
-  const pickupCode =
-    extractPickupCode(
-      pickupDetails,
-    );
+  /* =======================================================
+     TOKEN SYNC
+  ======================================================= */
 
   useEffect(() => {
-    if (!rideId) {
-      return;
-    }
+    mountedRef.current = true;
 
-    let mounted = true;
-    let running = false;
+    const syncToken = () => {
+      setToken(getPassengerToken());
+    };
 
-    const refresh = async () => {
-      if (running) {
+    syncToken();
+
+    window.addEventListener("storage", syncToken);
+
+    return () => {
+      mountedRef.current = false;
+
+      window.removeEventListener("storage", syncToken);
+    };
+  }, []);
+
+  /* =======================================================
+     HANDLE RIDE STATUS
+
+     Backend is the source of truth.
+  ======================================================= */
+
+  const handleRideStatus = useCallback(
+    (response: PassengerRideResponse) => {
+      if (
+        navigatingRef.current ||
+        !response?.id
+      ) {
         return;
       }
 
-      running = true;
+      setBackendRide(response);
 
-      try {
-        const response =
-          await passengerRideApi.getRide(
-            rideId,
-          );
+      setInitialLoading(false);
 
-        if (!mounted) {
-          return;
-        }
+      setRefreshError(false);
 
-        setBackendRide(response);
+      if (response.status !== "cancelled") {
         storeActiveRide(response);
+      }
 
-        if (
-          response.status ===
-            "ride_started" ||
-          response.status ===
-            "ride_in_progress"
-        ) {
-          setRideStatus(
-            "in-progress",
-          );
-
-          navigate(
-            "/passenger/ride/trip",
-            {
-              replace: true,
-            },
-          );
-
+      switch (response.status) {
+        case "driver_arrived":
+          setRideStatus("driver-arrived");
           return;
-        }
 
-        if (
-          response.status ===
-            "ride_completed" ||
-          response.status ===
-            "payment_pending" ||
-          response.status === "paid" ||
-          response.status === "closed"
-        ) {
-          navigate(
-            "/passenger/ride/complete",
-            {
-              replace: true,
-            },
-          );
+        case "requested":
+        case "searching":
+          navigatingRef.current = true;
 
+          setRideStatus("searching");
+
+          navigate("/passenger/ride/searching", {
+            replace: true,
+          });
           return;
-        }
 
-        if (
-          response.status ===
-          "cancelled"
-        ) {
+        case "driver_assigned":
+          navigatingRef.current = true;
+
+          setRideStatus("driver-assigned");
+
+          navigate("/passenger/ride/driver-assigned", {
+            replace: true,
+          });
+          return;
+
+        case "driver_en_route":
+          navigatingRef.current = true;
+
+          setRideStatus("driver-en-route");
+
+          navigate("/passenger/ride/driver-en-route", {
+            replace: true,
+          });
+          return;
+
+        case "ride_started":
+        case "ride_in_progress":
+          navigatingRef.current = true;
+
+          navigate("/passenger/ride/in-trip", {
+            replace: true,
+          });
+          return;
+
+        case "ride_completed":
+        case "payment_pending":
+        case "paid":
+        case "closed":
+          navigatingRef.current = true;
+
+          navigate("/passenger/ride/complete", {
+            replace: true,
+          });
+          return;
+
+        case "cancelled":
+          navigatingRef.current = true;
+
           clearActiveRide();
 
           setRideStatus("idle");
@@ -192,438 +237,789 @@ export default function DriverArrived() {
               "This ride has been cancelled.",
           );
 
-          navigate(
-            "/passenger/home",
-            {
-              replace: true,
-            },
+          navigate("/passenger/home", {
+            replace: true,
+          });
+          return;
+
+        case "no_drivers_found":
+          navigatingRef.current = true;
+
+          clearActiveRide();
+
+          setRideStatus("idle");
+
+          toast.error(
+            "This ride is no longer active.",
           );
-        }
-      } catch (error) {
-        console.error(
-          "DRIVER ARRIVED POLL ERROR:",
-          error,
-        );
-      } finally {
-        running = false;
+
+          navigate("/passenger/home", {
+            replace: true,
+          });
+          return;
+
+        default:
+          return;
       }
-    };
+    },
+    [navigate, setRideStatus],
+  );
 
-    refresh();
+  /* =======================================================
+     WEBSOCKET
 
-    const interval =
-      window.setInterval(
-        refresh,
-        4000,
-      );
+     Uses the existing useRideSocket hook.
+  ======================================================= */
 
-    return () => {
-      mounted = false;
-
-      window.clearInterval(
-        interval,
-      );
-    };
-  }, [
+  const {
+    connected,
+    socketError,
+  } = useRideSocket({
     rideId,
-    navigate,
-    setRideStatus,
-  ]);
+    token,
+    onRideUpdate: handleRideStatus,
+    enabled: Boolean(rideId && token),
+  });
 
-  useEffect(() => {
-    if (!rideId) {
-      return;
-    }
+  /* =======================================================
+     FALLBACK POLLING
 
-    let mounted = true;
-
-    const loadPickupDetails =
-      async () => {
-        try {
-          setLoadingCode(true);
-
-          const response =
-            await passengerRideApi.getPickupDetails(
-              rideId,
-            );
-
-          if (!mounted) {
-            return;
-          }
-
-          console.log(
-            "PICKUP DETAILS:",
-            response,
-          );
-
-          setPickupDetails(
-            response,
-          );
-        } catch (error) {
-          console.error(
-            "PICKUP DETAILS ERROR:",
-            error,
-          );
-
-          if (mounted) {
-            toast.error(
-              "Unable to load pickup code.",
-            );
-          }
-        } finally {
-          if (mounted) {
-            setLoadingCode(false);
-          }
-        }
-      };
-
-    loadPickupDetails();
-
-    return () => {
-      mounted = false;
-    };
-  }, [rideId]);
+     Poll every five seconds only when
+     the WebSocket is disconnected.
+  ======================================================= */
 
   useEffect(() => {
     if (
-      pickupCode &&
-      setVerificationCode
+      !rideId ||
+      connected ||
+      navigatingRef.current
     ) {
-      setVerificationCode(
-        pickupCode,
-      );
+      return;
     }
+
+    let active = true;
+
+    const pollRide = async () => {
+      if (
+        !active ||
+        pollingRef.current ||
+        navigatingRef.current
+      ) {
+        return;
+      }
+
+      pollingRef.current = true;
+
+      try {
+        const response =
+          await passengerRideApi.getRide(rideId);
+
+        if (
+          !active ||
+          navigatingRef.current
+        ) {
+          return;
+        }
+
+        handleRideStatus(response);
+      } catch (error) {
+        if (active) {
+          console.error(
+            "DRIVER ARRIVED FALLBACK POLLING ERROR:",
+            error,
+          );
+
+          setRefreshError(true);
+
+          setInitialLoading(false);
+        }
+      } finally {
+        pollingRef.current = false;
+      }
+    };
+
+    void pollRide();
+
+    const interval = window.setInterval(
+      () => {
+        void pollRide();
+      },
+      FALLBACK_POLL_INTERVAL,
+    );
+
+    return () => {
+      active = false;
+
+      window.clearInterval(interval);
+    };
   }, [
-    pickupCode,
-    setVerificationCode,
+    rideId,
+    connected,
+    handleRideStatus,
   ]);
 
-  if (!ride.pickup) {
-    return (
-      <Navigate
-        to="/passenger/book-ride"
-        replace
-      />
-    );
-  }
+  /* =======================================================
+     MANUAL REFRESH
+  ======================================================= */
+
+  const refreshRide = async () => {
+    if (
+      !rideId ||
+      isRefreshing ||
+      navigatingRef.current
+    ) {
+      return;
+    }
+
+    setIsRefreshing(true);
+
+    try {
+      const response =
+        await passengerRideApi.getRide(rideId);
+
+      if (navigatingRef.current) {
+        return;
+      }
+
+      handleRideStatus(response);
+    } catch (error) {
+      console.error(
+        "DRIVER ARRIVED REFRESH ERROR:",
+        error,
+      );
+
+      setRefreshError(true);
+
+      toast.error(
+        "Unable to refresh your ride status.",
+      );
+    } finally {
+      if (mountedRef.current) {
+        setIsRefreshing(false);
+      }
+    }
+  };
+
+  /* =======================================================
+     ROUTE GUARD
+  ======================================================= */
 
   if (!rideId) {
     return (
       <Navigate
-        to="/passenger/book-ride"
+        to="/passenger/home"
         replace
       />
     );
   }
 
-  const center =
-    ride.pickup.coordinates;
+  /* =======================================================
+     RESTORE PICKUP AND DESTINATION
 
-  if (!center) {
+     Prefer backend data when restoring a ride
+     after a browser refresh.
+  ======================================================= */
+
+  const pickup =
+    ride.pickup ??
+    (backendRide?.pickup
+      ? {
+          label: backendRide.pickup.address,
+          address: backendRide.pickup.address,
+          coordinates: {
+            lat: backendRide.pickup.lat,
+            lng: backendRide.pickup.lng,
+          },
+        }
+      : null);
+
+  const destination =
+    ride.destination ??
+    (backendRide?.dropoff
+      ? {
+          label: backendRide.dropoff.address,
+          address: backendRide.dropoff.address,
+          coordinates: {
+            lat: backendRide.dropoff.lat,
+            lng: backendRide.dropoff.lng,
+          },
+        }
+      : null);
+
+  if (!pickup?.coordinates) {
+    if (initialLoading) {
+      return (
+        <div className="flex h-[100dvh] items-center justify-center bg-[#F4F4F4]">
+          <div className="text-center">
+            <RefreshCw
+              size={28}
+              className="mx-auto animate-spin text-[#7442AD]"
+            />
+
+            <p className="mt-4 text-[14px] text-[#918B95]">
+              Restoring your ride details...
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <Navigate
-        to="/passenger/book-ride"
-        replace
-      />
+      <div className="flex h-[100dvh] items-center justify-center bg-[#F4F4F4] px-6">
+        <div className="w-full max-w-[360px] text-center">
+          <MapPin
+            size={30}
+            className="mx-auto text-[#7442AD]"
+          />
+
+          <h2 className="mt-4 text-[18px] font-semibold text-[#302B34]">
+            Unable to load pickup location
+          </h2>
+
+          <p className="mt-2 text-[14px] leading-6 text-[#918B95]">
+            Your ride is still saved. Please refresh
+            the ride details to continue.
+          </p>
+
+          <button
+            type="button"
+            onClick={refreshRide}
+            disabled={isRefreshing}
+            className="mt-5 h-[48px] w-full rounded-[12px] bg-[#7442AD] text-[14px] font-semibold text-white disabled:opacity-60"
+          >
+            {isRefreshing
+              ? "Refreshing..."
+              : "Refresh Ride"}
+          </button>
+        </div>
+      </div>
     );
   }
 
-  const regenerateCode =
-    async () => {
-      try {
-        setRegenerating(true);
+  /* =======================================================
+     DRIVER DETAILS
 
-        const response =
-          await passengerRideApi.regeneratePickupCode(
-            rideId,
-          );
+     Restore from backend when context is empty.
+  ======================================================= */
 
-        console.log(
-          "REGENERATED PICKUP DETAILS:",
-          response,
-        );
+  const backendDriver = backendRide?.driver;
 
-        setPickupDetails(
-          response,
-        );
+  const vehicle = backendRide?.vehicle;
 
-        toast.success(
-          "Pickup code refreshed.",
-        );
-      } catch (error) {
-        console.error(
-          "REGENERATE CODE ERROR:",
-          error,
-        );
+  const driverName =
+    backendDriver?.fullName?.trim() ||
+    [
+      backendDriver?.firstName,
+      backendDriver?.lastName,
+    ]
+      .filter(Boolean)
+      .join(" ") ||
+    "";
 
-        toast.error(
-          "Unable to regenerate pickup code.",
-        );
-      } finally {
-        setRegenerating(false);
-      }
-    };
+  const backendDriverForCard: RideDriver | null =
+    backendDriver && driverName && vehicle
+      ? {
+          id:
+            backendDriver.id ??
+            backendRide?.driverId ??
+            "",
+
+          firstName: driverName,
+
+          photo:
+            backendDriver.profilePicture ?? "",
+
+          rating:
+            backendDriver.rating ?? 0,
+
+          totalTrips:
+            backendDriver.totalCompletedRides ?? 0,
+
+          vehicle: {
+            make: vehicle.make ?? "",
+            model: vehicle.model ?? "",
+            color: vehicle.color ?? "",
+            plateNumber:
+              vehicle.plateNumber ??
+              vehicle.registrationNumber ??
+              "",
+          },
+        }
+      : null;
+
+  const driverForCard =
+    backendDriverForCard ??
+    ride.driver;
+
+  const vehicleName =
+    [
+      vehicle?.make,
+      vehicle?.model,
+    ]
+      .filter(Boolean)
+      .join(" ") ||
+    "Vehicle details updating";
+
+  const vehiclePlate =
+    vehicle?.plateNumber ??
+    vehicle?.registrationNumber ??
+    "";
+
+  const connectionLabel = connected
+    ? "Live ride updates connected"
+    : refreshError
+      ? "Unable to refresh ride status"
+      : socketError
+        ? "Using backup connection"
+        : "Connecting to live updates...";
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <div className="relative h-[100dvh] overflow-hidden bg-[#F4F4F4]">
+
+      {/* ===============================================
+          MAP
+      =============================================== */}
+
       <PassengerMap
-        center={center}
-        pickup={ride.pickup}
+        center={pickup.coordinates}
+        pickup={pickup}
+        destination={destination}
         zoom={17}
       />
+
+      {/* ===============================================
+          HEADER
+      =============================================== */}
 
       <RideMapHeader
         title="Driver Arrived"
         showMore
       />
 
+      {/* ===============================================
+          ARRIVAL NOTIFICATION
+      =============================================== */}
+
       <motion.div
         initial={{
           opacity: 0,
-          y: -20,
+          y: -16,
         }}
         animate={{
           opacity: 1,
           y: 0,
         }}
-        className="absolute left-4 right-4 top-[88px] z-[500] mx-auto flex max-w-[520px] items-center gap-3 rounded-[16px] bg-[#2E9B61] px-4 py-3 text-white shadow-[0_10px_30px_rgba(30,120,70,0.22)]"
+        transition={{
+          type: "spring",
+          stiffness: 220,
+          damping: 20,
+        }}
+        className="absolute left-4 right-4 top-[90px] z-[500] mx-auto flex max-w-[520px] items-center gap-3 rounded-[18px] bg-[#2E9B61] px-4 py-3.5 text-white shadow-[0_10px_30px_rgba(30,120,70,0.22)]"
       >
         <CheckCircle2
-          size={21}
+          size={24}
+          className="shrink-0"
         />
 
         <div>
-          <p className="text-[15px] font-semibold">
+          <p className="text-[16px] font-semibold">
             Your driver has arrived
           </p>
 
           <p className="mt-0.5 text-[13px] text-white/85">
-            Meet your driver at
-            the pickup point.
+            Meet your driver at the pickup point.
           </p>
         </div>
       </motion.div>
 
+      {/* ===============================================
+          BOTTOM SHEET
+      =============================================== */}
+
       <RideBottomSheet>
+
+        {/* HEADER */}
+
         <div className="text-center">
           <h1 className="text-[22px] font-semibold text-[#302B34]">
-            Pickup verification
+            Your ride is here!
           </h1>
 
           <p className="mx-auto mt-2 max-w-[360px] text-[14px] leading-6 text-[#918B95]">
-            Give this code only to
-            the driver shown in the
-            Sur-Drive app.
+            Check the driver and vehicle details
+            before boarding.
           </p>
         </div>
 
-        <div className="mt-6">
-          {loadingCode ? (
-            <div className="flex h-[90px] items-center justify-center">
-              <LoaderCircle
-                size={28}
-                className="animate-spin text-[#7442AD]"
+        {/* =========================================
+            CONNECTION STATUS
+        ========================================= */}
+
+        <div className="mt-4 flex items-center justify-between rounded-[13px] bg-[#F8F7FA] px-3 py-2.5">
+
+          <div className="flex items-center min-w-0 gap-2">
+
+            {connected ? (
+              <Wifi
+                size={16}
+                className="shrink-0 text-[#3C9A65]"
               />
+            ) : (
+              <WifiOff
+                size={16}
+                className={
+                  refreshError
+                    ? "shrink-0 text-[#D05B5B]"
+                    : "shrink-0 text-[#D6A044]"
+                }
+              />
+            )}
+
+            <p
+              className={`truncate text-[12px] font-medium ${
+                connected
+                  ? "text-[#3C9A65]"
+                  : refreshError
+                    ? "text-[#D05B5B]"
+                    : "text-[#A18448]"
+              }`}
+            >
+              {connectionLabel}
+            </p>
+
+          </div>
+
+          {!connected && (
+            <button
+              type="button"
+              onClick={refreshRide}
+              disabled={isRefreshing}
+              aria-label="Refresh ride status"
+              className="ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#7442AD] shadow-sm disabled:opacity-50"
+            >
+              <RefreshCw
+                size={15}
+                className={
+                  isRefreshing
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+            </button>
+          )}
+
+        </div>
+
+        {/* =========================================
+            DRIVER CARD
+        ========================================= */}
+
+        {driverForCard ? (
+          <div className="mt-5">
+            <DriverCard
+              driver={driverForCard}
+              showActions={false}
+            />
+          </div>
+        ) : (
+          <div className="mt-5 flex items-center gap-3 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
+
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
+              <UserRound size={23} />
             </div>
-          ) : pickupCode ? (
-            <div className="flex justify-center gap-2.5">
-              {pickupCode
-                .split("")
-                .map(
-                  (
-                    digit,
-                    index,
-                  ) => (
-                    <motion.div
-                      key={`${digit}-${index}`}
-                      initial={{
-                        opacity: 0,
-                        y: 8,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                      }}
-                      transition={{
-                        delay:
-                          index *
-                          0.04,
-                      }}
-                      className="flex h-[58px] min-w-[58px] items-center justify-center rounded-[12px] bg-[#F0E8F7] px-3 text-[25px] font-bold text-[#7442AD]"
-                    >
-                      {digit}
-                    </motion.div>
-                  ),
-                )}
-            </div>
-          ) : (
-            <div className="rounded-[15px] bg-[#FFF7E7] p-4 text-center">
-              <p className="text-[14px] font-medium text-[#765A25]">
-                Pickup code is not
-                available yet.
+
+            <div>
+              <p className="text-[15px] font-semibold text-[#302B34]">
+                Your driver
+              </p>
+
+              <p className="mt-1 text-[12px] text-[#918B95]">
+                Driver details are updating...
               </p>
             </div>
-          )}
+
+          </div>
+        )}
+
+        {/* =========================================
+            ASSIGNED VEHICLE
+        ========================================= */}
+
+        {vehicle && (
+          <div className="mt-4 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
+
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-[#918B95]">
+              Assigned vehicle
+            </p>
+
+            <div className="flex items-center justify-between gap-3 mt-2">
+
+              <div className="flex items-center min-w-0 gap-2">
+
+                <CarFront
+                  size={19}
+                  className="shrink-0 text-[#7442AD]"
+                />
+
+                <p className="truncate text-[15px] font-semibold text-[#302B34]">
+                  {vehicleName}
+                </p>
+
+              </div>
+
+              {vehiclePlate && (
+                <span className="shrink-0 rounded-lg bg-[#F3ECF9] px-3 py-2 text-[13px] font-bold text-[#7442AD]">
+                  {vehiclePlate}
+                </span>
+              )}
+
+            </div>
+
+            {vehicle.category && (
+              <p className="mt-2 text-[12px] text-[#918B95]">
+                {vehicle.category}
+              </p>
+            )}
+
+          </div>
+        )}
+
+        {/* =========================================
+            PICKUP POINT
+        ========================================= */}
+
+        <div className="mt-4 flex items-start gap-3 rounded-[16px] bg-[#F8F6FA] p-4">
+
+          <MapPin
+            size={19}
+            className="mt-0.5 shrink-0 text-[#7442AD]"
+          />
+
+          <div>
+            <p className="text-[12px] font-medium text-[#918B95]">
+              Pickup point
+            </p>
+
+            <p className="mt-1 text-[15px] font-semibold text-[#302B34]">
+              {pickup.label}
+            </p>
+
+            {pickup.address && (
+              <p className="mt-1 text-[13px] leading-5 text-[#918B95]">
+                {pickup.address}
+              </p>
+            )}
+          </div>
+
         </div>
+
+        {/* =========================================
+            SAFETY NOTICE
+        ========================================= */}
+
+        <div className="mt-4 flex gap-3 rounded-[15px] bg-[#EFF8F2] p-4 text-[#397052]">
+
+          <ShieldCheck
+            size={21}
+            className="shrink-0"
+          />
+
+          <p className="text-[13px] leading-5">
+            Your driver must verify the pickup code
+            before starting the trip.
+          </p>
+
+        </div>
+
+        {/* =========================================
+            VIEW PICKUP CODE
+        ========================================= */}
 
         <motion.button
           type="button"
-          disabled={
-            regenerating
+          whileTap={{ scale: 0.98 }}
+          onClick={() =>
+            navigate("/passenger/ride/verify")
           }
-          whileTap={{
-            scale: 0.98,
-          }}
-          onClick={
-            regenerateCode
-          }
-          className="mt-5 flex h-[52px] w-full items-center justify-center gap-2 rounded-[13px] bg-[#F0E8F8] text-[15px] font-semibold text-[#7442AD] disabled:opacity-50"
+          className="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_8px_25px_rgba(116,66,173,0.20)]"
         >
-          {regenerating ? (
-            <LoaderCircle
-              size={18}
-              className="animate-spin"
-            />
-          ) : (
-            <RefreshCw
-              size={18}
-            />
-          )}
+          View Pickup Code
 
-          Regenerate Code
+          <ChevronRight size={19} />
         </motion.button>
 
-        <div className="mt-4 rounded-[15px] bg-[#F7F5F8] p-4">
-          <p className="text-[14px] leading-6 text-[#625C66]">
-            Once your driver verifies
-            the code and starts the
-            trip, this screen will
-            update automatically.
-          </p>
-        </div>
       </RideBottomSheet>
+
     </div>
   );
 }
 
-// import {
-//   CheckCircle2,
-//   Clock3,
-// } from "lucide-react";
+// import { CheckCircle2, ChevronRight, MapPin, ShieldCheck } from "lucide-react";
 // import { motion } from "framer-motion";
+// import { useEffect, useState } from "react";
 // import { Navigate, useNavigate } from "react-router-dom";
+// import { toast } from "sonner";
 
 // import PassengerMap from "../../../components/passenger/ride/PassengerMap";
 // import RideBottomSheet from "../../../components/passenger/ride/RideBottomSheet";
 // import RideMapHeader from "../../../components/passenger/ride/RideMapHeader";
 // import DriverCard from "../../../components/passenger/ride/DriverCard";
-
 // import { usePassengerRide } from "../../../context/PassengerRideContext";
-// import { mockAssignedDriver } from "../../../data/passengerRide";
+// import { passengerRideApi, type PassengerRideResponse } from "../../../api/passenger/rides";
+// import {
+//   clearActiveRide,
+//   getStoredActiveRide,
+//   getStoredActiveRideId,
+//   storeActiveRide,
+// } from "../../../utils/passengerActiveRide";
 
 // export default function DriverArrived() {
 //   const navigate = useNavigate();
+//   const { ride, setRideStatus } = usePassengerRide();
+//   const [backendRide, setBackendRide] = useState<PassengerRideResponse | null>(
+//     () => getStoredActiveRide(),
+//   );
+//   const rideId = backendRide?.id ?? getStoredActiveRideId();
 
-//   const {
-//     ride,
-//     setRideStatus,
-//   } = usePassengerRide();
+//   useEffect(() => {
+//     if (!rideId) return;
+//     let mounted = true;
+//     let running = false;
+//     let finished = false;
 
-//   if (!ride.pickup) {
-//     return <Navigate to="/passenger/book-ride" replace />;
-//   }
+//     const refresh = async () => {
+//       if (running || finished) return;
+//       running = true;
+//       try {
+//         const response = await passengerRideApi.getRide(rideId);
+//         if (!mounted) return;
+//         setBackendRide(response);
+//         storeActiveRide(response);
+//         const status = response.status;
+//         let next: string | null = null;
 
-//   const driver =
-//     ride.driver ?? mockAssignedDriver;
-
-//   const center =
-//     ride.pickup.coordinates ?? {
-//       lat: 6.5244,
-//       lng: 3.3792,
+//         if (status === "ride_started" || status === "ride_in_progress") {
+//           setRideStatus("in-progress");
+//           next = "/passenger/ride/in-trip";
+//         } else if (
+//           status === "ride_completed" || status === "payment_pending" ||
+//           status === "paid" || status === "closed"
+//         ) {
+//           next = "/passenger/ride/complete";
+//         } else if (status === "driver_assigned" || status === "driver_en_route") {
+//           next = "/passenger/ride/driver-en-route";
+//         } else if (status === "cancelled" || String(status) === "no_drivers_found") {
+//           clearActiveRide();
+//           setRideStatus("idle");
+//           toast.error(response.cancellationReason || "This ride is no longer active.");
+//           next = "/passenger/home";
+//         }
+//         if (next) {
+//           finished = true;
+//           navigate(next, { replace: true });
+//         }
+//       } catch (error) {
+//         if (mounted) console.error("DRIVER ARRIVED POLL ERROR:", error);
+//       } finally {
+//         running = false;
+//       }
 //     };
 
-//   const verify = () => {
-//     setRideStatus("verifying");
+//     void refresh();
+//     const interval = window.setInterval(() => void refresh(), 4000);
+//     return () => {
+//       mounted = false;
+//       window.clearInterval(interval);
+//     };
+//   }, [rideId, navigate, setRideStatus]);
 
-//     navigate("/passenger/ride/verify");
-//   };
+//   if (!rideId) return <Navigate to="/passenger/home" replace />;
+//   if (!ride.pickup?.coordinates) return <Navigate to="/passenger/book-ride" replace />;
 
 //   return (
-//     <div className="relative h-[100dvh] overflow-hidden">
+//     <div className="relative h-[100dvh] overflow-hidden bg-[#F4F4F4]">
 //       <PassengerMap
-//         center={center}
+//         center={ride.pickup.coordinates}
 //         pickup={ride.pickup}
+//         destination={ride.destination}
 //         zoom={17}
 //       />
-
-//       <RideMapHeader
-//         title="Driver Arrived"
-//         showMore
-//       />
+//       <RideMapHeader title="Driver Arrived" showMore />
 
 //       <motion.div
-//         initial={{ opacity: 0, y: -30 }}
+//         initial={{ opacity: 0, y: -16 }}
 //         animate={{ opacity: 1, y: 0 }}
-//         className="absolute left-4 right-4 top-[88px] z-[500] mx-auto flex max-w-[520px] items-center gap-3 rounded-[16px] bg-[#2E9B61] px-4 py-3 text-white shadow-[0_10px_30px_rgba(30,120,70,0.22)]"
+//         transition={{ type: "spring", stiffness: 220, damping: 20 }}
+//         className="absolute left-4 right-4 top-[90px] z-[500] mx-auto flex max-w-[520px] items-center gap-3 rounded-[18px] bg-[#2E9B61] px-4 py-3.5 text-white shadow-[0_10px_30px_rgba(30,120,70,0.22)]"
 //       >
-//         <CheckCircle2 size={21} />
-
+//         <CheckCircle2 size={24} className="shrink-0" />
 //         <div>
-//           <p className="text-[15px] font-semibold">
-//             Your Driver Has Arrived
-//           </p>
-
-//           <p className="mt-0.5 text-[12px] text-white/80">
-//             {driver.firstName} is waiting at your pickup location
-//           </p>
+//           <p className="text-[16px] font-semibold">Your driver has arrived</p>
+//           <p className="mt-0.5 text-[13px] text-white/85">Meet your driver at the pickup point.</p>
 //         </div>
 //       </motion.div>
 
 //       <RideBottomSheet>
-//         <div className="flex items-center justify-between">
-//           <div>
-//             <h1 className="text-[22px] font-semibold text-[#302B34]">
-//               Your driver has arrived
-//             </h1>
+//         <div className="text-center">
+//           <h1 className="text-[22px] font-semibold text-[#302B34]">Your ride is here!</h1>
+//           <p className="mx-auto mt-2 max-w-[360px] text-[14px] leading-6 text-[#918B95]">
+//             Check the driver and vehicle details before boarding.
+//           </p>
+//         </div>
 
-//             <p className="mt-1 text-[13px] text-[#918B95]">
-//               Meet your driver at the pickup point.
-//             </p>
+//         {ride.driver && (
+//           <div className="mt-5">
+//             <DriverCard driver={ride.driver} showActions={false} />
 //           </div>
+//         )}
 
-//           <div className="flex items-center gap-1 rounded-[10px] bg-[#FFF5E0] px-3 py-2 text-[#A86B08]">
-//             <Clock3 size={15} />
-//             <span className="text-[14px] font-semibold">
-//               0:45
-//             </span>
+//         {backendRide?.vehicle && (
+//           <div className="mt-4 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
+//             <p className="text-[12px] font-semibold uppercase tracking-wider text-[#918B95]">Assigned vehicle</p>
+//             <div className="flex items-center justify-between gap-3 mt-2">
+//               <p className="text-[15px] font-semibold text-[#302B34]">
+//                 {backendRide.vehicle.model} · {backendRide.vehicle.category}
+//               </p>
+//               <span className="rounded-lg bg-[#F3ECF9] px-3 py-2 text-[13px] font-bold text-[#7442AD]">
+//                 {backendRide.vehicle.plateNumber}
+//               </span>
+//             </div>
+//           </div>
+//         )}
+
+//         <div className="mt-4 flex items-start gap-3 rounded-[16px] bg-[#F8F6FA] p-4">
+//           <MapPin size={19} className="mt-0.5 shrink-0 text-[#7442AD]" />
+//           <div>
+//             <p className="text-[12px] font-medium text-[#918B95]">Pickup point</p>
+//             <p className="mt-1 text-[15px] font-semibold text-[#302B34]">{ride.pickup.label}</p>
+//             {ride.pickup.address && (
+//               <p className="mt-1 text-[13px] leading-5 text-[#918B95]">{ride.pickup.address}</p>
+//             )}
 //           </div>
 //         </div>
 
-//         <div className="mt-5">
-//           <DriverCard
-//   driver={driver}
-//   onChat={() =>
-//     navigate(
-//       "/passenger/ride/chat",
-//     )
-//   }
-//   onCall={() => {
-//     console.log(
-//       "Open call sheet",
-//     );
-//   }}
-// />
+//         <div className="mt-4 flex gap-3 rounded-[15px] bg-[#EFF8F2] p-4 text-[#397052]">
+//           <ShieldCheck size={21} className="shrink-0" />
+//           <p className="text-[13px] leading-5">
+//             Your driver must verify the pickup code before starting the trip.
+//           </p>
 //         </div>
 
 //         <motion.button
 //           type="button"
 //           whileTap={{ scale: 0.98 }}
-//           onClick={verify}
-//           className="mt-5 h-[56px] w-full rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white"
+//           onClick={() => navigate("/passenger/ride/verify")}
+//           className="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_8px_25px_rgba(116,66,173,0.20)]"
 //         >
-//           Verify Ride
+//           View Pickup Code <ChevronRight size={19} />
 //         </motion.button>
 //       </RideBottomSheet>
 //     </div>
 //   );
 // }
+
+

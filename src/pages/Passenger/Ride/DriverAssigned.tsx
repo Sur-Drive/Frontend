@@ -1,17 +1,24 @@
+"use client";
+
 import {
-  Car,
   Clock3,
   LoaderCircle,
+  MessageCircle,
+  Phone,
   Share2,
   UserRound,
+  CarFront,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
 
-import {
-  motion,
-} from "framer-motion";
+import { motion } from "framer-motion";
 
 import {
+  useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -20,730 +27,1477 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import {
-  toast,
-} from "sonner";
+import { toast } from "sonner";
 
 import PassengerMap from "../../../components/passenger/ride/PassengerMap";
 import RideBottomSheet from "../../../components/passenger/ride/RideBottomSheet";
 import RideMapHeader from "../../../components/passenger/ride/RideMapHeader";
-
+import DriverCard from "../../../components/passenger/ride/DriverCard";
 import ShareRideSheet from "../../../components/passenger/ride/ShareRideSheet";
 import CancelRideSheet from "../../../components/passenger/ride/CancelRideSheet";
 
-import {
-  usePassengerRide,
-} from "../../../context/PassengerRideContext";
+import { usePassengerRide } from "../../../context/PassengerRideContext";
 
 import {
   passengerRideApi,
+  type PassengerRideResponse,
 } from "../../../api/passenger/rides";
 
-/* =========================================================
-   TYPES
-========================================================= */
+import {
+  clearActiveRide,
+  getStoredActiveRide,
+  getStoredActiveRideId,
+  storeActiveRide,
+} from "../../../utils/passengerActiveRide";
 
-type BackendVehicle = {
-  id?: string;
+import type { RideDriver } from "../../../types/passengerRide";
 
-  make?: string;
-
-  model?: string;
-
-  color?: string;
-
-  plateNumber?: string;
-
-  registrationNumber?: string;
-};
-
-type BackendDriver = {
-  id?: string;
-
-  fullName?: string;
-
-  firstName?: string;
-
-  lastName?: string;
-
-  phoneNumber?: string;
-
-  profilePicture?: string | null;
-
-  rating?: number;
-
-  currentLat?: number | null;
-
-  currentLng?: number | null;
-};
-
-type AssignedRideResponse = {
-  id: string;
-
-  driverId:
-    string | null;
-
-  status: string;
-
-  estimatedFare:
-    number;
-
-  estimatedDurationMin:
-    number;
-
-  estimatedDistanceKm:
-    number;
-
-  finalFare:
-    number | null;
-
-  driver?:
-    BackendDriver | null;
-
-  vehicle?:
-    BackendVehicle | null;
-
-  pickup?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-
-  dropoff?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-};
+import { useRideSocket } from "../../../hooks/passenger/useRideSocket";
 
 /* =========================================================
-   STORAGE
+   CONSTANTS
 ========================================================= */
 
-function getStoredRide():
-  AssignedRideResponse | null {
-  try {
-    const raw =
-      sessionStorage.getItem(
-        "surdrive_active_ride",
-      );
+const FALLBACK_POLL_INTERVAL = 5000;
 
-    if (!raw) {
-      return null;
-    }
+const PASSENGER_TOKEN_KEY = "passenger_access_token";
 
-    return JSON.parse(
-      raw,
-    ) as AssignedRideResponse;
-  } catch {
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getPassengerToken(): string | null {
+  if (typeof window === "undefined") {
     return null;
   }
+
+  return localStorage.getItem(PASSENGER_TOKEN_KEY);
+}
+
+function formatMoney(amount: number) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const candidate = error as {
+      message?: unknown;
+      response?: {
+        data?: {
+          message?: unknown;
+        };
+      };
+    };
+
+    const message =
+      candidate.response?.data?.message ??
+      candidate.message;
+
+    if (typeof message === "string") {
+      return message;
+    }
+
+    if (Array.isArray(message)) {
+      return message.join(", ");
+    }
+  }
+
+  return "Unable to complete this action. Please try again.";
 }
 
 /* =========================================================
-   PAGE
+   COMPONENT
 ========================================================= */
 
 export default function DriverAssigned() {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
   const {
     ride,
     setRideStatus,
-  } =
-    usePassengerRide();
+  } = usePassengerRide();
 
-  const [
-    shareOpen,
-    setShareOpen,
-  ] = useState(false);
+  /* =======================================================
+     STATE
+  ======================================================= */
 
-  const [
-    cancelOpen,
-    setCancelOpen,
-  ] = useState(false);
-
-  const [
-    backendRide,
-    setBackendRide,
-  ] =
-    useState<AssignedRideResponse | null>(
-      () =>
-        getStoredRide(),
+  const [backendRide, setBackendRide] =
+    useState<PassengerRideResponse | null>(
+      () => getStoredActiveRide(),
     );
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  const [cancelOpen, setCancelOpen] = useState(false);
+
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+
+  const [refreshError, setRefreshError] = useState(false);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [token, setToken] = useState<string | null>(
+    getPassengerToken,
+  );
+
+  /* =======================================================
+     REFS
+  ======================================================= */
+
+  const cancellingRef = useRef(false);
+
+  const navigatingRef = useRef(false);
+
+  const pollingRef = useRef(false);
+
+  const mountedRef = useRef(true);
+
+  /* =======================================================
+     RIDE ID
+  ======================================================= */
 
   const rideId =
     backendRide?.id ??
-    sessionStorage.getItem(
-      "surdrive_active_ride_id",
-    );
+    getStoredActiveRideId();
 
   /* =======================================================
-     KEEP POLLING
+     TOKEN SYNC
+
+     Uses the existing passenger access token.
+
+     If another tab updates the token, this component
+     picks up the new value.
   ======================================================= */
 
   useEffect(() => {
-    if (!rideId) {
+    mountedRef.current = true;
+
+    const syncToken = () => {
+      setToken(getPassengerToken());
+    };
+
+    syncToken();
+
+    window.addEventListener("storage", syncToken);
+
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener("storage", syncToken);
+    };
+  }, []);
+
+  /* =======================================================
+     HANDLE BACKEND RIDE STATUS
+
+     The backend remains the source of truth.
+
+     Called by:
+     - WebSocket updates
+     - Fallback polling
+     - Manual refresh
+     - Cancellation status checks
+  ======================================================= */
+
+  const handleRideStatus = useCallback(
+    (response: PassengerRideResponse) => {
+      if (navigatingRef.current) {
+        return;
+      }
+
+      if (!response?.id) {
+        return;
+      }
+
+      /*
+       * Update the local ride information.
+       */
+      setBackendRide(response);
+
+      /*
+       * Keep the active ride available after
+       * a page refresh or navigation.
+       */
+      if (response.status !== "cancelled") {
+        storeActiveRide(response);
+      }
+
+      /*
+       * Navigate according to backend status.
+       */
+      switch (response.status) {
+        case "requested":
+        case "searching":
+          navigatingRef.current = true;
+
+          setRideStatus("searching");
+
+          navigate("/passenger/ride/searching", {
+            replace: true,
+          });
+          return;
+
+        case "driver_assigned":
+          setRideStatus("driver-assigned");
+          return;
+
+        case "driver_en_route":
+          navigatingRef.current = true;
+
+          setRideStatus("driver-en-route");
+
+          navigate("/passenger/ride/driver-en-route", {
+            replace: true,
+          });
+          return;
+
+        case "driver_arrived":
+          navigatingRef.current = true;
+
+          setRideStatus("driver-arrived");
+
+          navigate("/passenger/ride/driver-arrived", {
+            replace: true,
+          });
+          return;
+
+        case "ride_started":
+        case "ride_in_progress":
+          navigatingRef.current = true;
+
+          navigate("/passenger/ride/in-trip", {
+            replace: true,
+          });
+          return;
+
+        case "ride_completed":
+        case "payment_pending":
+        case "paid":
+        case "closed":
+          navigatingRef.current = true;
+
+          navigate("/passenger/ride/complete", {
+            replace: true,
+          });
+          return;
+
+        case "cancelled":
+          navigatingRef.current = true;
+
+          clearActiveRide();
+
+          setRideStatus("idle");
+
+          setCancelOpen(false);
+
+          toast.info(
+            response.cancellationReason ||
+              "Your ride has been cancelled.",
+          );
+
+          navigate("/passenger/home", {
+            replace: true,
+          });
+          return;
+
+        case "no_drivers_found":
+          navigatingRef.current = true;
+
+          setRideStatus("searching");
+
+          navigate("/passenger/ride/searching", {
+            replace: true,
+          });
+          return;
+
+        default:
+          return;
+      }
+    },
+    [navigate, setRideStatus],
+  );
+
+  /* =======================================================
+     WEBSOCKET CONNECTION
+
+     Primary connection:
+     Socket.IO namespace /rides
+
+     Authentication:
+     passenger_access_token
+
+     Subscription:
+     ride.subscribe { rideId }
+  ======================================================= */
+
+  const {
+    connected,
+    socketError,
+  } = useRideSocket({
+    rideId,
+    token,
+    onRideUpdate: handleRideStatus,
+    enabled: Boolean(rideId && token),
+  });
+
+  /* =======================================================
+     FALLBACK POLLING
+
+     Polling starts when WebSocket is unavailable.
+
+     Polling stops when WebSocket connects.
+
+     Interval: 5 seconds.
+  ======================================================= */
+
+  useEffect(() => {
+    if (
+      !rideId ||
+      connected ||
+      navigatingRef.current
+    ) {
       return;
     }
 
-    let mounted = true;
+    let active = true;
 
-    let running = false;
+    const pollRide = async () => {
+      if (
+        !active ||
+        pollingRef.current ||
+        cancellingRef.current ||
+        navigatingRef.current
+      ) {
+        return;
+      }
 
-    const refreshRide =
-      async () => {
-        if (running) {
+      pollingRef.current = true;
+
+      try {
+        const response =
+          await passengerRideApi.getRide(rideId);
+
+        if (
+          !active ||
+          cancellingRef.current ||
+          navigatingRef.current
+        ) {
           return;
         }
 
-        running = true;
+        setRefreshError(false);
 
-        try {
-          setLoading(true);
-
-          const rawResponse =
-            await passengerRideApi.getRide(
-              rideId,
-            );
-
-          if (!mounted) {
-            return;
-          }
-
-          const response =
-            rawResponse as AssignedRideResponse;
-
-          console.log(
-            "DRIVER ASSIGNED RIDE:",
-            response,
-          );
-
-          setBackendRide(
-            response,
-          );
-
-          sessionStorage.setItem(
-            "surdrive_active_ride",
-            JSON.stringify(
-              response,
-            ),
-          );
-
-          /* DRIVER NOW EN ROUTE */
-
-          if (
-            response.status ===
-            "driver_en_route"
-          ) {
-            setRideStatus(
-              "driver-en-route",
-            );
-
-            navigate(
-              "/passenger/ride/driver-en-route",
-              {
-                replace: true,
-              },
-            );
-
-            return;
-          }
-
-          /* DRIVER ALREADY ARRIVED */
-
-          if (
-            response.status ===
-            "driver_arrived"
-          ) {
-            setRideStatus(
-              "driver-arrived",
-            );
-
-            navigate(
-              "/passenger/ride/driver-arrived",
-              {
-                replace: true,
-              },
-            );
-
-            return;
-          }
-
-          /* RIDE STARTED */
-
-          if (
-  response.status === "ride_started" ||
-  response.status === "ride_in_progress"
-) {
-  navigate(
-    "/passenger/ride/in-trip",
-    {
-      replace: true,
-    },
-  );
-
-  return;
-}
-
-          /* CANCELLED */
-
-          if (
-            response.status ===
-            "cancelled"
-          ) {
-            sessionStorage.removeItem(
-              "surdrive_active_ride_id",
-            );
-
-            sessionStorage.removeItem(
-              "surdrive_active_ride",
-            );
-
-            setRideStatus(
-              "idle",
-            );
-
-            toast.error(
-              "This ride has been cancelled.",
-            );
-
-            navigate(
-              "/passenger/home",
-              {
-                replace: true,
-              },
-            );
-          }
-        } catch (error) {
+        handleRideStatus(response);
+      } catch (error) {
+        if (active) {
           console.error(
-            "GET ASSIGNED RIDE ERROR:",
+            "DRIVER ASSIGNED FALLBACK POLLING ERROR:",
             error,
           );
-        } finally {
-          if (mounted) {
-            setLoading(
-              false,
-            );
-          }
 
-          running = false;
+          setRefreshError(true);
         }
-      };
+      } finally {
+        pollingRef.current = false;
+      }
+    };
 
-    refreshRide();
+    /*
+     * Fetch immediately while the socket
+     * is disconnected.
+     */
+    void pollRide();
 
-    const interval =
-      window.setInterval(
-        refreshRide,
-        5000,
-      );
+    /*
+     * Continue every five seconds until
+     * the WebSocket reconnects.
+     */
+    const interval = window.setInterval(
+      () => {
+        void pollRide();
+      },
+      FALLBACK_POLL_INTERVAL,
+    );
 
     return () => {
-      mounted = false;
-
-      window.clearInterval(
-        interval,
-      );
+      active = false;
+      window.clearInterval(interval);
     };
   }, [
     rideId,
-    navigate,
-    setRideStatus,
+    connected,
+    handleRideStatus,
   ]);
 
   /* =======================================================
-     GUARDS
+     MANUAL REFRESH
   ======================================================= */
 
-  if (
-    !ride.pickup ||
-    !ride.destination
-  ) {
+  const refreshRide = async () => {
+    if (
+      !rideId ||
+      isRefreshing ||
+      cancellingRef.current ||
+      navigatingRef.current
+    ) {
+      return;
+    }
+
+    setIsRefreshing(true);
+
+    try {
+      const response =
+        await passengerRideApi.getRide(rideId);
+
+      if (navigatingRef.current) {
+        return;
+      }
+
+      setRefreshError(false);
+
+      handleRideStatus(response);
+    } catch (error) {
+      console.error(
+        "DRIVER ASSIGNED MANUAL REFRESH ERROR:",
+        error,
+      );
+
+      setRefreshError(true);
+
+      toast.error(
+        "Unable to refresh ride details.",
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  /* =======================================================
+     CANCEL RIDE
+
+     Backend decides whether cancellation
+     is allowed and what fee applies.
+  ======================================================= */
+
+  const handleCancel = async (
+    reason: string,
+    _comment?: string,
+  ) => {
+    if (
+      !rideId ||
+      cancellingRef.current ||
+      navigatingRef.current
+    ) {
+      return;
+    }
+
+    cancellingRef.current = true;
+
+    setIsCancelling(true);
+
+    try {
+      /*
+       * Check the latest ride status before
+       * submitting cancellation.
+       */
+      const latest =
+        await passengerRideApi.getRide(rideId);
+
+      if (
+        latest.status !== "driver_assigned" &&
+        latest.status !== "driver_en_route"
+      ) {
+        setCancelOpen(false);
+
+        handleRideStatus(latest);
+
+        toast.info(
+          "Your ride status has changed.",
+        );
+
+        return;
+      }
+
+      /*
+       * Submit cancellation to backend.
+       */
+      const response =
+        await passengerRideApi.cancelRide(
+          rideId,
+          reason,
+        );
+
+      /*
+       * If the backend returned a different
+       * status, handle that instead.
+       */
+      if (response.status !== "cancelled") {
+        setCancelOpen(false);
+
+        handleRideStatus(response);
+
+        toast.info(
+          "Your ride status changed before cancellation.",
+        );
+
+        return;
+      }
+
+      /*
+       * Cancellation confirmed.
+       */
+      navigatingRef.current = true;
+
+      clearActiveRide();
+
+      setCancelOpen(false);
+
+      setRideStatus("idle");
+
+      toast.success(
+        response.cancellationFee > 0
+          ? `Ride cancelled. Fee: ${formatMoney(
+              response.cancellationFee,
+            )}`
+          : "Ride cancelled successfully.",
+      );
+
+      navigate("/passenger/home", {
+        replace: true,
+      });
+    } catch (error) {
+      console.error(
+        "DRIVER ASSIGNED CANCEL ERROR:",
+        error,
+      );
+
+      /*
+       * Cancellation might have succeeded
+       * even if the request timed out.
+
+       * Recheck the backend before reporting
+       * failure.
+       */
+      try {
+        const latest =
+          await passengerRideApi.getRide(rideId);
+
+        if (
+          latest.status !== "driver_assigned" &&
+          latest.status !== "driver_en_route"
+        ) {
+          setCancelOpen(false);
+
+          handleRideStatus(latest);
+          return;
+        }
+      } catch (refreshError) {
+        console.error(
+          "CANCELLATION STATUS RECHECK ERROR:",
+          refreshError,
+        );
+      }
+
+      toast.error(getErrorMessage(error));
+    } finally {
+      cancellingRef.current = false;
+
+      if (mountedRef.current) {
+        setIsCancelling(false);
+      }
+    }
+  };
+
+  /* =======================================================
+     CHAT WITH DRIVER
+  ======================================================= */
+
+  const openDriverChat = () => {
+    if (!backendRide?.driverId) {
+      toast.info(
+        "Driver details are still updating.",
+      );
+      return;
+    }
+
+    navigate("/passenger/ride/chat");
+  };
+
+  /* =======================================================
+     CALL DRIVER
+  ======================================================= */
+
+  const callDriver = () => {
+    const phone =
+      backendRide?.driver?.phoneNumber;
+
+    if (!phone) {
+      toast.info(
+        "Driver calling is not available yet.",
+      );
+      return;
+    }
+
+    window.location.href = `tel:${phone}`;
+  };
+
+  /* =======================================================
+     ROUTE GUARDS
+  ======================================================= */
+
+  if (!rideId) {
     return (
       <Navigate
-        to="/passenger/book-ride"
+        to="/passenger/home"
         replace
       />
     );
   }
 
-  if (!rideId) {
+  /* =======================================================
+     RESTORE PICKUP AND DESTINATION
+
+     Prefer context values.
+
+     Use backend values after refresh.
+  ======================================================= */
+
+  const pickup =
+    ride.pickup ??
+    (backendRide?.pickup
+      ? {
+          label: backendRide.pickup.address,
+          address: backendRide.pickup.address,
+          coordinates: {
+            lat: backendRide.pickup.lat,
+            lng: backendRide.pickup.lng,
+          },
+        }
+      : null);
+
+  const destination =
+    ride.destination ??
+    (backendRide?.dropoff
+      ? {
+          label: backendRide.dropoff.address,
+          address: backendRide.dropoff.address,
+          coordinates: {
+            lat: backendRide.dropoff.lat,
+            lng: backendRide.dropoff.lng,
+          },
+        }
+      : null);
+
+  if (!pickup || !destination) {
     return (
       <Navigate
-        to="/passenger/book-ride"
+        to="/passenger/home"
         replace
       />
     );
   }
 
   const center =
-    ride.pickup.coordinates ??
-    ride.destination.coordinates;
+    pickup.coordinates ??
+    destination.coordinates;
 
   if (!center) {
     return (
       <Navigate
-        to="/passenger/book-ride"
+        to="/passenger/home"
         replace
       />
     );
   }
 
   /* =======================================================
-     DRIVER / VEHICLE
+     DRIVER AND VEHICLE DATA
   ======================================================= */
 
-  const driver =
-    backendRide?.driver;
+  const backendDriver = backendRide?.driver;
 
-  const vehicle =
-    backendRide?.vehicle;
+  const vehicle = backendRide?.vehicle;
 
   const driverName =
-    driver?.fullName ||
+    backendDriver?.fullName?.trim() ||
     [
-      driver?.firstName,
-      driver?.lastName,
+      backendDriver?.firstName,
+      backendDriver?.lastName,
     ]
       .filter(Boolean)
       .join(" ") ||
-    "Your Sur-Drive driver";
+    "";
 
-  const vehicleName =
-    [
-      vehicle?.color,
-      vehicle?.make,
-      vehicle?.model,
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    "Vehicle details updating";
+  const driverForCard: RideDriver | null =
+    backendDriver && driverName && vehicle
+      ? {
+          id:
+            backendDriver.id ??
+            backendRide?.driverId ??
+            "",
 
-  const plateNumber =
-    vehicle?.plateNumber ||
-    vehicle?.registrationNumber;
+          firstName: driverName,
 
-  const eta =
-    backendRide
-      ?.estimatedDurationMin;
+          photo:
+            backendDriver.profilePicture ?? "",
+
+          rating:
+            backendDriver.rating ?? 0,
+
+          totalTrips:
+            backendDriver.totalCompletedRides ?? 0,
+
+          vehicle: {
+            make: vehicle.make ?? "",
+            model: vehicle.model ?? "",
+            color: vehicle.color ?? "",
+            plateNumber:
+              vehicle.plateNumber ??
+              vehicle.registrationNumber ??
+              "",
+          },
+        }
+      : null;
 
   /* =======================================================
-     CANCEL
+     DISPLAY DATA
   ======================================================= */
 
-  const handleCancel =
-    (
-      reason: string,
-      comment?: string,
-    ) => {
-      console.log(
-        "Cancellation requested:",
-        {
-          rideId,
-          reason,
-          comment,
-        },
-      );
+  const eta =
+    backendRide?.estimatedDurationMin;
 
-      setCancelOpen(
-        false,
-      );
+  const isUsingFallback = !connected;
 
-      toast.info(
-        "Cancellation request is not connected to the backend yet.",
-      );
-    };
+  const connectionLabel = isCancelling
+    ? "Cancelling ride..."
+    : connected
+      ? "Live ride updates connected"
+      : refreshError
+        ? "Unable to refresh ride status"
+        : socketError
+          ? "Using backup connection"
+          : "Connecting to live updates...";
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
 
   return (
     <div className="relative h-[100dvh] overflow-hidden bg-[#F4F4F4]">
+
+      {/* ===============================================
+          MAP
+      =============================================== */}
+
       <PassengerMap
         center={center}
-        pickup={
-          ride.pickup
-        }
-        destination={
-          ride.destination
-        }
+        pickup={pickup}
+        destination={destination}
         zoom={15}
       />
+
+      {/* ===============================================
+          HEADER
+      =============================================== */}
 
       <RideMapHeader
         title="Driver Assigned"
         showMore
       />
 
-      <RideBottomSheet>
-        {/* HEADER */}
+      {/* ===============================================
+          BOTTOM SHEET
+      =============================================== */}
 
-        <div className="flex items-start justify-between gap-4">
+      <RideBottomSheet>
+
+        {/* DRAG HANDLE */}
+
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-[#E0DCE4]" />
+
+        {/* =========================================
+            TITLE
+        ========================================= */}
+
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-[22px] font-semibold text-[#302B34]">
+            <h1 className="text-[20px] font-semibold text-[#302B34]">
               Driver Assigned
             </h1>
 
-            <p className="mt-1 text-[14px] leading-5 text-[#928C96]">
-              Your driver has
-              accepted the ride.
+            <p className="mt-1 text-[13px] text-[#928C96]">
+              Your driver has accepted your ride.
             </p>
           </div>
 
-          {typeof eta ===
-            "number" && (
-            <div className="shrink-0 rounded-[12px] bg-[#F0E8F8] px-3 py-2 text-right text-[#7442AD]">
-              <div className="flex items-center gap-1 text-[13px] font-semibold">
-                <Clock3
-                  size={14}
-                />
-
-                {eta} min
-              </div>
-
-              <p className="mt-0.5 text-[11px]">
-                estimate
-              </p>
-            </div>
+          {(loading || isRefreshing) && (
+            <LoaderCircle
+              size={19}
+              className="animate-spin text-[#7442AD]"
+            />
           )}
         </div>
 
-        {/* DRIVER */}
+        {/* =========================================
+            CONNECTION STATUS
+        ========================================= */}
 
-        <div className="mt-5 rounded-[17px] border border-[#EEEAF1] bg-white p-4">
-          <div className="flex items-center gap-3">
-            {/* AVATAR */}
+        <div className="mt-4 flex items-center justify-between rounded-[13px] bg-[#F8F7FA] px-3 py-2.5">
 
-            <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0E8F8] text-[#7442AD]">
-              {driver?.profilePicture ? (
-                <img
-                  src={
-                    driver.profilePicture
-                  }
-                  alt={
-                    driverName
-                  }
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <UserRound
-                  size={25}
-                />
-              )}
-            </div>
+          <div className="flex items-center min-w-0 gap-2">
 
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-[17px] font-semibold text-[#302B34]">
-                {
-                  driverName
+            {connected ? (
+              <Wifi
+                size={16}
+                className="shrink-0 text-[#3C9A65]"
+              />
+            ) : (
+              <WifiOff
+                size={16}
+                className={
+                  refreshError
+                    ? "shrink-0 text-[#D05B5B]"
+                    : "shrink-0 text-[#D6A044]"
                 }
-              </p>
-
-              {typeof driver?.rating ===
-                "number" && (
-                <p className="mt-1 text-[13px] text-[#928C96]">
-                  ★{" "}
-                  {driver.rating.toFixed(
-                    1,
-                  )}
-                </p>
-              )}
-
-              {!driver &&
-                backendRide?.driverId && (
-                  <p className="mt-1 text-[12px] text-[#9C96A0]">
-                    Driver details
-                    are updating...
-                  </p>
-                )}
-            </div>
-
-            {loading && (
-              <LoaderCircle
-                size={18}
-                className="animate-spin text-[#7442AD]"
               />
             )}
+
+            <p
+              className={`truncate text-[12px] font-medium ${
+                connected
+                  ? "text-[#3C9A65]"
+                  : refreshError
+                    ? "text-[#D05B5B]"
+                    : "text-[#A18448]"
+              }`}
+            >
+              {connectionLabel}
+            </p>
+
           </div>
 
-          {/* VEHICLE */}
-
-          <div className="my-4 h-px bg-[#EEEAF0]" />
-
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F6F3F8] text-[#7442AD]">
-              <Car
-                size={19}
-              />
-            </span>
-
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-[14px] font-semibold text-[#302B34]">
-                {
-                  vehicleName
+          {isUsingFallback && (
+            <button
+              type="button"
+              onClick={refreshRide}
+              disabled={isRefreshing}
+              aria-label="Refresh ride status"
+              className="ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#7442AD] shadow-sm disabled:opacity-50"
+            >
+              <RefreshCw
+                size={15}
+                className={
+                  isRefreshing
+                    ? "animate-spin"
+                    : ""
                 }
-              </p>
+              />
+            </button>
+          )}
 
-              {plateNumber && (
-                <p className="mt-0.5 text-[12px] font-medium uppercase tracking-[0.08em] text-[#928C96]">
-                  {
-                    plateNumber
-                  }
-                </p>
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* SHARE */}
+        {/* =========================================
+            ROUTE SUMMARY
+        ========================================= */}
+
+        <div className="mt-4 rounded-[16px] bg-[#FAF9FB] p-4">
+
+          <div className="flex gap-3">
+
+            <div className="flex flex-col items-center pt-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#E9AF27]" />
+              <span className="my-1 h-8 w-px bg-[#D9D2E0]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#7442AD]" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+
+              <p className="truncate text-[13px] font-medium text-[#302B34]">
+                {pickup.label}
+              </p>
+
+              <p className="my-3 text-[12px] text-[#A29BA6]">
+                Add Stop
+              </p>
+
+              <p className="truncate text-[13px] font-medium text-[#302B34]">
+                {destination.label}
+              </p>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* =========================================
+            DRIVER AND VEHICLE
+        ========================================= */}
+
+        <div className="mt-4">
+
+          {driverForCard ? (
+            <DriverCard
+              driver={driverForCard}
+              onChat={openDriverChat}
+              onCall={callDriver}
+            />
+          ) : (
+
+            <div className="rounded-[18px] border border-[#EEEAF1] bg-white p-4">
+
+              <div className="flex items-center gap-3">
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
+                  <UserRound size={23} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+
+                  <p className="text-[15px] font-semibold text-[#302B34]">
+                    Driver assigned
+                  </p>
+
+                  <p className="mt-1 text-[12px] text-[#918B95]">
+                    Driver profile is updating...
+                  </p>
+
+                </div>
+
+                <div className="flex gap-2">
+
+                  <button
+                    type="button"
+                    onClick={openDriverChat}
+                    aria-label="Chat with driver"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]"
+                  >
+                    <MessageCircle size={19} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={callDriver}
+                    aria-label="Call driver"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E7F7EC] text-[#2E9B61]"
+                  >
+                    <Phone size={18} />
+                  </button>
+
+                </div>
+              </div>
+
+              {/* VEHICLE DETAILS */}
+
+              <div className="mt-4 flex items-center gap-3 border-t border-[#F0EDF2] pt-3">
+
+                <CarFront
+                  size={19}
+                  className="text-[#7442AD]"
+                />
+
+                <div className="min-w-0">
+
+                  <p className="text-[14px] font-semibold text-[#302B34]">
+                    {[vehicle?.make, vehicle?.model]
+                      .filter(Boolean)
+                      .join(" ") ||
+                      "Vehicle details updating"}
+                  </p>
+
+                  {(vehicle?.plateNumber ||
+                    vehicle?.registrationNumber) && (
+                    <p className="mt-1 text-[12px] text-[#928C96]">
+                      {vehicle.plateNumber ||
+                        vehicle.registrationNumber}
+                    </p>
+                  )}
+
+                </div>
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
+        {/* =========================================
+            ESTIMATED TRIP DURATION
+        ========================================= */}
+
+        {typeof eta === "number" && (
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-[#918B95]">
+
+            <Clock3
+              size={15}
+              className="text-[#7442AD]"
+            />
+
+            Estimated trip duration:{" "}
+            {Math.round(eta)} min
+
+          </div>
+        )}
+
+        {/* =========================================
+            SHARE TRIP
+        ========================================= */}
 
         <motion.button
           type="button"
-          whileTap={{
-            scale: 0.98,
-          }}
-          onClick={() =>
-            setShareOpen(
-              true,
-            )
-          }
-          className="mt-4 flex h-[52px] w-full items-center justify-center gap-2 rounded-[13px] bg-[#F0E8F8] text-[15px] font-semibold text-[#7442AD]"
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setShareOpen(true)}
+          className="mt-4 flex h-[50px] w-full items-center justify-between rounded-[13px] bg-[#F8F7F9] px-4 text-[14px] font-semibold text-[#302B34]"
         >
-          <Share2
-            size={18}
-          />
 
-          Share Trip Live
-          Status
+          <span className="flex items-center gap-2">
+
+            <Share2
+              size={17}
+              className="text-[#7442AD]"
+            />
+
+            Share Trip Live Status
+
+          </span>
+
+          <span className="text-[#A49AAA]">
+            ›
+          </span>
+
         </motion.button>
 
-        {/* CANCEL */}
+        {/* =========================================
+            CANCEL RIDE
+        ========================================= */}
 
-        <button
+        <motion.button
           type="button"
-          onClick={() =>
-            setCancelOpen(
-              true,
-            )
-          }
-          className="mt-3 h-[48px] w-full text-[15px] font-semibold text-[#E45B5B]"
+          whileTap={{ scale: 0.98 }}
+          onClick={() => setCancelOpen(true)}
+          disabled={isCancelling}
+          className="mt-4 flex h-[54px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#F35C43] text-[16px] font-semibold text-white disabled:opacity-60"
         >
-          Cancel Ride
-        </button>
+
+          {isCancelling && (
+            <LoaderCircle
+              size={18}
+              className="animate-spin"
+            />
+          )}
+
+          {isCancelling
+            ? "Cancelling..."
+            : "Cancel Ride"}
+
+        </motion.button>
+
       </RideBottomSheet>
 
-      {/*
-        We cannot safely feed DriverCard /
-        ShareRideSheet a fabricated driver
-        object anymore.
+      {/* ===============================================
+          SHARE RIDE SHEET
+      =============================================== */}
 
-        Once GET /rides/:id shows us the
-        actual assigned-driver response,
-        we can map it exactly.
-      */}
+      {rideId && (
+        <ShareRideSheet
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          rideId={rideId}
+          driver={ride.driver}
+          pickup={pickup}
+          destination={destination}
+          eta={
+            typeof eta === "number"
+              ? `${Math.round(eta)} min`
+              : undefined
+          }
+        />
+      )}
+
+      {/* ===============================================
+          CANCEL RIDE SHEET
+      =============================================== */}
 
       <CancelRideSheet
-        open={
-          cancelOpen
-        }
-        onClose={() =>
-          setCancelOpen(
-            false,
-          )
-        }
-        onConfirm={
-          handleCancel
-        }
+        open={cancelOpen}
+        onClose={() => {
+          if (!isCancelling) {
+            setCancelOpen(false);
+          }
+        }}
+        onConfirm={handleCancel}
       />
+
     </div>
   );
 }
 
+
+// "use client";
+
 // import {
 //   Clock3,
+//   LoaderCircle,
+//   MessageCircle,
+//   Phone,
 //   Share2,
+//   UserRound,
+//   CarFront,
 // } from "lucide-react";
 // import { motion } from "framer-motion";
+// import { useEffect, useRef, useState } from "react";
 // import { Navigate, useNavigate } from "react-router-dom";
+// import { toast } from "sonner";
 
 // import PassengerMap from "../../../components/passenger/ride/PassengerMap";
 // import RideBottomSheet from "../../../components/passenger/ride/RideBottomSheet";
 // import RideMapHeader from "../../../components/passenger/ride/RideMapHeader";
 // import DriverCard from "../../../components/passenger/ride/DriverCard";
-
-// import { usePassengerRide } from "../../../context/PassengerRideContext";
-// import { mockAssignedDriver } from "../../../data/passengerRide";
-// import { useState } from "react";
 // import ShareRideSheet from "../../../components/passenger/ride/ShareRideSheet";
 // import CancelRideSheet from "../../../components/passenger/ride/CancelRideSheet";
 
+// import { usePassengerRide } from "../../../context/PassengerRideContext";
+// import {
+//   passengerRideApi,
+//   type PassengerRideResponse,
+// } from "../../../api/passenger/rides";
+// import {
+//   clearActiveRide,
+//   getStoredActiveRide,
+//   getStoredActiveRideId,
+//   storeActiveRide,
+// } from "../../../utils/passengerActiveRide";
+// import type { RideDriver } from "../../../types/passengerRide";
+
+// const POLL_INTERVAL = 4000;
+
 // export default function DriverAssigned() {
 //   const navigate = useNavigate();
+//   const { ride, setRideStatus } = usePassengerRide();
 
-//   const {
-//     ride,
-//     setDriver,
-//     setRideStatus,
-//   } = usePassengerRide();
+//   const [backendRide, setBackendRide] =
+//     useState<PassengerRideResponse | null>(
+//       () => getStoredActiveRide(),
+//     );
 
-//   const [
-//   shareOpen,
-//   setShareOpen,
-// ] = useState(false);
+//   const [shareOpen, setShareOpen] = useState(false);
+//   const [cancelOpen, setCancelOpen] = useState(false);
+//   const [isCancelling, setIsCancelling] = useState(false);
+//   const [loading, setLoading] = useState(false);
 
-// const [
-//   cancelOpen,
-//   setCancelOpen,
-// ] = useState(false);
+//   const cancellingRef = useRef(false);
 
-//   if (!ride.pickup || !ride.destination) {
-//     return <Navigate to="/passenger/book-ride" replace />;
-//   }
+//   const rideId =
+//     backendRide?.id ?? getStoredActiveRideId();
 
-//   const driver = ride.driver ?? mockAssignedDriver;
+//   const handleRideStatus = (
+//     response: PassengerRideResponse,
+//   ) => {
+//     setBackendRide(response);
+//     storeActiveRide(response);
 
-//   const center =
-//     ride.pickup.coordinates ?? {
-//       lat: 6.5244,
-//       lng: 3.3792,
-//     };
+//     switch (response.status) {
+//       case "requested":
+//       case "searching":
+//         setRideStatus("searching");
+//         navigate("/passenger/ride/searching", {
+//           replace: true,
+//         });
+//         return;
 
-//   const continueForDevelopment = () => {
-//     setDriver(mockAssignedDriver);
-//     setRideStatus("driver-en-route");
+//       case "driver_en_route":
+//         setRideStatus("driver-en-route");
+//         navigate("/passenger/ride/driver-en-route", {
+//           replace: true,
+//         });
+//         return;
 
-//     navigate("/passenger/ride/driver-en-route");
+//       case "driver_arrived":
+//         setRideStatus("driver-arrived");
+//         navigate("/passenger/ride/driver-arrived", {
+//           replace: true,
+//         });
+//         return;
+
+//       case "ride_started":
+//       case "ride_in_progress":
+//         setRideStatus("in-progress");
+//         navigate("/passenger/ride/in-trip", {
+//           replace: true,
+//         });
+//         return;
+
+//       case "ride_completed":
+//       case "payment_pending":
+//       case "paid":
+//       case "closed":
+//         navigate("/passenger/ride/complete", {
+//           replace: true,
+//         });
+//         return;
+
+//       case "cancelled":
+//         clearActiveRide();
+//         setRideStatus("idle");
+//         navigate("/passenger/home", {
+//           replace: true,
+//         });
+//         return;
+
+//       case "no_drivers_found":
+//         setRideStatus("searching");
+//         navigate("/passenger/ride/searching", {
+//           replace: true,
+//         });
+//         return;
+
+//       default:
+//         return;
+//     }
 //   };
 
-//   const handleCancel = (
-//   reason: string,
-//   comment?: string,
-// ) => {
-//   console.log({
-//     reason,
-//     comment,
-//   });
+//   useEffect(() => {
+//     if (!rideId) return;
 
-//   setRideStatus("idle");
+//     let mounted = true;
+//     let running = false;
 
-//   navigate(
-//     "/passenger/home",
-//     {
-//       replace: true,
-//     },
-//   );
-// };
+//     const refresh = async () => {
+//       if (running || cancellingRef.current) return;
+
+//       running = true;
+
+//       try {
+//         setLoading(true);
+
+//         const response =
+//           await passengerRideApi.getRide(rideId);
+
+//         if (!mounted || cancellingRef.current) return;
+
+//         handleRideStatus(response);
+//       } catch (error) {
+//         if (mounted) {
+//           console.error(
+//             "DRIVER ASSIGNED POLLING ERROR:",
+//             error,
+//           );
+//         }
+//       } finally {
+//         running = false;
+//         if (mounted) setLoading(false);
+//       }
+//     };
+
+//     void refresh();
+
+//     const interval = window.setInterval(
+//       refresh,
+//       POLL_INTERVAL,
+//     );
+
+//     return () => {
+//       mounted = false;
+//       window.clearInterval(interval);
+//     };
+//     // handleRideStatus reads stable navigation/context setters.
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [rideId, navigate, setRideStatus]);
+
+//   const handleCancel = async (
+//     reason: string,
+//     _comment?: string,
+//   ) => {
+//     if (!rideId || cancellingRef.current) return;
+
+//     cancellingRef.current = true;
+//     setIsCancelling(true);
+
+//     try {
+//       const latest =
+//         await passengerRideApi.getRide(rideId);
+
+//       if (
+//         latest.status !== "driver_assigned" &&
+//         latest.status !== "driver_en_route"
+//       ) {
+//         setCancelOpen(false);
+//         handleRideStatus(latest);
+//         return;
+//       }
+
+//       const response =
+//         await passengerRideApi.cancelRide(
+//           rideId,
+//           reason,
+//         );
+
+//       if (response.status !== "cancelled") {
+//         setCancelOpen(false);
+//         handleRideStatus(response);
+//         toast.info(
+//           "Your ride status changed before cancellation.",
+//         );
+//         return;
+//       }
+
+//       clearActiveRide();
+//       setCancelOpen(false);
+//       setRideStatus("idle");
+
+//       toast.success(
+//         response.cancellationFee > 0
+//           ? `Ride cancelled. Fee: ₦${response.cancellationFee.toLocaleString("en-NG")}`
+//           : "Ride cancelled successfully.",
+//       );
+
+//       navigate("/passenger/home", {
+//         replace: true,
+//       });
+//     } catch (error) {
+//       console.error("CANCEL RIDE ERROR:", error);
+
+//       try {
+//         const latest =
+//           await passengerRideApi.getRide(rideId);
+
+//         if (latest.status !== "driver_assigned") {
+//           setCancelOpen(false);
+//           handleRideStatus(latest);
+//           return;
+//         }
+//       } catch (refreshError) {
+//         console.error(
+//           "CANCEL STATUS REFRESH ERROR:",
+//           refreshError,
+//         );
+//       }
+
+//       toast.error(
+//         "Unable to cancel the ride. Please try again.",
+//       );
+//     } finally {
+//       cancellingRef.current = false;
+//       setIsCancelling(false);
+//     }
+//   };
+
+//   if (!rideId) {
+//     return (
+//       <Navigate to="/passenger/home" replace />
+//     );
+//   }
+
+//   // Prefer the ride context; use backend coordinates
+//   // when the screen is refreshed.
+//   const pickup =
+//     ride.pickup ??
+//     (backendRide?.pickup
+//       ? {
+//           label: backendRide.pickup.address,
+//           address: backendRide.pickup.address,
+//           coordinates: {
+//             lat: backendRide.pickup.lat,
+//             lng: backendRide.pickup.lng,
+//           },
+//         }
+//       : null);
+
+//   const destination =
+//     ride.destination ??
+//     (backendRide?.dropoff
+//       ? {
+//           label: backendRide.dropoff.address,
+//           address: backendRide.dropoff.address,
+//           coordinates: {
+//             lat: backendRide.dropoff.lat,
+//             lng: backendRide.dropoff.lng,
+//           },
+//         }
+//       : null);
+
+//   if (!pickup || !destination) {
+//     return (
+//       <Navigate to="/passenger/home" replace />
+//     );
+//   }
+
+//   const center =
+//     pickup.coordinates ??
+//     destination.coordinates;
+
+//   if (!center) {
+//     return (
+//       <Navigate to="/passenger/home" replace />
+//     );
+//   }
+
+
+//   const backendDriver = backendRide?.driver;
+// const vehicle = backendRide?.vehicle;
+
+// const driverName =
+//   backendDriver?.fullName?.trim() ||
+//   [backendDriver?.firstName, backendDriver?.lastName]
+//     .filter(Boolean)
+//     .join(" ") ||
+//   "";
+
+// const driverForCard: RideDriver | null =
+//   backendDriver && driverName && vehicle
+//     ? {
+//         id: backendDriver.id ?? backendRide?.driverId ?? "",
+//         firstName: driverName,
+//         photo: backendDriver.profilePicture ?? "",
+//         rating: backendDriver.rating ?? 0,
+//         totalTrips: backendDriver.totalCompletedRides ?? 0,
+//         vehicle: {
+//           make: vehicle.make ?? "",
+//           model: vehicle.model ?? "",
+//           color: vehicle.color ?? "",
+//           plateNumber:
+//             vehicle.plateNumber ??
+//             vehicle.registrationNumber ??
+//             "",
+//         },
+//       }
+//     : null;
+
+//   const openDriverChat = () => {
+//     if (!backendRide?.driverId) {
+//       toast.info("Driver details are updating.");
+//       return;
+//     }
+
+//     navigate("/passenger/ride/chat");
+//   };
+
+//   const callDriver = () => {
+//     const phone = backendDriver?.phoneNumber;
+
+//     if (!phone) {
+//       toast.info(
+//         "Driver calling is not available yet.",
+//       );
+//       return;
+//     }
+
+//     window.location.href = `tel:${phone}`;
+//   };
+
+//   const eta = backendRide?.estimatedDurationMin;
 
 //   return (
 //     <div className="relative h-[100dvh] overflow-hidden bg-[#F4F4F4]">
 //       <PassengerMap
 //         center={center}
-//         pickup={ride.pickup}
-//         destination={ride.destination}
+//         pickup={pickup}
+//         destination={destination}
 //         zoom={15}
 //       />
 
@@ -753,102 +1507,194 @@ export default function DriverAssigned() {
 //       />
 
 //       <RideBottomSheet>
-//         <div className="flex items-center justify-between">
+//         <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-[#E0DCE4]" />
+
+//         <div className="flex items-start justify-between gap-3">
 //           <div>
-//             <h1 className="text-[22px] font-semibold text-[#302B34]">
+//             <h1 className="text-[20px] font-semibold text-[#302B34]">
 //               Driver Assigned
 //             </h1>
 
-//             <p className="mt-1 text-[14px] text-[#928C96]">
-//               Your driver is heading to you.
+//             <p className="mt-1 text-[13px] text-[#928C96]">
+//               Your driver has accepted your ride.
 //             </p>
 //           </div>
 
-//           <div className="rounded-[12px] bg-[#F0E8F8] px-3 py-2 text-right text-[#7442AD]">
-//             <div className="flex items-center gap-1 text-[13px] font-semibold">
-//               <Clock3 size={14} />
-//               5 min
+//           {loading && (
+//             <LoaderCircle
+//               size={19}
+//               className="animate-spin text-[#7442AD]"
+//             />
+//           )}
+//         </div>
+
+//         {/* ROUTE SUMMARY */}
+//         <div className="mt-4 rounded-[16px] bg-[#FAF9FB] p-4">
+//           <div className="flex gap-3">
+//             <div className="flex flex-col items-center pt-1">
+//               <span className="h-2.5 w-2.5 rounded-full bg-[#E9AF27]" />
+//               <span className="my-1 h-8 w-px bg-[#D9D2E0]" />
+//               <span className="h-2.5 w-2.5 rounded-full bg-[#7442AD]" />
 //             </div>
 
-//             <p className="mt-0.5 text-[11px]">
-//               away
-//             </p>
+//             <div className="flex-1 min-w-0">
+//               <p className="truncate text-[13px] font-medium text-[#302B34]">
+//                 {pickup.label}
+//               </p>
+
+//               <p className="my-3 text-[12px] text-[#A29BA6]">
+//                 Add Stop
+//               </p>
+
+//               <p className="truncate text-[13px] font-medium text-[#302B34]">
+//                 {destination.label}
+//               </p>
+//             </div>
 //           </div>
 //         </div>
 
-//         <div className="mt-5">
-//           <DriverCard
-//   driver={driver}
-//   onChat={() =>
-//     navigate(
-//       "/passenger/ride/chat",
-//     )
-//   }
-//   onCall={() => {
-//     console.log(
-//       "Open call sheet",
-//     );
-//   }}
-// />
+//         {/* DRIVER AND VEHICLE */}
+//         <div className="mt-4">
+//           {driverForCard ? (
+//             <DriverCard
+//               driver={driverForCard}
+//               onChat={openDriverChat}
+//               onCall={callDriver}
+//             />
+//           ) : (
+//             <div className="rounded-[18px] border border-[#EEEAF1] bg-white p-4">
+//               <div className="flex items-center gap-3">
+//                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
+//                   <UserRound size={23} />
+//                 </div>
+
+//                 <div className="flex-1 min-w-0">
+//                   <p className="text-[15px] font-semibold text-[#302B34]">
+//                     Driver assigned
+//                   </p>
+//                   <p className="mt-1 text-[12px] text-[#918B95]">
+//                     Driver profile is updating...
+//                   </p>
+//                 </div>
+
+//                 <div className="flex gap-2">
+//                   <button
+//                     type="button"
+//                     onClick={openDriverChat}
+//                     aria-label="Chat with driver"
+//                     className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]"
+//                   >
+//                     <MessageCircle size={19} />
+//                   </button>
+
+//                   <button
+//                     type="button"
+//                     onClick={callDriver}
+//                     aria-label="Call driver"
+//                     className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E7F7EC] text-[#2E9B61]"
+//                   >
+//                     <Phone size={18} />
+//                   </button>
+//                 </div>
+//               </div>
+
+//               <div className="mt-4 flex items-center gap-3 border-t border-[#F0EDF2] pt-3">
+//                 <CarFront
+//                   size={19}
+//                   className="text-[#7442AD]"
+//                 />
+//                 <div className="min-w-0">
+//                   <p className="text-[14px] font-semibold text-[#302B34]">
+//                     {[vehicle?.make, vehicle?.model]
+//                       .filter(Boolean)
+//                       .join(" ") ||
+//                       "Vehicle details updating"}
+//                   </p>
+
+//                   {vehicle?.plateNumber && (
+//                     <p className="mt-1 text-[12px] text-[#928C96]">
+//                       {vehicle.plateNumber}
+//                     </p>
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+//           )}
 //         </div>
 
+//         {/* ETA */}
+//         {typeof eta === "number" && (
+//           <div className="mt-3 flex items-center gap-2 text-[12px] text-[#918B95]">
+//             <Clock3
+//               size={15}
+//               className="text-[#7442AD]"
+//             />
+//             Estimated trip duration: {Math.round(eta)} min
+//           </div>
+//         )}
+
+//         {/* SHARE TRIP */}
 //         <motion.button
-//   type="button"
-//   whileTap={{
-//     scale: 0.98,
-//   }}
-//   onClick={() =>
-//     setShareOpen(true)
-//   }
-//   className="mt-4 flex h-[52px] w-full items-center justify-center gap-2 rounded-[13px] bg-[#F0E8F8] text-[15px] font-semibold text-[#7442AD]"
-// >
-//   <Share2 size={18} />
-//   Share Trip Live Status
-// </motion.button>
-
-//         {/* TEMPORARY UI DEVELOPMENT BUTTON */}
-//         <button
 //           type="button"
-//           onClick={continueForDevelopment}
-//           className="mt-3 h-[52px] w-full rounded-[13px] bg-[#7442AD] text-[15px] font-semibold text-white"
+//           whileTap={{ scale: 0.98 }}
+//           onClick={() => setShareOpen(true)}
+//           className="mt-4 flex h-[50px] w-full items-center justify-between rounded-[13px] bg-[#F8F7F9] px-4 text-[14px] font-semibold text-[#302B34]"
 //         >
-//           Preview Driver En Route
-//         </button>
+//           <span className="flex items-center gap-2">
+//             <Share2
+//               size={17}
+//               className="text-[#7442AD]"
+//             />
+//             Share Trip Live Status
+//           </span>
+//           <span className="text-[#A49AAA]">›</span>
+//         </motion.button>
 
-//         <button
-//   type="button"
-//   onClick={() =>
-//     setCancelOpen(true)
-//   }
-//   className="mt-3 h-[48px] w-full text-[15px] font-semibold text-[#E45B5B]"
-// >
-//   Cancel Ride
-// </button>
+//         {/* CANCEL */}
+//         <motion.button
+//           type="button"
+//           whileTap={{ scale: 0.98 }}
+//           onClick={() => setCancelOpen(true)}
+//           disabled={isCancelling}
+//           className="mt-4 flex h-[54px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#F35C43] text-[16px] font-semibold text-white disabled:opacity-60"
+//         >
+//           {isCancelling && (
+//             <LoaderCircle
+//               size={18}
+//               className="animate-spin"
+//             />
+//           )}
+//           Cancel Ride
+//         </motion.button>
 //       </RideBottomSheet>
 
+//       {rideId && (
+//         <ShareRideSheet
+//           open={shareOpen}
+//           onClose={() => setShareOpen(false)}
+//           rideId={rideId}
+//           driver={ride.driver}
+//           pickup={pickup}
+//           destination={destination}
+//           eta={
+//             typeof eta === "number"
+//               ? `${Math.round(eta)} min`
+//               : undefined
+//           }
+//         />
+//       )}
 
-//       <ShareRideSheet
-//   open={shareOpen}
-//   onClose={() =>
-//     setShareOpen(false)
-//   }
-//   driver={driver}
-//   pickup={ride.pickup}
-//   destination={
-//     ride.destination
-//   }
-//   eta="5 min"
-// />
-
-// <CancelRideSheet
-//   open={cancelOpen}
-//   onClose={() =>
-//     setCancelOpen(false)
-//   }
-//   onConfirm={
-//     handleCancel
-//   }
-// />
+//       <CancelRideSheet
+//         open={cancelOpen}
+//         onClose={() => {
+//           if (!isCancelling) setCancelOpen(false);
+//         }}
+//         onConfirm={handleCancel}
+//       />
 //     </div>
 //   );
 // }
+
+
+
+

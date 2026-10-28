@@ -85,6 +85,7 @@ export interface BackendDriver {
 
   currentLat?: number | null;
   currentLng?: number | null;
+  totalCompletedRides?: number;
 }
 
 /* =========================================================
@@ -106,6 +107,7 @@ export interface BackendVehicle {
 
   plateNumber?: string;
   registrationNumber?: string;
+  category?: string;
 }
 
 /* =========================================================

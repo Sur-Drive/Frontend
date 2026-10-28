@@ -211,7 +211,7 @@ export default function RideChat({
   const routes: Record<string, string> = {
     "driver-assigned": "/passenger/ride/driver-assigned",
     "driver-en-route": "/passenger/ride/driver-en-route",
-    "driver-arriving": "/passenger/ride/driver-arriving",
+    "driver-arriving": "/passenger/ride/driver-en-route",
     "driver-arrived": "/passenger/ride/driver-arrived",
     "in-progress": "/passenger/ride/in-trip",
   };
