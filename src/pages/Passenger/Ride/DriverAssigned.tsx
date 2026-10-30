@@ -53,6 +53,9 @@ import {
 import type { RideDriver } from "../../../types/passengerRide";
 
 import { useRideSocket } from "../../../hooks/passenger/useRideSocket";
+import {
+  useRideDriverDetails,
+} from "../../../hooks/passenger/useRideDriverDetails";
 
 /* =========================================================
    CONSTANTS
@@ -719,50 +722,56 @@ export default function DriverAssigned() {
      DRIVER AND VEHICLE DATA
   ======================================================= */
 
-  const backendDriver = backendRide?.driver;
+  const {
+  driver: driverForCard,
+  loading: driverLoading,
+  error: driverError,
+} = useRideDriverDetails(
+  rideId,
+  backendRide,
+  ride.driver,
+);
 
-  const vehicle = backendRide?.vehicle;
+  // const driverName =
+  //   backendDriver?.fullName?.trim() ||
+  //   [
+  //     backendDriver?.firstName,
+  //     backendDriver?.lastName,
+  //   ]
+  //     .filter(Boolean)
+  //     .join(" ") ||
+  //   "";
 
-  const driverName =
-    backendDriver?.fullName?.trim() ||
-    [
-      backendDriver?.firstName,
-      backendDriver?.lastName,
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    "";
+  // const driverForCard: RideDriver | null =
+  //   backendDriver && driverName && vehicle
+  //     ? {
+  //         id:
+  //           backendDriver.id ??
+  //           backendRide?.driverId ??
+  //           "",
 
-  const driverForCard: RideDriver | null =
-    backendDriver && driverName && vehicle
-      ? {
-          id:
-            backendDriver.id ??
-            backendRide?.driverId ??
-            "",
+  //         firstName: driverName,
 
-          firstName: driverName,
+  //         photo:
+  //           backendDriver.profilePicture ?? "",
 
-          photo:
-            backendDriver.profilePicture ?? "",
+  //         rating:
+  //           backendDriver.rating ?? 0,
 
-          rating:
-            backendDriver.rating ?? 0,
+  //         totalTrips:
+  //           backendDriver.totalCompletedRides ?? 0,
 
-          totalTrips:
-            backendDriver.totalCompletedRides ?? 0,
-
-          vehicle: {
-            make: vehicle.make ?? "",
-            model: vehicle.model ?? "",
-            color: vehicle.color ?? "",
-            plateNumber:
-              vehicle.plateNumber ??
-              vehicle.registrationNumber ??
-              "",
-          },
-        }
-      : null;
+  //         vehicle: {
+  //           make: vehicle.make ?? "",
+  //           model: vehicle.model ?? "",
+  //           color: vehicle.color ?? "",
+  //           plateNumber:
+  //             vehicle.plateNumber ??
+  //             vehicle.registrationNumber ??
+  //             "",
+  //         },
+  //       }
+  //     : null;
 
   /* =======================================================
      DISPLAY DATA
@@ -939,7 +948,7 @@ export default function DriverAssigned() {
             DRIVER AND VEHICLE
         ========================================= */}
 
-        <div className="mt-4">
+        {/* <div className="mt-4">
 
           {driverForCard ? (
             <DriverCard
@@ -992,7 +1001,7 @@ export default function DriverAssigned() {
                 </div>
               </div>
 
-              {/* VEHICLE DETAILS */}
+              VEHICLE DETAILS
 
               <div className="mt-4 flex items-center gap-3 border-t border-[#F0EDF2] pt-3">
 
@@ -1024,7 +1033,45 @@ export default function DriverAssigned() {
             </div>
           )}
 
+        </div> */}
+        <div className="mt-4">
+  {driverForCard ? (
+    <DriverCard
+      driver={driverForCard}
+      onChat={openDriverChat}
+      onCall={callDriver}
+    />
+  ) : (
+    <div className="rounded-[18px] border border-[#EEEAF1] bg-white p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
+          <UserRound size={23} />
         </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-semibold text-[#302B34]">
+            Your driver
+          </p>
+
+          <p className="mt-1 text-[12px] text-[#918B95]">
+            {driverLoading
+              ? "Loading driver details..."
+              : driverError
+                ? "Unable to load driver details"
+                : "Driver details updating..."}
+          </p>
+        </div>
+
+        {driverLoading && (
+          <LoaderCircle
+            size={18}
+            className="animate-spin text-[#7442AD]"
+          />
+        )}
+      </div>
+    </div>
+  )}
+</div>
 
         {/* =========================================
             ESTIMATED TRIP DURATION

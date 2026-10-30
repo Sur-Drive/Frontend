@@ -94,12 +94,14 @@ export interface RideDriver {
 
   phone?: string;
 
-  vehicle: {
-    make: string;
-    model: string;
-    color: string;
-    plateNumber: string;
-  };
+  vehicle?: {
+  make?: string;
+  model?: string;
+  color?: string;
+  plateNumber?: string;
+  category?: string;
+  capacity?: number | null;
+};
 
   photo?: string;
 }

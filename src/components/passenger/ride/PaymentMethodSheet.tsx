@@ -1,9 +1,10 @@
 import {
-  Building2,
+  Banknote,
   Check,
   CreditCard,
   LockKeyhole,
   ShieldCheck,
+  Wallet,
 } from "lucide-react";
 
 import { motion } from "framer-motion";
@@ -14,6 +15,10 @@ import type {
   PaymentMethod,
 } from "../../../types/passengerRide";
 
+/* =========================================================
+   TYPES
+========================================================= */
+
 interface PaymentMethodSheetProps {
   open: boolean;
   onClose: () => void;
@@ -22,36 +27,52 @@ interface PaymentMethodSheetProps {
   onSelect: (method: PaymentMethod) => void;
 }
 
-type OnlinePaymentChannel = "card" | "transfer";
+type SupportedPaymentChannel = "cash" | "card";
+
+/* =========================================================
+   PAYMENT METHODS
+========================================================= */
+
+export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+  {
+    id: "cash",
+    type: "cash",
+    label: "Pay with Cash",
+  },
+  {
+    id: "paystack-card",
+    type: "card",
+    label: "Pay with Card",
+  },
+];
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 function getPaymentChannel(
   method: PaymentMethod,
-): OnlinePaymentChannel | null {
-  const value = `${method.id} ${method.type}`.toLowerCase();
-
-  if (value.includes("transfer")) {
-    return "transfer";
+): SupportedPaymentChannel | null {
+  if (
+    method.id === "cash" &&
+    method.type === "cash"
+  ) {
+    return "cash";
   }
 
-  if (value.includes("card")) {
+  if (
+    method.id === "paystack-card" &&
+    method.type === "card"
+  ) {
     return "card";
   }
 
   return null;
 }
 
-const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
-  {
-    id: "paystack-card",
-    type: "card",
-    label: "Pay with Card",
-  },
-  {
-    id: "paystack-transfer",
-    type: "card",
-    label: "Bank Transfer",
-  },
-];
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function PaymentMethodSheet({
   open,
@@ -60,9 +81,18 @@ export default function PaymentMethodSheet({
   methods = DEFAULT_PAYMENT_METHODS,
   onSelect,
 }: PaymentMethodSheetProps) {
-  const onlineMethods = methods.filter(
+  const supportedMethods = methods.filter(
     (method) => getPaymentChannel(method) !== null,
   );
+
+  const selectedChannel = selected
+    ? getPaymentChannel(selected)
+    : null;
+
+  const handleSelect = (method: PaymentMethod) => {
+    onSelect(method);
+    onClose();
+  };
 
   return (
     <RideModalSheet
@@ -71,23 +101,25 @@ export default function PaymentMethodSheet({
       title="Payment Method"
       description="Choose how you would like to pay for your ride."
     >
+      {/* ===============================================
+          PAYMENT OPTIONS
+      =============================================== */}
+
       <div className="space-y-3">
-        {onlineMethods.map((method, index) => {
+        {supportedMethods.map((method, index) => {
           const channel = getPaymentChannel(method);
 
           if (!channel) return null;
 
-          const Icon =
-            channel === "transfer"
-              ? Building2
-              : CreditCard;
+          const isCash = channel === "cash";
+
+          const Icon = isCash ? Banknote : CreditCard;
 
           const active = selected?.id === method.id;
 
-          const description =
-            channel === "transfer"
-              ? "Pay securely via bank transfer"
-              : "Pay securely with your debit or credit card";
+          const description = isCash
+            ? "Pay your driver directly when your trip ends."
+            : "Pay securely with your debit or credit card after your trip.";
 
           return (
             <motion.button
@@ -103,16 +135,14 @@ export default function PaymentMethodSheet({
               }}
               transition={{
                 delay: index * 0.05,
+                duration: 0.25,
               }}
               whileTap={{
                 scale: 0.985,
               }}
-              onClick={() => {
-                onSelect(method);
-                onClose();
-              }}
+              onClick={() => handleSelect(method)}
               className={`
-                flex min-h-[78px] w-full
+                flex min-h-[90px] w-full
                 items-center gap-3
                 rounded-[16px] border
                 p-4 text-left
@@ -124,6 +154,8 @@ export default function PaymentMethodSheet({
                 }
               `}
             >
+              {/* ICON */}
+
               <span
                 className={`
                   flex h-12 w-12
@@ -139,6 +171,8 @@ export default function PaymentMethodSheet({
                 <Icon size={22} strokeWidth={1.8} />
               </span>
 
+              {/* CONTENT */}
+
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-semibold text-[#302B34]">
                   {method.label}
@@ -148,13 +182,22 @@ export default function PaymentMethodSheet({
                   {description}
                 </p>
 
-                {channel === "card" && (
-                  <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#7442AD]">
-                    <LockKeyhole size={11} />
-                    Secure checkout
+                {/* PAYMENT LABEL */}
+
+                {isCash ? (
+                  <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#7442AD]">
+                    <Wallet size={12} />
+                    Pay after your ride
+                  </span>
+                ) : (
+                  <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#7442AD]">
+                    <LockKeyhole size={12} />
+                    Secure Paystack checkout
                   </span>
                 )}
               </div>
+
+              {/* SELECTED INDICATOR */}
 
               <span
                 className={`
@@ -178,39 +221,303 @@ export default function PaymentMethodSheet({
         })}
       </div>
 
-      {onlineMethods.length === 0 && (
+      {/* ===============================================
+          EMPTY STATE
+      =============================================== */}
+
+      {supportedMethods.length === 0 && (
         <div className="rounded-[14px] bg-[#FFF7F2] p-4 text-[13px] text-[#A15B36]">
-          No supported online payment method is available.
+          No supported payment method is currently available.
         </div>
       )}
 
-      <div className="mt-5 rounded-[15px] border border-[#EDE5F4] bg-[#FAF7FD] p-4">
+      {/* ===============================================
+          PAYMENT INFORMATION
+      =============================================== */}
+
+      <motion.div
+        key={selectedChannel ?? "default"}
+        initial={{
+          opacity: 0,
+          y: 6,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.25,
+        }}
+        className="mt-5 rounded-[15px] border border-[#EDE5F4] bg-[#FAF7FD] p-4"
+      >
         <div className="flex items-start gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEE4F7] text-[#7442AD]">
-            <ShieldCheck size={19} />
+            {selectedChannel === "cash" ? (
+              <Banknote size={19} />
+            ) : (
+              <ShieldCheck size={19} />
+            )}
           </span>
 
           <div>
             <p className="text-[13px] font-semibold text-[#44354F]">
-              Secure online payment
+              {selectedChannel === "cash"
+                ? "Cash payment"
+                : selectedChannel === "card"
+                  ? "Secure card payment"
+                  : "Flexible payment options"}
             </p>
 
             <p className="mt-1 text-[12px] leading-[19px] text-[#82788A]">
-              Your final fare will be calculated when
-              your trip ends. Payment will be processed
-              securely through Paystack.
+              {selectedChannel === "cash"
+                ? "Your final fare will be calculated when your trip ends. Please pay the displayed amount directly to your driver."
+                : selectedChannel === "card"
+                  ? "Your final fare will be calculated when your trip ends. You will then complete your payment securely through Paystack."
+                  : "Your final fare will be calculated when your trip ends. Choose cash to pay your driver or card to pay securely online."}
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
+
+      {/* ===============================================
+          FOOTER
+      =============================================== */}
 
       <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-[#96909A]">
-        <LockKeyhole size={13} />
-        <span>Secure payment powered by Paystack</span>
+        {selectedChannel === "cash" ? (
+          <>
+            <Banknote size={14} />
+            <span>Pay your driver after your trip</span>
+          </>
+        ) : selectedChannel === "card" ? (
+          <>
+            <LockKeyhole size={13} />
+            <span>Secure payment powered by Paystack</span>
+          </>
+        ) : (
+          <>
+            <ShieldCheck size={14} />
+            <span>Choose the payment method that suits you</span>
+          </>
+        )}
       </div>
     </RideModalSheet>
   );
 }
+
+// import {
+//   Building2,
+//   Check,
+//   CreditCard,
+//   LockKeyhole,
+//   ShieldCheck,
+// } from "lucide-react";
+
+// import { motion } from "framer-motion";
+
+// import RideModalSheet from "./RideModalSheet";
+
+// import type {
+//   PaymentMethod,
+// } from "../../../types/passengerRide";
+
+// interface PaymentMethodSheetProps {
+//   open: boolean;
+//   onClose: () => void;
+//   selected: PaymentMethod | null;
+//   methods?: PaymentMethod[];
+//   onSelect: (method: PaymentMethod) => void;
+// }
+
+// type OnlinePaymentChannel = "card" | "transfer";
+
+// function getPaymentChannel(
+//   method: PaymentMethod,
+// ): OnlinePaymentChannel | null {
+//   const value = `${method.id} ${method.type}`.toLowerCase();
+
+//   if (value.includes("transfer")) {
+//     return "transfer";
+//   }
+
+//   if (value.includes("card")) {
+//     return "card";
+//   }
+
+//   return null;
+// }
+
+// const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+//   {
+//     id: "paystack-card",
+//     type: "card",
+//     label: "Pay with Card",
+//   },
+//   {
+//     id: "paystack-transfer",
+//     type: "card",
+//     label: "Bank Transfer",
+//   },
+// ];
+
+// export default function PaymentMethodSheet({
+//   open,
+//   onClose,
+//   selected,
+//   methods = DEFAULT_PAYMENT_METHODS,
+//   onSelect,
+// }: PaymentMethodSheetProps) {
+//   const onlineMethods = methods.filter(
+//     (method) => getPaymentChannel(method) !== null,
+//   );
+
+//   return (
+//     <RideModalSheet
+//       open={open}
+//       onClose={onClose}
+//       title="Payment Method"
+//       description="Choose how you would like to pay for your ride."
+//     >
+//       <div className="space-y-3">
+//         {onlineMethods.map((method, index) => {
+//           const channel = getPaymentChannel(method);
+
+//           if (!channel) return null;
+
+//           const Icon =
+//             channel === "transfer"
+//               ? Building2
+//               : CreditCard;
+
+//           const active = selected?.id === method.id;
+
+//           const description =
+//             channel === "transfer"
+//               ? "Pay securely via bank transfer"
+//               : "Pay securely with your debit or credit card";
+
+//           return (
+//             <motion.button
+//               key={method.id}
+//               type="button"
+//               initial={{
+//                 opacity: 0,
+//                 y: 8,
+//               }}
+//               animate={{
+//                 opacity: 1,
+//                 y: 0,
+//               }}
+//               transition={{
+//                 delay: index * 0.05,
+//               }}
+//               whileTap={{
+//                 scale: 0.985,
+//               }}
+//               onClick={() => {
+//                 onSelect(method);
+//                 onClose();
+//               }}
+//               className={`
+//                 flex min-h-[78px] w-full
+//                 items-center gap-3
+//                 rounded-[16px] border
+//                 p-4 text-left
+//                 transition-all duration-200
+//                 ${
+//                   active
+//                     ? "border-[#7442AD] bg-[#FBF8FE] shadow-[0_4px_16px_rgba(116,66,173,0.08)]"
+//                     : "border-[#ECE8EF] bg-white hover:border-[#D5C3E7]"
+//                 }
+//               `}
+//             >
+//               <span
+//                 className={`
+//                   flex h-12 w-12
+//                   shrink-0 items-center
+//                   justify-center rounded-[14px]
+//                   ${
+//                     active
+//                       ? "bg-[#7442AD] text-white"
+//                       : "bg-[#F1EAF7] text-[#7442AD]"
+//                   }
+//                 `}
+//               >
+//                 <Icon size={22} strokeWidth={1.8} />
+//               </span>
+
+//               <div className="flex-1 min-w-0">
+//                 <p className="text-[15px] font-semibold text-[#302B34]">
+//                   {method.label}
+//                 </p>
+
+//                 <p className="mt-1 text-[12px] leading-5 text-[#96909A]">
+//                   {description}
+//                 </p>
+
+//                 {channel === "card" && (
+//                   <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#7442AD]">
+//                     <LockKeyhole size={11} />
+//                     Secure checkout
+//                   </span>
+//                 )}
+//               </div>
+
+//               <span
+//                 className={`
+//                   flex h-6 w-6
+//                   shrink-0 items-center
+//                   justify-center rounded-full
+//                   border transition-colors
+//                   ${
+//                     active
+//                       ? "border-[#7442AD] bg-[#7442AD] text-white"
+//                       : "border-[#DAD4DF] bg-white"
+//                   }
+//                 `}
+//               >
+//                 {active && (
+//                   <Check size={14} strokeWidth={3} />
+//                 )}
+//               </span>
+//             </motion.button>
+//           );
+//         })}
+//       </div>
+
+//       {onlineMethods.length === 0 && (
+//         <div className="rounded-[14px] bg-[#FFF7F2] p-4 text-[13px] text-[#A15B36]">
+//           No supported online payment method is available.
+//         </div>
+//       )}
+
+//       <div className="mt-5 rounded-[15px] border border-[#EDE5F4] bg-[#FAF7FD] p-4">
+//         <div className="flex items-start gap-3">
+//           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEE4F7] text-[#7442AD]">
+//             <ShieldCheck size={19} />
+//           </span>
+
+//           <div>
+//             <p className="text-[13px] font-semibold text-[#44354F]">
+//               Secure online payment
+//             </p>
+
+//             <p className="mt-1 text-[12px] leading-[19px] text-[#82788A]">
+//               Your final fare will be calculated when
+//               your trip ends. Payment will be processed
+//               securely through Paystack.
+//             </p>
+//           </div>
+//         </div>
+//       </div>
+
+//       <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-[#96909A]">
+//         <LockKeyhole size={13} />
+//         <span>Secure payment powered by Paystack</span>
+//       </div>
+//     </RideModalSheet>
+//   );
+// }
 
 
 // import {

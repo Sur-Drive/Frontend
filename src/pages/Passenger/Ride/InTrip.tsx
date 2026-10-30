@@ -8,6 +8,7 @@ import {
   WifiOff,
   RefreshCw,
   LoaderCircle,
+  UserRound,
 } from "lucide-react";
 
 import { motion } from "framer-motion";
@@ -50,6 +51,11 @@ import {
 import {
   useRideSocket,
 } from "../../../hooks/passenger/useRideSocket";
+import DriverCard from "../../../components/passenger/ride/DriverCard";
+
+import {
+  useRideDriverDetails,
+} from "../../../hooks/passenger/useRideDriverDetails";
 
 /* =========================================================
    CONFIGURATION
@@ -127,6 +133,16 @@ export default function InTrip() {
   const rideId =
     backendRide?.id ??
     getStoredActiveRideId();
+
+    const {
+  driver: driverForCard,
+  loading: driverLoading,
+  error: driverError,
+} = useRideDriverDetails(
+  rideId,
+  backendRide,
+  ride.driver,
+);
 
   /* =======================================================
      TOKEN SYNCHRONIZATION
@@ -761,6 +777,50 @@ export default function InTrip() {
         </div>
 
         {/* =========================================
+            DRIVER DETAILS
+        ========================================= */}
+
+        <div className="mt-4">
+          {driverForCard ? (
+            <DriverCard
+              driver={driverForCard}
+              showActions={false}
+            />
+          ) : (
+            <div className="rounded-[16px] border border-[#EEEAF1] bg-white p-4">
+              <div className="flex items-center gap-3">
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
+                  <UserRound size={23} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-semibold text-[#302B34]">
+                    Your driver
+                  </p>
+
+                  <p className="mt-1 text-[12px] text-[#918B95]">
+                    {driverLoading
+                      ? "Loading driver details..."
+                      : driverError
+                        ? "Unable to load driver details"
+                        : "Driver details updating..."}
+                  </p>
+                </div>
+
+                {driverLoading && (
+                  <LoaderCircle
+                    size={18}
+                    className="animate-spin text-[#7442AD]"
+                  />
+                )}
+
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* =========================================
             FARE
         ========================================= */}
 
@@ -779,6 +839,7 @@ export default function InTrip() {
 
           </div>
         )}
+
 
         {/* =========================================
             SAFETY ACTIONS
@@ -879,7 +940,7 @@ export default function InTrip() {
   open={shareOpen}
   onClose={() => setShareOpen(false)}
   rideId={rideId}
-  driver={ride.driver}
+  driver={driverForCard ?? ride.driver}
   pickup={pickup}
   destination={destination}
   eta={

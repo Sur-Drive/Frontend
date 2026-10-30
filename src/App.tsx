@@ -130,6 +130,8 @@ import InTrip from "./pages/Passenger/Ride/InTrip";
 import LiveChatConversation from "./pages/Passenger/Account/Support/LiveChatConversation";
 import RidePayment from "./pages/Passenger/Ride/RidePayment";
 import TripReceipt from "./pages/Passenger/Ride/TripReceipt";
+import RidePaymentCallback from "./pages/Passenger/Ride/RidePaymentCallback";
+import PassengerCallLayout from "./components/passenger/PassengerCallLayout";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -471,6 +473,7 @@ function AppRoutes() {
           <Route path="/passenger/biometric" element={<PassengerBiometric />} />
 
           <Route element={<PassengerProtectedRoute />}>
+          <Route element={<PassengerCallLayout />}>
             <Route path="/passenger/home" element={<PassengerHome />} />
             <Route path="/passenger/book-ride" element={<BookRide />} />
 
@@ -512,6 +515,7 @@ function AppRoutes() {
             <Route path="/passenger/ride/arrived" element={<TripComplete />} /> 
 
             <Route path="/passenger/ride/payment" element={<RidePayment />} />
+            <Route path="/passenger/ride/payment/callback" element={<RidePaymentCallback />} />
 
             <Route path="/passenger/ride/receipt" element={<TripReceipt />} />
 
@@ -585,10 +589,8 @@ function AppRoutes() {
 
             <Route path="/passenger/account/support/tickets/:ticketId" element={<TicketConversation />} />
 
-            {/* <Route
-  path="/passenger/wallet"
-  element={<PassengerWallet />}
-/> */}
+            {/* <Route path="/passenger/wallet" element={<PassengerWallet /> /> */}
+          </Route>
           </Route>
         </Routes>
       </div>

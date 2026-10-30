@@ -5,6 +5,7 @@ import {
 
 import {
   ArrowUpDown,
+  Clock3,
   Crosshair,
   LoaderCircle,
   MapPin,
@@ -56,6 +57,8 @@ import {
 import type {
   RideLocation,
 } from "../../../types/passengerRide";
+import type { PassengerRecentDestination } from "../../../types/passengerHome";
+import { passengerHomeApi } from "../../../api/passenger/home.api";
 
 type ActiveLocationField =
   | "pickup"
@@ -401,6 +404,47 @@ useEffect(() => {
       setActiveField(null);
     }
   };
+
+  /* ======================================================
+   SELECT RECENT DESTINATION
+====================================================== */
+
+const handleRecentDestinationSelect = (
+  destination: PassengerRecentDestination,
+) => {
+  if (
+    !Number.isFinite(destination.lat) ||
+    !Number.isFinite(destination.lng)
+  ) {
+    toast.error(
+      "This destination does not have valid coordinates.",
+    );
+
+    return;
+  }
+
+  const location: RideLocation = {
+    label: destination.address,
+    address: destination.address,
+
+    coordinates: {
+      lat: destination.lat,
+      lng: destination.lng,
+    },
+  };
+
+  // Always populate DESTINATION, never pickup.
+  setDestination(location);
+
+  // Update the visible destination input.
+  setDestinationQuery(destination.address);
+
+  // Clear any previous Google Places suggestions.
+  setSuggestions([]);
+
+  // Close the location search area.
+  setActiveField(null);
+};
 
   /**
    * Resolve a Google suggestion into a
@@ -1387,7 +1431,12 @@ useEffect(() => {
                     />
                   </div>
 
-                  <RecentDestinations />
+                  {/* <RecentDestinations /> */}
+                  {activeField === "destination" && (
+                  <RecentDestinations
+                    onSelect={handleRecentDestinationSelect}
+                  />
+                )}
                 </>
               )}
             </motion.section>
@@ -1809,10 +1858,85 @@ function SearchResults({
 /* ======================================================
    RECENT DESTINATIONS
 ====================================================== */
+/* ======================================================
+   RECENT DESTINATIONS
+====================================================== */
 
-function RecentDestinations() {
+interface RecentDestinationsProps {
+  onSelect: (
+    destination: PassengerRecentDestination,
+  ) => void;
+}
+
+function RecentDestinations({
+  onSelect,
+}: RecentDestinationsProps) {
+  const [
+    destinations,
+    setDestinations,
+  ] = useState<PassengerRecentDestination[]>([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  const [retryKey, setRetryKey] = useState(0);
+
+  /* ======================================================
+     FETCH RECENT DESTINATIONS
+  ====================================================== */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchDestinations = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response =
+          await passengerHomeApi.getRecentDestinations();
+
+        if (cancelled) return;
+
+        const sorted = [...response].sort(
+          (a, b) =>
+            new Date(b.lastVisitedAt).getTime() -
+            new Date(a.lastVisitedAt).getTime(),
+        );
+
+        setDestinations(sorted.slice(0, 5));
+      } catch (err) {
+        if (cancelled) return;
+
+        console.error(
+          "Failed to fetch recent destinations:",
+          err,
+        );
+
+        setError(
+          "Unable to load recent destinations.",
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchDestinations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [retryKey]);
+
+  /* ======================================================
+     UI
+  ====================================================== */
+
   return (
-    <motion.div
+    <motion.section
       initial={{
         opacity: 0,
         y: 8,
@@ -1821,2503 +1945,210 @@ function RecentDestinations() {
         opacity: 1,
         y: 0,
       }}
+      transition={{
+        duration: 0.25,
+      }}
       className="mt-7"
     >
-      <h2
-        className="
-          text-[18px]
-          font-semibold
-          text-[#302B34]
-        "
-      >
-        Recent destinations
-      </h2>
+      {/* HEADER */}
 
-      {/*
-       * This intentionally remains an empty
-       * state until we connect real recent
-       * destination data.
-       *
-       * Do not hardcode fake places.
-       */}
-      <div
-        className="
-          mt-4
-          rounded-[18px]
-          border
-          border-[#ECE8EF]
-          bg-white
-          px-5
-          py-7
-          text-center
-        "
-      >
-        <span
-          className="
-            mx-auto
-            flex h-11 w-11
-            items-center
-            justify-center
-            rounded-full
-            bg-[#F3EDF8]
-            text-[#7442AD]
-          "
-        >
-          <MapPin
-            size={22}
-          />
-        </span>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[18px] font-semibold text-[#302B34]">
+          Recent destinations
+        </h2>
 
-        <p
-          className="
-            mt-3
-            text-[16px]
-            font-semibold
-            text-[#302B34]
-          "
-        >
-          No recent destinations
-        </p>
-
-        <p
-          className="
-            mx-auto
-            mt-1
-            max-w-[310px]
-            text-[14px]
-            leading-5
-            text-[#99939D]
-          "
-        >
-          Places from your recent
-          rides will appear here for
-          quicker booking.
-        </p>
+        {!loading && destinations.length > 0 && (
+          <span className="rounded-full bg-[#F3EDF8] px-3 py-1 text-[12px] font-medium text-[#7442AD]">
+            {destinations.length} recent
+          </span>
+        )}
       </div>
-    </motion.div>
+
+      {/* LOADING STATE */}
+
+      {loading && (
+        <div className="overflow-hidden rounded-[18px] bg-white">
+          {[1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="
+                flex animate-pulse items-center gap-3
+                border-b border-[#F1EDF3]
+                px-4 py-4 last:border-0
+              "
+            >
+              <div className="h-11 w-11 shrink-0 rounded-full bg-[#F1EDF3]" />
+
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-3/4 rounded bg-[#F1EDF3]" />
+                <div className="h-3 w-1/2 rounded bg-[#F1EDF3]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ERROR STATE */}
+
+      {!loading && error && (
+        <div className="rounded-[18px] border border-[#ECE8EF] bg-white px-5 py-6 text-center">
+          <p className="text-[14px] text-[#8F8993]">
+            {error}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRetryKey((prev) => prev + 1);
+            }}
+            className="
+              mt-3 rounded-full
+              bg-[#F3EDF8]
+              px-5 py-2
+              text-[13px] font-semibold
+              text-[#7442AD]
+            "
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* EMPTY STATE */}
+
+      {!loading &&
+        !error &&
+        destinations.length === 0 && (
+          <div className="rounded-[18px] border border-[#ECE8EF] bg-white px-5 py-7 text-center">
+            <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F3EDF8] text-[#7442AD]">
+              <MapPin size={22} />
+            </span>
+
+            <p className="mt-3 text-[16px] font-semibold text-[#302B34]">
+              No recent destinations
+            </p>
+
+            <p className="mx-auto mt-1 max-w-[310px] text-[14px] leading-5 text-[#99939D]">
+              Places from your recent rides will appear
+              here for quicker booking.
+            </p>
+          </div>
+        )}
+
+      {/* DESTINATION LIST */}
+
+      {!loading &&
+        !error &&
+        destinations.length > 0 && (
+          <div
+            className="
+              overflow-hidden
+              rounded-[18px]
+              border border-[#ECE8EF]
+              bg-white
+              shadow-[0_8px_28px_rgba(32,22,40,0.04)]
+            "
+          >
+            {destinations.map((destination, index) => {
+              const addressParts = destination.address
+                .split(",")
+                .map((part) => part.trim());
+
+              const title =
+                destination.name ||
+                addressParts[0] ||
+                destination.address;
+
+              const subtitle = addressParts
+                .slice(1)
+                .join(", ");
+
+              return (
+                <motion.button
+                  key={destination.id}
+                  type="button"
+                  whileTap={{
+                    scale: 0.98,
+                  }}
+                  onClick={() => onSelect(destination)}
+                  className={`
+                    flex w-full items-center gap-3
+                    px-4 py-4 text-left
+                    transition-colors
+                    hover:bg-[#FBF9FD]
+                    ${
+                      index !== destinations.length - 1
+                        ? "border-b border-[#F0ECF2]"
+                        : ""
+                    }
+                  `}
+                >
+                  {/* ICON */}
+
+                  <span
+                    className="
+                      flex h-11 w-11
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-[#F3EDF8]
+                      text-[#7442AD]
+                    "
+                  >
+                    <Clock3 size={20} />
+                  </span>
+
+                  {/* ADDRESS */}
+
+                  <span className="flex-1 min-w-0">
+                    <span
+                      className="
+                        block truncate
+                        text-[15px]
+                        font-semibold
+                        text-[#302B34]
+                      "
+                    >
+                      {title}
+                    </span>
+
+                    {subtitle && (
+                      <span
+                        className="
+                          mt-1 block truncate
+                          text-[13px]
+                          text-[#99939D]
+                        "
+                      >
+                        {subtitle}
+                      </span>
+                    )}
+                  </span>
+
+                  {/* VISIT COUNT */}
+
+                  {destination.visitCount > 1 && (
+                    <span
+                      className="
+                        shrink-0 rounded-full
+                        bg-[#F3EDF8]
+                        px-2.5 py-1
+                        text-[11px]
+                        font-medium
+                        text-[#7442AD]
+                      "
+                    >
+                      {destination.visitCount} visits
+                    </span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+    </motion.section>
   );
 }
 
-// import {
-//   AnimatePresence,
-//   motion,
-// } from "framer-motion";
 
-// import {
-//   ArrowUpDown,
-//   Crosshair,
-//   LoaderCircle,
-//   MapPin,
-//   Navigation,
-//   Plus,
-//   Search,
-//   X,
-// } from "lucide-react";
-
-// import {
-//   useEffect,
-//   useMemo,
-//   useState,
-// } from "react";
-
-// import {
-//   useNavigate,
-// } from "react-router-dom";
-
-// import { toast } from "sonner";
-
-// import RideHeader from "../../../components/passenger/ride/RideHeader";
-// import AddStopSheet from "../../../components/passenger/ride/AddStopSheet";
-
-// import {
-//   usePassengerRide,
-// } from "../../../context/PassengerRideContext";
-
-// import {
-//   usePassengerLocation,
-// } from "../../../hooks/passenger/usePassengerLocation";
-
-// import {
-//   passengerLocationApi,
-// } from "../../../api/passenger/location";
-
-// import {
-//   getPlaceDetails,
-//   searchPlaces,
-//   type PlaceSuggestion,
-// } from "../../../api/passenger/placeSearch";
-
-// import {
-//   passengerLocationToRideLocation,
-//   placeDetailsToRideLocation,
-// } from "../../../utils/passengerRideLocation";
-
-// import type {
-//   RideLocation,
-// } from "../../../types/passengerRide";
-
-// type ActiveLocationField =
-//   | "pickup"
-//   | "destination"
-//   | null;
-
-// export default function BookRide() {
-//   const navigate = useNavigate();
-
-//   const {
-//     ride,
-
-//     setPickup,
-//     setDestination,
-
-//     swapLocations,
-
-//     addStop,
-//     removeStop,
-
-//     setRideStatus,
-//   } = usePassengerRide();
-
-//   const locationQuery =
-//     usePassengerLocation();
-
-//   const [
-//     activeField,
-//     setActiveField,
-//   ] =
-//     useState<ActiveLocationField>(
-//       ride.destination
-//         ? null
-//         : "destination",
-//     );
-
-//   const [
-//     pickupQuery,
-//     setPickupQuery,
-//   ] = useState(
-//     ride.pickup?.label ?? "",
-//   );
-
-//   const [
-//     destinationQuery,
-//     setDestinationQuery,
-//   ] = useState(
-//     ride.destination?.label ?? "",
-//   );
-
-//   const [
-//     suggestions,
-//     setSuggestions,
-//   ] = useState<PlaceSuggestion[]>([]);
-
-//   const [
-//     isSearching,
-//     setIsSearching,
-//   ] = useState(false);
-
-//   const [
-//     isResolvingPlace,
-//     setIsResolvingPlace,
-//   ] = useState(false);
-
-//   const [
-//     isGettingCurrentLocation,
-//     setIsGettingCurrentLocation,
-//   ] = useState(false);
-
-//   const [
-//     addStopOpen,
-//     setAddStopOpen,
-//   ] = useState(false);
-
-//   useEffect(() => {
-//     setRideStatus("planning");
-//   }, [setRideStatus]);
-
-//   /**
-//    * Hydrate the pickup using the
-//    * rider's location stored by the backend.
-//    *
-//    * Do NOT request browser location here.
-//    */
-//   useEffect(() => {
-//     if (ride.pickup) {
-//       return;
-//     }
-
-//     if (!locationQuery.data) {
-//       return;
-//     }
-
-//     const currentLocation =
-//       passengerLocationToRideLocation(
-//         locationQuery.data,
-//       );
-
-//     if (!currentLocation) {
-//       return;
-//     }
-
-//     setPickup(currentLocation);
-
-//     setPickupQuery(
-//       currentLocation.label,
-//     );
-//   }, [
-//     locationQuery.data,
-//     ride.pickup,
-//     setPickup,
-//   ]);
-
-//   /**
-//    * Keep text inputs synchronized when
-//    * another screen modifies ride context,
-//    * e.g. Set Location on Map.
-//    */
-//   useEffect(() => {
-//     if (ride.pickup) {
-//       setPickupQuery(
-//         ride.pickup.label,
-//       );
-//     }
-//   }, [ride.pickup]);
-
-//   useEffect(() => {
-//     if (ride.destination) {
-//       setDestinationQuery(
-//         ride.destination.label,
-//       );
-//     }
-//   }, [ride.destination]);
-
-//   const searchQuery = useMemo(
-//     () =>
-//       activeField === "pickup"
-//         ? pickupQuery
-//         : activeField ===
-//             "destination"
-//           ? destinationQuery
-//           : "",
-//     [
-//       activeField,
-//       pickupQuery,
-//       destinationQuery,
-//     ],
-//   );
-
-//   /**
-//    * Real Google Places search.
-//    */
-//   useEffect(() => {
-//     const query =
-//       searchQuery.trim();
-
-//     if (
-//       !activeField ||
-//       query.length < 3
-//     ) {
-//       setSuggestions([]);
-//       setIsSearching(false);
-//       return;
-//     }
-
-//     const selectedLocation =
-//       activeField === "pickup"
-//         ? ride.pickup
-//         : ride.destination;
-
-//     /**
-//      * Prevent another Google request just
-//      * because we populated the input after
-//      * selecting a place.
-//      */
-//     if (
-//       selectedLocation &&
-//       query ===
-//         selectedLocation.label
-//     ) {
-//       setSuggestions([]);
-//       setIsSearching(false);
-//       return;
-//     }
-
-//     let cancelled = false;
-
-//     const timer =
-//       window.setTimeout(
-//         async () => {
-//           try {
-//             setIsSearching(true);
-
-//             const results =
-//               await searchPlaces(
-//                 query,
-//               );
-
-//             if (!cancelled) {
-//               setSuggestions(
-//                 results,
-//               );
-//             }
-//           } catch (error) {
-//             if (cancelled) {
-//               return;
-//             }
-
-//             console.error(
-//               "Place search failed:",
-//               error,
-//             );
-
-//             setSuggestions([]);
-
-//             toast.error(
-//               "Unable to search locations.",
-//             );
-//           } finally {
-//             if (!cancelled) {
-//               setIsSearching(false);
-//             }
-//           }
-//         },
-//         350,
-//       );
-
-//     return () => {
-//       cancelled = true;
-
-//       window.clearTimeout(
-//         timer,
-//       );
-//     };
-//   }, [
-//     searchQuery,
-//     activeField,
-//     ride.pickup,
-//     ride.destination,
-//   ]);
-
-//   const chooseLocation = (
-//     location: RideLocation,
-//   ) => {
-//     if (
-//       activeField === "pickup"
-//     ) {
-//       setPickup(location);
-
-//       setPickupQuery(
-//         location.label,
-//       );
-
-//       setSuggestions([]);
-
-//       setActiveField(
-//         "destination",
-//       );
-
-//       return;
-//     }
-
-//     if (
-//       activeField ===
-//       "destination"
-//     ) {
-//       setDestination(location);
-
-//       setDestinationQuery(
-//         location.label,
-//       );
-
-//       setSuggestions([]);
-
-//       setActiveField(null);
-//     }
-//   };
-
-//   const handleSuggestionSelect =
-//     async (
-//       suggestion: PlaceSuggestion,
-//     ) => {
-//       try {
-//         setIsResolvingPlace(true);
-
-//         const details =
-//           await getPlaceDetails(
-//             suggestion.placeId,
-//           );
-
-//         const location =
-//           placeDetailsToRideLocation(
-//             details,
-//           );
-
-//         chooseLocation(location);
-//       } catch (error) {
-//         console.error(
-//           "Place details failed:",
-//           error,
-//         );
-
-//         toast.error(
-//           "Unable to select this location.",
-//         );
-//       } finally {
-//         setIsResolvingPlace(false);
-//       }
-//     };
-
-//   /**
-//    * "Use current location"
-//    *
-//    * First use backend-persisted location.
-//    * Only request device GPS when no usable
-//    * backend location exists.
-//    */
-//   const handleCurrentLocation =
-//     () => {
-//       const persisted =
-//         locationQuery.data
-//           ? passengerLocationToRideLocation(
-//               locationQuery.data,
-//             )
-//           : null;
-
-//       if (persisted) {
-//         chooseLocation(
-//           persisted,
-//         );
-
-//         return;
-//       }
-
-//       if (
-//         !navigator.geolocation
-//       ) {
-//         toast.error(
-//           "Location is not supported on this device.",
-//         );
-
-//         return;
-//       }
-
-//       setIsGettingCurrentLocation(
-//         true,
-//       );
-
-//       navigator.geolocation.getCurrentPosition(
-//         async (position) => {
-//           try {
-//             const {
-//               latitude,
-//               longitude,
-//               accuracy,
-//               heading,
-//               speed,
-//             } = position.coords;
-
-//             const updated =
-//               await passengerLocationApi.updateLocation(
-//                 {
-//                   lat: latitude,
-//                   lng: longitude,
-//                   accuracy,
-
-//                   ...(heading !==
-//                     null &&
-//                   Number.isFinite(
-//                     heading,
-//                   )
-//                     ? { heading }
-//                     : {}),
-
-//                   ...(speed !== null &&
-//                   Number.isFinite(
-//                     speed,
-//                   )
-//                     ? { speed }
-//                     : {}),
-//                 },
-//               );
-
-//             const currentLocation =
-//               passengerLocationToRideLocation(
-//                 updated,
-//               );
-
-//             if (
-//               !currentLocation
-//             ) {
-//               throw new Error(
-//                 "Backend returned an incomplete location.",
-//               );
-//             }
-
-//             chooseLocation(
-//               currentLocation,
-//             );
-
-//             await locationQuery.refetch();
-
-//             toast.success(
-//               "Current location updated.",
-//             );
-//           } catch (error) {
-//             console.error(
-//               "Current location update failed:",
-//               error,
-//             );
-
-//             toast.error(
-//               "Unable to update your current location.",
-//             );
-//           } finally {
-//             setIsGettingCurrentLocation(
-//               false,
-//             );
-//           }
-//         },
-
-//         (error) => {
-//           setIsGettingCurrentLocation(
-//             false,
-//           );
-
-//           if (error.code === 1) {
-//             toast.error(
-//               "Location permission was denied.",
-//             );
-
-//             return;
-//           }
-
-//           if (error.code === 2) {
-//             toast.error(
-//               "Your location is currently unavailable.",
-//             );
-
-//             return;
-//           }
-
-//           if (error.code === 3) {
-//             toast.error(
-//               "Location request timed out.",
-//             );
-
-//             return;
-//           }
-
-//           toast.error(
-//             "Unable to get your current location.",
-//           );
-//         },
-
-//         {
-//           enableHighAccuracy: true,
-//           timeout: 12000,
-//           maximumAge: 0,
-//         },
-//       );
-//     };
-
-//   const handleSwap = () => {
-//     swapLocations();
-
-//     const previousPickup =
-//       pickupQuery;
-
-//     setPickupQuery(
-//       destinationQuery,
-//     );
-
-//     setDestinationQuery(
-//       previousPickup,
-//     );
-
-//     setSuggestions([]);
-//   };
-
-//   const handleMapLocation =
-//     () => {
-//       if (!activeField) {
-//         return;
-//       }
-
-//       navigate(
-//         "/passenger/ride/map-location",
-//         {
-//           state: {
-//             target:
-//               activeField,
-//           },
-//         },
-//       );
-//     };
-
-//   const handleContinue = () => {
-//     if (!ride.pickup) {
-//       toast.error(
-//         "Choose your pickup location.",
-//       );
-
-//       return;
-//     }
-
-//     if (!ride.destination) {
-//       toast.error(
-//         "Choose your destination.",
-//       );
-
-//       return;
-//     }
-
-//     if (
-//       !ride.pickup.coordinates
-//     ) {
-//       toast.error(
-//         "Pickup coordinates are unavailable.",
-//       );
-
-//       return;
-//     }
-
-//     if (
-//       !ride.destination
-//         .coordinates
-//     ) {
-//       toast.error(
-//         "Destination coordinates are unavailable.",
-//       );
-
-//       return;
-//     }
-
-//     const invalidStop =
-//       ride.stops.some(
-//         (stop) =>
-//           !stop.coordinates &&
-//           !stop.address &&
-//           !stop.savedPlaceId,
-//       );
-
-//     if (invalidStop) {
-//       toast.error(
-//         "One of your stops does not have a valid location.",
-//       );
-
-//       return;
-//     }
-
-//     setRideStatus(
-//       "selecting",
-//     );
-
-//     navigate(
-//       "/passenger/ride/select",
-//     );
-//   };
-
-//   const hasSearchQuery =
-//     searchQuery.trim().length >=
-//     3;
-
-//   return (
-//     <div
-//       className="
-//         min-h-[100dvh]
-//         bg-[#F8F8FA]
-//         text-[#302B34]
-//       "
-//     >
-//       <RideHeader
-//         title="Where are you going?"
-//       />
-
-//       <main
-//         className="
-//           mx-auto w-full
-//           max-w-[760px]
-//           px-4 pb-36 pt-5
-//           sm:px-6
-//         "
-//       >
-//         <motion.div
-//           initial={{
-//             opacity: 0,
-//             y: 16,
-//           }}
-//           animate={{
-//             opacity: 1,
-//             y: 0,
-//           }}
-//           className="
-//             relative
-//             rounded-[22px]
-//             bg-white p-4
-//             shadow-[0_10px_40px_rgba(32,22,40,0.06)]
-//           "
-//         >
-//           <div
-//             className="
-//               absolute
-//               left-[31px]
-//               top-[53px]
-//               h-[52px]
-//               border-l-2
-//               border-dotted
-//               border-[#CAC2D1]
-//             "
-//           />
-
-//           {/* PICKUP */}
-
-//           <div className="flex gap-3">
-//             <div
-//               className="
-//                 mt-[21px]
-//                 h-3 w-3
-//                 shrink-0
-//                 rounded-full
-//                 border-[3px]
-//                 border-[#7442AD]
-//                 bg-white
-//               "
-//             />
-
-//             <div className="flex-1 min-w-0">
-//               <p
-//                 className="
-//                   mb-1
-//                   text-[13px]
-//                   font-medium
-//                   text-[#9A949F]
-//                 "
-//               >
-//                 Pickup
-//               </p>
-
-//               <div
-//                 className={`
-//                   flex h-[52px]
-//                   items-center
-//                   rounded-[12px]
-//                   border px-3
-//                   transition-all
-
-//                   ${
-//                     activeField ===
-//                     "pickup"
-//                       ? `
-//                           border-[#A67BD2]
-//                           bg-white
-//                           shadow-[0_0_0_3px_rgba(116,66,173,0.07)]
-//                         `
-//                       : `
-//                           border-transparent
-//                           bg-[#F5F5F6]
-//                         `
-//                   }
-//                 `}
-//               >
-//                 <Search
-//                   size={18}
-//                   className="
-//                     mr-2.5
-//                     shrink-0
-//                     text-[#6D6572]
-//                   "
-//                 />
-
-//                 <input
-//                   value={
-//                     pickupQuery
-//                   }
-//                   onFocus={() =>
-//                     setActiveField(
-//                       "pickup",
-//                     )
-//                   }
-//                   onChange={(
-//                     event,
-//                   ) => {
-//                     setPickupQuery(
-//                       event.target
-//                         .value,
-//                     );
-
-//                     setPickup(null);
-
-//                     setActiveField(
-//                       "pickup",
-//                     );
-//                   }}
-//                   placeholder="Pickup location"
-//                   className="
-//                     min-w-0 flex-1
-//                     bg-transparent
-//                     text-[16px]
-//                     outline-none
-//                     placeholder:text-[#AAA5AE]
-//                   "
-//                 />
-
-//                 {pickupQuery && (
-//                   <button
-//                     type="button"
-//                     onClick={() => {
-//                       setPickupQuery(
-//                         "",
-//                       );
-
-//                       setPickup(null);
-
-//                       setSuggestions(
-//                         [],
-//                       );
-
-//                       setActiveField(
-//                         "pickup",
-//                       );
-//                     }}
-//                     className="
-//                       flex h-8 w-8
-//                       items-center
-//                       justify-center
-//                       rounded-full
-//                       text-[#A09AA5]
-//                       hover:bg-black/5
-//                     "
-//                   >
-//                     <X
-//                       size={16}
-//                     />
-//                   </button>
-//                 )}
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* SWAP */}
-
-//           <motion.button
-//             type="button"
-//             onClick={handleSwap}
-//             whileTap={{
-//               rotate: 180,
-//               scale: 0.88,
-//             }}
-//             transition={{
-//               type: "spring",
-//               stiffness: 330,
-//               damping: 18,
-//             }}
-//             className="
-//               absolute
-//               right-7
-//               top-[82px]
-//               z-10
-//               flex h-10 w-10
-//               items-center
-//               justify-center
-//               rounded-full
-//               border
-//               border-[#E5DCEB]
-//               bg-white
-//               text-[#7442AD]
-//               shadow-[0_4px_16px_rgba(44,27,58,0.10)]
-//             "
-//           >
-//             <ArrowUpDown
-//               size={18}
-//             />
-//           </motion.button>
-
-//           {/* DESTINATION */}
-
-//           <div className="flex gap-3 mt-3">
-//             <MapPin
-//               size={17}
-//               fill="#7442AD"
-//               stroke="#7442AD"
-//               className="
-//                 mt-[22px]
-//                 shrink-0
-//               "
-//             />
-
-//             <div className="flex-1 min-w-0">
-//               <p
-//                 className="
-//                   mb-1
-//                   text-[13px]
-//                   font-medium
-//                   text-[#9A949F]
-//                 "
-//               >
-//                 Destination
-//               </p>
-
-//               <div
-//                 className={`
-//                   flex h-[52px]
-//                   items-center
-//                   rounded-[12px]
-//                   border px-3
-//                   transition-all
-
-//                   ${
-//                     activeField ===
-//                     "destination"
-//                       ? `
-//                           border-[#A67BD2]
-//                           bg-white
-//                           shadow-[0_0_0_3px_rgba(116,66,173,0.07)]
-//                         `
-//                       : `
-//                           border-transparent
-//                           bg-[#F5F5F6]
-//                         `
-//                   }
-//                 `}
-//               >
-//                 <Search
-//                   size={18}
-//                   className="
-//                     mr-2.5
-//                     shrink-0
-//                     text-[#6D6572]
-//                   "
-//                 />
-
-//                 <input
-//                   autoFocus={
-//                     !ride.destination
-//                   }
-//                   value={
-//                     destinationQuery
-//                   }
-//                   onFocus={() =>
-//                     setActiveField(
-//                       "destination",
-//                     )
-//                   }
-//                   onChange={(
-//                     event,
-//                   ) => {
-//                     setDestinationQuery(
-//                       event.target
-//                         .value,
-//                     );
-
-//                     setDestination(
-//                       null,
-//                     );
-
-//                     setActiveField(
-//                       "destination",
-//                     );
-//                   }}
-//                   placeholder="Where to?"
-//                   className="
-//                     min-w-0 flex-1
-//                     bg-transparent
-//                     text-[16px]
-//                     outline-none
-//                     placeholder:text-[#AAA5AE]
-//                   "
-//                 />
-
-//                 {destinationQuery && (
-//                   <button
-//                     type="button"
-//                     onClick={() => {
-//                       setDestinationQuery(
-//                         "",
-//                       );
-
-//                       setDestination(
-//                         null,
-//                       );
-
-//                       setSuggestions(
-//                         [],
-//                       );
-
-//                       setActiveField(
-//                         "destination",
-//                       );
-//                     }}
-//                     className="
-//                       flex h-8 w-8
-//                       items-center
-//                       justify-center
-//                       rounded-full
-//                       text-[#A09AA5]
-//                       hover:bg-black/5
-//                     "
-//                   >
-//                     <X
-//                       size={16}
-//                     />
-//                   </button>
-//                 )}
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* STOPS */}
-
-//           <AnimatePresence>
-//             {ride.stops.map(
-//               (
-//                 stop,
-//                 index,
-//               ) => (
-//                 <motion.div
-//                   key={stop.id}
-//                   initial={{
-//                     opacity: 0,
-//                     height: 0,
-//                     y: -10,
-//                   }}
-//                   animate={{
-//                     opacity: 1,
-//                     height:
-//                       "auto",
-//                     y: 0,
-//                   }}
-//                   exit={{
-//                     opacity: 0,
-//                     height: 0,
-//                   }}
-//                   className="
-//                     ml-[29px]
-//                     mt-3 flex
-//                     items-center
-//                     gap-2
-//                   "
-//                 >
-//                   <div
-//                     className="
-//                       flex h-[48px]
-//                       flex-1
-//                       items-center
-//                       rounded-[12px]
-//                       bg-[#F5F5F6]
-//                       px-3
-//                     "
-//                   >
-//                     <MapPin
-//                       size={17}
-//                       className="
-//                         mr-2
-//                         text-[#7442AD]
-//                       "
-//                     />
-
-//                     <span
-//                       className="
-//                         min-w-0
-//                         flex-1
-//                         truncate
-//                         text-[15px]
-//                       "
-//                     >
-//                       {stop.label ||
-//                         `Stop ${
-//                           index + 1
-//                         }`}
-//                     </span>
-//                   </div>
-
-//                   <button
-//                     type="button"
-//                     onClick={() =>
-//                       removeStop(
-//                         stop.id,
-//                       )
-//                     }
-//                     className="
-//                       flex h-10 w-10
-//                       items-center
-//                       justify-center
-//                       rounded-full
-//                       bg-[#F5F2F8]
-//                       text-[#7442AD]
-//                     "
-//                   >
-//                     <X
-//                       size={17}
-//                     />
-//                   </button>
-//                 </motion.div>
-//               ),
-//             )}
-//           </AnimatePresence>
-
-//           <motion.button
-//             type="button"
-//             whileTap={{
-//               scale: 0.97,
-//             }}
-//             onClick={() =>
-//               setAddStopOpen(
-//                 true,
-//               )
-//             }
-//             className="
-//               ml-[28px] mt-4
-//               flex items-center
-//               gap-2
-//               text-[15px]
-//               font-semibold
-//               text-[#7442AD]
-//             "
-//           >
-//             <span
-//               className="
-//                 flex h-8 w-8
-//                 items-center
-//                 justify-center
-//                 rounded-full
-//                 bg-[#F1E9F8]
-//               "
-//             >
-//               <Plus
-//                 size={17}
-//               />
-//             </span>
-
-//             Add stop
-//           </motion.button>
-//         </motion.div>
-
-//         {/* LOCATION ACTIONS / SEARCH */}
-
-//         <AnimatePresence
-//           mode="wait"
-//         >
-//           {activeField && (
-//             <motion.div
-//               key={activeField}
-//               initial={{
-//                 opacity: 0,
-//                 y: 12,
-//               }}
-//               animate={{
-//                 opacity: 1,
-//                 y: 0,
-//               }}
-//               exit={{
-//                 opacity: 0,
-//                 y: -8,
-//               }}
-//               className="mt-6"
-//             >
-//               <button
-//                 type="button"
-//                 disabled={
-//                   isGettingCurrentLocation
-//                 }
-//                 onClick={
-//                   handleCurrentLocation
-//                 }
-//                 className="
-//                   flex w-full
-//                   items-center
-//                   gap-3
-//                   border-b
-//                   border-[#ECE9EF]
-//                   py-4
-//                   text-left
-//                   disabled:opacity-60
-//                 "
-//               >
-//                 <span
-//                   className="
-//                     flex h-10 w-10
-//                     shrink-0
-//                     items-center
-//                     justify-center
-//                     rounded-full
-//                     bg-[#EEE7F5]
-//                     text-[#7442AD]
-//                   "
-//                 >
-//                   {isGettingCurrentLocation ? (
-//                     <LoaderCircle
-//                       size={19}
-//                       className="animate-spin"
-//                     />
-//                   ) : (
-//                     <Crosshair
-//                       size={19}
-//                     />
-//                   )}
-//                 </span>
-
-//                 <span>
-//                   <span
-//                     className="
-//                       block
-//                       text-[16px]
-//                       font-semibold
-//                     "
-//                   >
-//                     Use my current location
-//                   </span>
-
-//                   <span
-//                     className="
-//                       mt-0.5 block
-//                       text-[14px]
-//                       text-[#99939D]
-//                     "
-//                   >
-//                     {locationQuery.data
-//                       ?.locationEnabled
-//                       ? "Use your saved current location"
-//                       : "Use your device location"}
-//                   </span>
-//                 </span>
-//               </button>
-
-//               <button
-//                 type="button"
-//                 onClick={
-//                   handleMapLocation
-//                 }
-//                 className="
-//                   flex w-full
-//                   items-center
-//                   gap-3
-//                   border-b
-//                   border-[#ECE9EF]
-//                   py-4
-//                   text-left
-//                 "
-//               >
-//                 <span
-//                   className="
-//                     flex h-10 w-10
-//                     items-center
-//                     justify-center
-//                     rounded-full
-//                     bg-[#EEE7F5]
-//                     text-[#7442AD]
-//                   "
-//                 >
-//                   <Navigation
-//                     size={19}
-//                   />
-//                 </span>
-
-//                 <span
-//                   className="
-//                     text-[16px]
-//                     font-semibold
-//                   "
-//                 >
-//                   Set location on map
-//                 </span>
-//               </button>
-
-//               {hasSearchQuery ? (
-//                 <SearchResults
-//                   suggestions={
-//                     suggestions
-//                   }
-//                   isSearching={
-//                     isSearching
-//                   }
-//                   isResolving={
-//                     isResolvingPlace
-//                   }
-//                   onSelect={
-//                     handleSuggestionSelect
-//                   }
-//                 />
-//               ) : (
-//                 <div className="mt-7">
-//                   <h2
-//                     className="
-//                       text-[18px]
-//                       font-semibold
-//                     "
-//                   >
-//                     Recent destinations
-//                   </h2>
-
-//                   <div
-//                     className="
-//                       mt-4
-//                       rounded-[18px]
-//                       border
-//                       border-[#ECE8EF]
-//                       bg-white
-//                       px-5 py-7
-//                       text-center
-//                     "
-//                   >
-//                     <MapPin
-//                       size={24}
-//                       className="
-//                         mx-auto
-//                         text-[#7442AD]
-//                       "
-//                     />
-
-//                     <p
-//                       className="
-//                         mt-3
-//                         text-[16px]
-//                         font-semibold
-//                       "
-//                     >
-//                       No recent destinations
-//                     </p>
-
-//                     <p
-//                       className="
-//                         mt-1
-//                         text-[14px]
-//                         text-[#99939D]
-//                       "
-//                     >
-//                       Your recent ride
-//                       destinations will
-//                       appear here.
-//                     </p>
-//                   </div>
-//                 </div>
-//               )}
-//             </motion.div>
-//           )}
-//         </AnimatePresence>
-
-        
-//       </main>
-
-//       {/* CONTINUE */}
-
-//       <AnimatePresence>
-//         {ride.pickup &&
-//           ride.destination && (
-//             <motion.div
-//               initial={{
-//                 y: 100,
-//                 opacity: 0,
-//               }}
-//               animate={{
-//                 y: 0,
-//                 opacity: 1,
-//               }}
-//               exit={{
-//                 y: 100,
-//                 opacity: 0,
-//               }}
-//               className="
-//                 fixed inset-x-0
-//                 bottom-0
-//                 z-[700]
-//                 border-t
-//                 border-[#EEEAF0]
-//                 bg-white/95
-//                 px-5
-//                 pb-[calc(18px+env(safe-area-inset-bottom))]
-//                 pt-4
-//                 backdrop-blur-xl
-//               "
-//             >
-//               <motion.button
-//                 type="button"
-//                 whileTap={{
-//                   scale: 0.98,
-//                 }}
-//                 onClick={
-//                   handleContinue
-//                 }
-//                 className="
-//                   mx-auto flex
-//                   h-[56px]
-//                   w-full
-//                   max-w-[720px]
-//                   items-center
-//                   justify-center
-//                   rounded-[14px]
-//                   bg-[#7442AD]
-//                   text-[16px]
-//                   font-semibold
-//                   text-white
-//                   shadow-[0_10px_30px_rgba(116,66,173,0.22)]
-//                 "
-//               >
-//                 Find rides
-//               </motion.button>
-//             </motion.div>
-//           )}
-//       </AnimatePresence>
-
-//       <AddStopSheet
-//         open={addStopOpen}
-//         onClose={() =>
-//           setAddStopOpen(false)
-//         }
-//         onAdd={(location) => {
-//           addStop({
-//             ...location,
-
-//             id:
-//               crypto.randomUUID(),
-//           });
-
-//           setAddStopOpen(
-//             false,
-//           );
-//         }}
-//       />
-//     </div>
-//   );
-// }
-
-// interface SearchResultsProps {
-//   suggestions:
-//     PlaceSuggestion[];
-
-//   isSearching: boolean;
-//   isResolving: boolean;
-
-//   onSelect: (
-//     suggestion: PlaceSuggestion,
-//   ) => void;
-// }
-
-// function SearchResults({
-//   suggestions,
-//   isSearching,
-//   isResolving,
-//   onSelect,
-// }: SearchResultsProps) {
-//   return (
-//     <div className="mt-7">
-//       <h2
-//         className="
-//           mb-2
-//           text-[18px]
-//           font-semibold
-//         "
-//       >
-//         Search results
-//       </h2>
-
-//       {isSearching ? (
-//         <div
-//           className="
-//             flex items-center
-//             justify-center
-//             gap-2 py-10
-//             text-[15px]
-//             text-[#8F8993]
-//           "
-//         >
-//           <LoaderCircle
-//             size={18}
-//             className="animate-spin"
-//           />
-
-//           Searching...
-//         </div>
-//       ) : suggestions.length >
-//         0 ? (
-//         suggestions.map(
-//           (suggestion) => (
-//             <motion.button
-//               key={
-//                 suggestion.placeId
-//               }
-//               type="button"
-//               whileHover={{
-//                 x: 3,
-//               }}
-//               whileTap={{
-//                 scale: 0.99,
-//               }}
-//               disabled={
-//                 isResolving
-//               }
-//               onClick={() =>
-//                 onSelect(
-//                   suggestion,
-//                 )
-//               }
-//               className="
-//                 flex w-full
-//                 items-center
-//                 gap-3
-//                 border-b
-//                 border-[#EEEAF0]
-//                 py-4
-//                 text-left
-//                 disabled:opacity-50
-//               "
-//             >
-//               <span
-//                 className="
-//                   flex h-10 w-10
-//                   shrink-0
-//                   items-center
-//                   justify-center
-//                   rounded-full
-//                   bg-[#F3F0F5]
-//                   text-[#7442AD]
-//                 "
-//               >
-//                 <MapPin
-//                   size={19}
-//                 />
-//               </span>
-
-//               <span className="min-w-0">
-//                 <span
-//                   className="
-//                     block truncate
-//                     text-[16px]
-//                     font-medium
-//                   "
-//                 >
-//                   {
-//                     suggestion.label
-//                   }
-//                 </span>
-
-//                 <span
-//                   className="
-//                     mt-1 block
-//                     truncate
-//                     text-[14px]
-//                     text-[#99939D]
-//                   "
-//                 >
-//                   {
-//                     suggestion.address
-//                   }
-//                 </span>
-//               </span>
-//             </motion.button>
-//           ),
-//         )
-//       ) : (
-//         <div
-//           className="
-//             py-10
-//             text-center
-//             text-[15px]
-//             text-[#8F8993]
-//           "
-//         >
-//           No locations found.
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-// import {
-//   AnimatePresence,
-//   motion,
-// } from "framer-motion";
-
-// import {
-//   ArrowUpDown,
-//   Crosshair,
-//   MapPin,
-//   Navigation,
-//   Plus,
-//   Search,
-//   X,
-// } from "lucide-react";
-
-// import {
-//   useEffect,
-//   useMemo,
-//   useState,
-// } from "react";
-
-// import { useNavigate } from "react-router-dom";
-
-// import RideHeader from "../../../components/passenger/ride/RideHeader";
-
-// import {
-//   usePassengerRide,
-// } from "../../../context/PassengerRideContext";
-
-// import type {
-//   RideLocation,
-// } from "../../../types/passengerRide";
-// import AddStopSheet from "../../../components/passenger/ride/AddStopSheet";
-
-// type ActiveLocationField =
-//   | "pickup"
-//   | "destination"
-//   | null;
-
-// export default function BookRide() {
-//   const navigate = useNavigate();
-
-//   const {
-//     ride,
-//     setPickup,
-//     setDestination,
-//     swapLocations,
-//     addStop,
-//     removeStop,
-//     setRideStatus,
-//   } = usePassengerRide();
-
-//   const [
-//   addStopOpen,
-//   setAddStopOpen,
-// ] = useState(false);
-
-//   const [activeField, setActiveField] =
-//     useState<ActiveLocationField>(
-//       ride.destination
-//         ? null
-//         : "destination",
-//     );
-
-//   const [pickupQuery, setPickupQuery] =
-//     useState(
-//       ride.pickup?.label ??
-//         "Current location",
-//     );
-
-//   const [
-//     destinationQuery,
-//     setDestinationQuery,
-//   ] = useState(
-//     ride.destination?.label ?? "",
-//   );
-
-//   useEffect(() => {
-//     setRideStatus("planning");
-//   }, [setRideStatus]);
-
-//   const searchQuery =
-//     activeField === "pickup"
-//       ? pickupQuery
-//       : destinationQuery;
-
-//   const filteredLocations = useMemo(
-//     () => {
-//       if (!searchQuery.trim()) {
-//         return recentRideLocations;
-//       }
-
-//       const query =
-//         searchQuery.toLowerCase();
-
-//       return recentRideLocations.filter(
-//         (location) =>
-//           location.label
-//             .toLowerCase()
-//             .includes(query) ||
-//           location.address
-//             .toLowerCase()
-//             .includes(query),
-//       );
-//     },
-//     [searchQuery],
-//   );
-
-//   const chooseLocation = (
-//     location: RideLocation,
-//   ) => {
-//     if (activeField === "pickup") {
-//       setPickup(location);
-//       setPickupQuery(location.label);
-
-//       setActiveField("destination");
-
-//       return;
-//     }
-
-//     setDestination(location);
-
-//     setDestinationQuery(
-//       location.label,
-//     );
-
-//     setActiveField(null);
-//   };
-
-//   const handleCurrentLocation = () => {
-//     if (!navigator.geolocation) {
-//       return;
-//     }
-
-//     navigator.geolocation.getCurrentPosition(
-//       (position) => {
-//         const current: RideLocation = {
-//           label: "Current location",
-
-//           address:
-//             "Your current location",
-
-//           coordinates: {
-//             lat:
-//               position.coords.latitude,
-
-//             lng:
-//               position.coords.longitude,
-//           },
-//         };
-
-//         if (activeField === "pickup") {
-//           setPickup(current);
-
-//           setPickupQuery(
-//             "Current location",
-//           );
-
-//           setActiveField(
-//             "destination",
-//           );
-//         } else {
-//           setDestination(current);
-
-//           setDestinationQuery(
-//             "Current location",
-//           );
-
-//           setActiveField(null);
-//         }
-//       },
-//       () => {
-//         // We'll connect this to your
-//         // existing IP fallback later.
-//       },
-//       {
-//         enableHighAccuracy: true,
-//         timeout: 12000,
-//       },
-//     );
-//   };
-
-//   const handleSwap = () => {
-//     swapLocations();
-
-//     const previousPickup =
-//       pickupQuery;
-
-//     setPickupQuery(
-//       destinationQuery,
-//     );
-
-//     setDestinationQuery(
-//       previousPickup,
-//     );
-//   };
-
-//   const handleContinue = () => {
-//     if (
-//       !ride.pickup ||
-//       !ride.destination
-//     ) {
-//       return;
-//     }
-
-//     setRideStatus("selecting");
-
-//     navigate(
-//       "/passenger/ride/select",
-//     );
-//   };
-
-//   return (
-//     <div
-//       className="
-//         min-h-[100dvh]
-//         bg-[#F8F8FA]
-//         text-[#302B34]
-//       "
-//     >
-//       <RideHeader
-//         title="Where are you going?"
-//       />
-
-//       <main
-//         className="
-//           mx-auto w-full
-//           max-w-[760px]
-//           px-4 pb-36 pt-5
-//           sm:px-6
-//         "
-//       >
-//         <motion.div
-//           initial={{
-//             opacity: 0,
-//             y: 16,
-//           }}
-//           animate={{
-//             opacity: 1,
-//             y: 0,
-//           }}
-//           className="
-//             relative rounded-[22px]
-//             bg-white p-4
-//             shadow-[0_10px_40px_rgba(32,22,40,0.06)]
-//           "
-//         >
-//           <div
-//             className="
-//               absolute left-[31px]
-//               top-[53px]
-//               h-[52px]
-//               border-l-2 border-dotted
-//               border-[#CAC2D1]
-//             "
-//           />
-
-//           <div className="flex gap-3">
-//             <div
-//               className="
-//                 mt-[21px] h-3 w-3
-//                 shrink-0 rounded-full
-//                 border-[3px]
-//                 border-[#7442AD]
-//                 bg-white
-//               "
-//             />
-
-//             <div className="flex-1 min-w-0">
-//               <p
-//                 className="
-//                   mb-1 text-[12px]
-//                   font-medium
-//                   text-[#9A949F]
-//                 "
-//               >
-//                 Pickup
-//               </p>
-
-//               <div
-//                 className={`
-//                   flex h-[52px]
-//                   items-center
-//                   rounded-[12px]
-//                   border
-//                   px-3
-//                   transition-all
-
-//                   ${
-//                     activeField ===
-//                     "pickup"
-//                       ? `
-//                         border-[#A67BD2]
-//                         bg-white
-//                         shadow-[0_0_0_3px_rgba(116,66,173,0.07)]
-//                       `
-//                       : `
-//                         border-transparent
-//                         bg-[#F5F5F6]
-//                       `
-//                   }
-//                 `}
-//               >
-//                 <Search
-//                   size={18}
-//                   className="
-//                     mr-2.5
-//                     shrink-0
-//                     text-[#6D6572]
-//                   "
-//                 />
-
-//                 <input
-//                   value={pickupQuery}
-//                   onFocus={() =>
-//                     setActiveField(
-//                       "pickup",
-//                     )
-//                   }
-//                   onChange={(event) => {
-//                     setPickupQuery(
-//                       event.target.value,
-//                     );
-
-//                     setActiveField(
-//                       "pickup",
-//                     );
-//                   }}
-//                   placeholder="Pickup location"
-//                   className="
-//                     min-w-0 flex-1
-//                     bg-transparent
-//                     text-[16px]
-//                     outline-none
-//                     placeholder:text-[#AAA5AE]
-//                   "
-//                 />
-
-//                 {pickupQuery && (
-//                   <button
-//                     type="button"
-//                     onClick={() => {
-//                       setPickupQuery("");
-//                       setPickup(null);
-//                     }}
-//                     className="
-//                       flex h-8 w-8
-//                       items-center
-//                       justify-center
-//                       rounded-full
-//                       text-[#A09AA5]
-//                       hover:bg-black/5
-//                     "
-//                   >
-//                     <X size={16} />
-//                   </button>
-//                 )}
-//               </div>
-//             </div>
-//           </div>
-
-//           <motion.button
-//             type="button"
-//             onClick={handleSwap}
-//             whileTap={{
-//               rotate: 180,
-//               scale: 0.88,
-//             }}
-//             transition={{
-//               type: "spring",
-//               stiffness: 330,
-//               damping: 18,
-//             }}
-//             className="
-//               absolute right-7
-//               top-[82px]
-//               z-10 flex
-//               h-10 w-10
-//               items-center
-//               justify-center
-//               rounded-full
-//               border border-[#E5DCEB]
-//               bg-white
-//               text-[#7442AD]
-//               shadow-[0_4px_16px_rgba(44,27,58,0.10)]
-//             "
-//           >
-//             <ArrowUpDown
-//               size={18}
-//               strokeWidth={2}
-//             />
-//           </motion.button>
-
-//           <div className="flex gap-3 mt-3">
-//             <MapPin
-//               size={17}
-//               fill="#7442AD"
-//               stroke="#7442AD"
-//               className="
-//                 mt-[22px]
-//                 shrink-0
-//               "
-//             />
-
-//             <div className="flex-1 min-w-0">
-//               <p
-//                 className="
-//                   mb-1 text-[12px]
-//                   font-medium
-//                   text-[#9A949F]
-//                 "
-//               >
-//                 Destination
-//               </p>
-
-//               <div
-//                 className={`
-//                   flex h-[52px]
-//                   items-center
-//                   rounded-[12px]
-//                   border px-3
-//                   transition-all
-
-//                   ${
-//                     activeField ===
-//                     "destination"
-//                       ? `
-//                         border-[#A67BD2]
-//                         bg-white
-//                         shadow-[0_0_0_3px_rgba(116,66,173,0.07)]
-//                       `
-//                       : `
-//                         border-transparent
-//                         bg-[#F5F5F6]
-//                       `
-//                   }
-//                 `}
-//               >
-//                 <Search
-//                   size={18}
-//                   className="
-//                     mr-2.5
-//                     shrink-0
-//                     text-[#6D6572]
-//                   "
-//                 />
-
-//                 <input
-//                   autoFocus
-//                   value={
-//                     destinationQuery
-//                   }
-//                   onFocus={() =>
-//                     setActiveField(
-//                       "destination",
-//                     )
-//                   }
-//                   onChange={(event) => {
-//                     setDestinationQuery(
-//                       event.target.value,
-//                     );
-
-//                     setActiveField(
-//                       "destination",
-//                     );
-//                   }}
-//                   placeholder="Where to?"
-//                   className="
-//                     min-w-0 flex-1
-//                     bg-transparent
-//                     text-[16px]
-//                     outline-none
-//                     placeholder:text-[#AAA5AE]
-//                   "
-//                 />
-
-//                 {destinationQuery && (
-//                   <button
-//                     type="button"
-//                     onClick={() => {
-//                       setDestinationQuery(
-//                         "",
-//                       );
-
-//                       setDestination(null);
-//                     }}
-//                     className="
-//                       flex h-8 w-8
-//                       items-center
-//                       justify-center
-//                       rounded-full
-//                       text-[#A09AA5]
-//                       hover:bg-black/5
-//                     "
-//                   >
-//                     <X size={16} />
-//                   </button>
-//                 )}
-//               </div>
-//             </div>
-//           </div>
-
-//           <AnimatePresence>
-//             {ride.stops.map(
-//               (stop, index) => (
-//                 <motion.div
-//                   key={stop.id}
-//                   initial={{
-//                     opacity: 0,
-//                     height: 0,
-//                     y: -10,
-//                   }}
-//                   animate={{
-//                     opacity: 1,
-//                     height: "auto",
-//                     y: 0,
-//                   }}
-//                   exit={{
-//                     opacity: 0,
-//                     height: 0,
-//                   }}
-//                   className="
-//                     ml-[29px]
-//                     mt-3 flex
-//                     items-center gap-2
-//                   "
-//                 >
-//                   <div
-//                     className="
-//                       flex h-[48px]
-//                       flex-1 items-center
-//                       rounded-[12px]
-//                       bg-[#F5F5F6]
-//                       px-3
-//                     "
-//                   >
-//                     <MapPin
-//                       size={17}
-//                       className="
-//                         mr-2
-//                         text-[#7442AD]
-//                       "
-//                     />
-
-//                     <span
-//                       className="
-//                         min-w-0 flex-1
-//                         truncate
-//                         text-[15px]
-//                       "
-//                     >
-//                       {stop.label ||
-//                         `Stop ${
-//                           index + 1
-//                         }`}
-//                     </span>
-//                   </div>
-
-//                   <button
-//                     type="button"
-//                     onClick={() =>
-//                       removeStop(stop.id)
-//                     }
-//                     className="
-//                       flex h-10 w-10
-//                       items-center
-//                       justify-center
-//                       rounded-full
-//                       bg-[#F5F2F8]
-//                       text-[#7442AD]
-//                     "
-//                   >
-//                     <X size={17} />
-//                   </button>
-//                 </motion.div>
-//               ),
-//             )}
-//           </AnimatePresence>
-
-//           <motion.button
-//             type="button"
-//             whileTap={{
-//               scale: 0.97,
-//             }}
-//             // onClick={() => {
-//             //   addStop({
-//             //     id:
-//             //       crypto.randomUUID(),
-
-//             //     label: "New stop",
-
-//             //     address: "",
-
-//             //     coordinates: null,
-//             //   });
-//             // }}
-//             onClick={() =>
-//   setAddStopOpen(true)
-// }
-//             className="
-//               ml-[28px] mt-4
-//               flex items-center
-//               gap-2
-//               text-[14px]
-//               font-semibold
-//               text-[#7442AD]
-//             "
-//           >
-//             <span
-//               className="
-//                 flex h-8 w-8
-//                 items-center
-//                 justify-center
-//                 rounded-full
-//                 bg-[#F1E9F8]
-//               "
-//             >
-//               <Plus size={17} />
-//             </span>
-
-//             Add stop
-//           </motion.button>
-//         </motion.div>
-
-//         <AnimatePresence mode="wait">
-//           {activeField && (
-//             <motion.div
-//               key={activeField}
-//               initial={{
-//                 opacity: 0,
-//                 y: 12,
-//               }}
-//               animate={{
-//                 opacity: 1,
-//                 y: 0,
-//               }}
-//               exit={{
-//                 opacity: 0,
-//                 y: -8,
-//               }}
-//               className="mt-6"
-//             >
-//               <button
-//                 type="button"
-//                 onClick={
-//                   handleCurrentLocation
-//                 }
-//                 className="
-//                   flex w-full
-//                   items-center gap-3
-//                   border-b
-//                   border-[#ECE9EF]
-//                   py-4 text-left
-//                 "
-//               >
-//                 <span
-//                   className="
-//                     flex h-10 w-10
-//                     shrink-0 items-center
-//                     justify-center
-//                     rounded-full
-//                     bg-[#EEE7F5]
-//                     text-[#7442AD]
-//                   "
-//                 >
-//                   <Crosshair
-//                     size={19}
-//                   />
-//                 </span>
-
-//                 <span>
-//                   <span
-//                     className="
-//                       block text-[16px]
-//                       font-semibold
-//                     "
-//                   >
-//                     Use my current location
-//                   </span>
-
-//                   <span
-//                     className="
-//                       mt-0.5 block
-//                       text-[13px]
-//                       text-[#99939D]
-//                     "
-//                   >
-//                     Use your device location
-//                   </span>
-//                 </span>
-//               </button>
-
-//               <button
-//                 type="button"
-//                 onClick={() =>
-//                   navigate(
-//                     "/passenger/ride/map-location",
-//                     {
-//                       state: {
-//                         target:
-//                           activeField,
-//                       },
-//                     },
-//                   )
-//                 }
-//                 className="
-//                   flex w-full
-//                   items-center gap-3
-//                   border-b
-//                   border-[#ECE9EF]
-//                   py-4 text-left
-//                 "
-//               >
-//                 <span
-//                   className="
-//                     flex h-10 w-10
-//                     items-center
-//                     justify-center
-//                     rounded-full
-//                     bg-[#EEE7F5]
-//                     text-[#7442AD]
-//                   "
-//                 >
-//                   <Navigation
-//                     size={19}
-//                   />
-//                 </span>
-
-//                 <span
-//                   className="
-//                     text-[16px]
-//                     font-semibold
-//                   "
-//                 >
-//                   Set location on map
-//                 </span>
-//               </button>
-
-//               <h2
-//                 className="
-//                   mb-2 mt-7
-//                   text-[18px]
-//                   font-semibold
-//                 "
-//               >
-//                 Recent destinations
-//               </h2>
-
-//               {filteredLocations.map(
-//                 (location) => (
-//                   <motion.button
-//                     key={location.id}
-//                     type="button"
-//                     whileHover={{
-//                       x: 3,
-//                     }}
-//                     whileTap={{
-//                       scale: 0.99,
-//                     }}
-//                     onClick={() =>
-//                       chooseLocation(
-//                         location,
-//                       )
-//                     }
-//                     className="
-//                       flex w-full
-//                       items-center gap-3
-//                       border-b
-//                       border-[#EEEAF0]
-//                       py-4
-//                       text-left
-//                     "
-//                   >
-//                     <span
-//                       className="
-//                         flex h-10 w-10
-//                         shrink-0 items-center
-//                         justify-center
-//                         rounded-full
-//                         bg-[#F3F0F5]
-//                         text-[#77707C]
-//                       "
-//                     >
-//                       <MapPin
-//                         size={19}
-//                       />
-//                     </span>
-
-//                     <span className="min-w-0">
-//                       <span
-//                         className="
-//                           block truncate
-//                           text-[16px]
-//                           font-medium
-//                         "
-//                       >
-//                         {
-//                           location.label
-//                         }
-//                       </span>
-
-//                       <span
-//                         className="
-//                           mt-1 block
-//                           truncate
-//                           text-[13px]
-//                           text-[#99939D]
-//                         "
-//                       >
-//                         {
-//                           location.address
-//                         }
-//                       </span>
-//                     </span>
-//                   </motion.button>
-//                 ),
-//               )}
-//             </motion.div>
-//           )}
-//         </AnimatePresence>
-//       </main>
-
-//       <AnimatePresence>
-//         {ride.pickup &&
-//           ride.destination && (
-//             <motion.div
-//               initial={{
-//                 y: 100,
-//                 opacity: 0,
-//               }}
-//               animate={{
-//                 y: 0,
-//                 opacity: 1,
-//               }}
-//               exit={{
-//                 y: 100,
-//                 opacity: 0,
-//               }}
-//               className="
-//                 fixed inset-x-0
-//                 bottom-0 z-[700]
-//                 border-t
-//                 border-[#EEEAF0]
-//                 bg-white/95
-//                 px-5
-//                 pb-[calc(18px+env(safe-area-inset-bottom))]
-//                 pt-4
-//                 backdrop-blur-xl
-//               "
-//             >
-//               <motion.button
-//                 type="button"
-//                 whileTap={{
-//                   scale: 0.98,
-//                 }}
-//                 onClick={
-//                   handleContinue
-//                 }
-//                 className="
-//                   mx-auto flex
-//                   h-[56px] w-full
-//                   max-w-[720px]
-//                   items-center
-//                   justify-center
-//                   rounded-[14px]
-//                   bg-[#7442AD]
-//                   text-[16px]
-//                   font-semibold
-//                   text-white
-//                   shadow-[0_10px_30px_rgba(116,66,173,0.22)]
-//                 "
-//               >
-//                 Find rides
-//               </motion.button>
-//             </motion.div>
-//           )}
-//       </AnimatePresence>
-
-
-//       <AddStopSheet
-//   open={addStopOpen}
-//   onClose={() =>
-//     setAddStopOpen(false)
-//   }
-//   suggestions={
-//     recentRideLocations
-//   }
-//   onAdd={(location) => {
-//     addStop({
-//       ...location,
-//       id:
-//         crypto.randomUUID(),
-//     });
-
-//     setAddStopOpen(false);
-//   }}
-// />
-//     </div>
-//   );
-// }

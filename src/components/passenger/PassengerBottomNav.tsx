@@ -43,11 +43,6 @@ const navItems: PassengerNavItem[] = [
     label: "Activity",
   },
   {
-    to: "/passenger/wallet",
-    icon: Wallet,
-    label: "Wallet",
-  },
-  {
     to: "/passenger/alerts",
     icon: Bell,
     label: "Alerts",

@@ -108,6 +108,7 @@ export interface BackendVehicle {
   plateNumber?: string;
   registrationNumber?: string;
   category?: string;
+  capacity?: number;
 }
 
 /* =========================================================

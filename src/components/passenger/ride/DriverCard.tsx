@@ -1,4 +1,4 @@
-import { MessageCircle, Phone, Star } from "lucide-react";
+import { MessageCircle, Phone, Star, UsersRound } from "lucide-react";
 import { motion } from "framer-motion";
 
 import type { RideDriver } from "../../../types/passengerRide";
@@ -117,7 +117,51 @@ export default function DriverCard({
             {driver.vehicle.plateNumber}
           </span>
         )}
+      
       </div>
+            {/* <div className="flex items-center justify-between gap-3 border-[#F0EDF2]">
+       {driver.vehicle?.category && (
+              <p className="mt-2 text-[13px] text-[#918B95]">
+                {driver.vehicle.category}
+              </p>
+            )}
+
+            {driver.vehicle?.capacity && (
+              <p className="mt-2 text-[13px] text-[#918B95]">
+                {driver.vehicle.capacity} seats
+              </p>
+            )}
+            </div> */}
+             {/* VEHICLE CATEGORY AND CAPACITY */}
+
+  {(driver.vehicle?.category ||
+    driver.vehicle?.capacity != null) && (
+
+    <div className="flex flex-wrap items-center gap-2 mt-3">
+
+      {/* CATEGORY */}
+
+      {driver.vehicle?.category && (
+        <span className="inline-flex items-center rounded-full bg-[#F3ECF9] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#7442AD]">
+          {driver.vehicle.category}
+        </span>
+      )}
+
+      {/* PASSENGER CAPACITY */}
+
+      {driver.vehicle?.capacity != null && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F7F7F8] px-3 py-1.5 text-[11px] font-medium text-[#77717C]">
+          <UsersRound size={13} />
+
+          {driver.vehicle.capacity}{" "}
+          {driver.vehicle.capacity === 1
+            ? "Passenger"
+            : "Passengers"}
+        </span>
+      )}
+
+    </div>
+  )}
     </div>
   );
 }

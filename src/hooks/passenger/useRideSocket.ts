@@ -36,7 +36,6 @@ const RIDE_EVENTS = [
   "ride.payment_pending",
   "ride.payment_action_required",
   "ride.payment_failed",
-  "ride.paid",
 ] as const;
 
 export function useRideSocket({

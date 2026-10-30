@@ -2,6 +2,7 @@
 
 import {
   BadgePercent,
+  Banknote,
   Building2,
   ChevronRight,
   Clock3,
@@ -74,14 +75,14 @@ type RideType = (typeof RIDE_TYPES)[number];
 
 const paymentMethods: PaymentMethod[] = [
   {
+    id: "cash",
+    type: "cash",
+    label: "Pay with Cash",
+  },
+  {
     id: "paystack-card",
     type: "card",
     label: "Pay with Card",
-  },
-  {
-    id: "paystack-transfer",
-    type: "card",
-    label: "Bank Transfer",
   },
 ];
 
@@ -445,11 +446,16 @@ export default function SelectRide() {
      PAYMENT VALIDATION
   ======================================================= */
 
-  const selectedPaymentSupported =
-    paymentMethods.some(
-      (method) =>
-        method.id === ride.paymentMethod?.id,
-    );
+  // const selectedPaymentSupported =
+  //   paymentMethods.some(
+  //     (method) =>
+  //       method.id === ride.paymentMethod?.id,
+  //   );
+  const selectedPaymentSupported = paymentMethods.some(
+  (method) =>
+    method.id === ride.paymentMethod?.id &&
+    method.type === ride.paymentMethod?.type,
+);
 
   useEffect(() => {
     if (selectedPaymentSupported) {
@@ -925,12 +931,11 @@ export default function SelectRide() {
           className="flex w-full items-center gap-3 rounded-[12px] py-2 text-left"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F2ECF8] text-[#7442AD]">
-            {ride.paymentMethod?.id ===
-            "paystack-transfer" ? (
-              <Building2 size={20} />
-            ) : (
-              <CreditCard size={20} />
-            )}
+            {ride.paymentMethod?.type === "cash" ? (
+            <Banknote size={20} />
+          ) : (
+            <CreditCard size={20} />
+          )}
           </span>
 
           <span className="flex-1 min-w-0">
@@ -941,7 +946,9 @@ export default function SelectRide() {
             </span>
 
             <span className="mt-1 block text-[12px] text-[#9C96A0]">
-              Secure online payment
+              {ride.paymentMethod?.type === "cash"
+                ? "Pay your driver after the trip"
+                : "Secure card payment via Paystack"}
             </span>
           </span>
 

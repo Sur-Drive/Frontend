@@ -50,6 +50,8 @@ import {
 import {
   useRideSocket,
 } from "../../../hooks/passenger/useRideSocket";
+import { useRideDriverDetails } from
+  "../../../hooks/passenger/useRideDriverDetails";
 
 /* =========================================================
    CONFIG
@@ -178,6 +180,16 @@ export default function VerifyRide() {
   const rideId =
     backendRide?.id ??
     getStoredActiveRideId();
+
+    const {
+  driver: driverForCard,
+  loading: driverLoading,
+  error: driverError,
+} = useRideDriverDetails(
+  rideId,
+  backendRide,
+  ride.driver,
+);
 
   const code = extractPickupCode(details);
 
@@ -745,63 +757,98 @@ export default function VerifyRide() {
   }
 
   /* =======================================================
+   DRIVER DETAILS
+
+   Use the same backend-backed driver information
+   as Driver Arrived, Driver En Route, and In Trip.
+======================================================= */
+
+const driverName =
+  driverForCard?.firstName ||
+  "Your driver";
+
+const driverPhoto =
+  driverForCard?.photo || "";
+
+const driverInitials =
+  getDriverInitials(driverName);
+
+const vehicleName =
+  [
+    driverForCard?.vehicle?.color,
+    driverForCard?.vehicle?.make,
+    driverForCard?.vehicle?.model,
+  ]
+    .filter(Boolean)
+    .join(" ") ||
+  "Vehicle details updating";
+
+const vehiclePlate =
+  driverForCard?.vehicle?.plateNumber ||
+  "";
+
+const vehicleSubtitle = vehiclePlate
+  ? `${vehicleName} · ${vehiclePlate}`
+  : vehicleName;
+
+  /* =======================================================
      DRIVER DETAILS
 
      Restore from backend after refresh.
   ======================================================= */
 
-  const backendDriver =
-    backendRide?.driver;
+  // const backendDriver =
+  //   backendRide?.driver;
 
-  const vehicle =
-    backendRide?.vehicle;
+  // const vehicle =
+  //   backendRide?.vehicle;
 
-  const driverName =
-    backendDriver?.fullName?.trim() ||
-    [
-      backendDriver?.firstName,
-      backendDriver?.lastName,
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    ride.driver?.firstName ||
-    "Your driver";
+  // const driverName =
+  //   backendDriver?.fullName?.trim() ||
+  //   [
+  //     backendDriver?.firstName,
+  //     backendDriver?.lastName,
+  //   ]
+  //     .filter(Boolean)
+  //     .join(" ") ||
+  //   ride.driver?.firstName ||
+  //   "Your driver";
 
-  const driverPhoto =
-    backendDriver?.profilePicture ||
-    ride.driver?.photo ||
-    "";
+  // const driverPhoto =
+  //   backendDriver?.profilePicture ||
+  //   ride.driver?.photo ||
+  //   "";
 
-  const driverInitials =
-    getDriverInitials(driverName);
+  // const driverInitials =
+  //   getDriverInitials(driverName);
 
-  const vehicleName =
-    [
-      vehicle?.color,
-      vehicle?.make,
-      vehicle?.model,
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    [
-      ride.driver?.vehicle?.color,
-      ride.driver?.vehicle?.make,
-      ride.driver?.vehicle?.model,
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    "Vehicle details updating";
+  // const vehicleName =
+  //   [
+  //     vehicle?.color,
+  //     vehicle?.make,
+  //     vehicle?.model,
+  //   ]
+  //     .filter(Boolean)
+  //     .join(" ") ||
+  //   [
+  //     ride.driver?.vehicle?.color,
+  //     ride.driver?.vehicle?.make,
+  //     ride.driver?.vehicle?.model,
+  //   ]
+  //     .filter(Boolean)
+  //     .join(" ") ||
+  //   "Vehicle details updating";
 
-  const vehiclePlate =
-    vehicle?.plateNumber ??
-    vehicle?.registrationNumber ??
-    ride.driver?.vehicle?.plateNumber ??
-    "";
+  // const vehiclePlate =
+  //   vehicle?.plateNumber ??
+  //   vehicle?.registrationNumber ??
+  //   ride.driver?.vehicle?.plateNumber ??
+  //   "";
 
-  const vehicleSubtitle =
-    vehiclePlate
-      ? `${vehicleName} · ${vehiclePlate}`
-      : vehicleName;
+  // const vehicleSubtitle =
+  //   vehiclePlate
+  //     ? `${vehicleName} · ${vehiclePlate}`
+  //     : vehicleName;
 
   const currentStage: VerificationStage =
     verified
@@ -851,7 +898,7 @@ export default function VerifyRide() {
             DRIVER PROFILE
         ========================================= */}
 
-        <div className="flex flex-col items-center mt-5 text-center">
+        {/* <div className="flex flex-col items-center mt-5 text-center">
 
           <div className="flex h-[82px] w-[82px] items-center justify-center overflow-hidden rounded-full border-[2px] border-[#E9AF27] bg-[#F3ECF9]">
 
@@ -877,7 +924,51 @@ export default function VerifyRide() {
             {vehicleSubtitle}
           </p>
 
-        </div>
+        </div> */}
+        {/* =========================================
+    DRIVER PROFILE
+========================================= */}
+
+<div className="flex flex-col items-center mt-5 text-center">
+
+  <div className="flex h-[82px] w-[82px] items-center justify-center overflow-hidden rounded-full border-[2px] border-[#E9AF27] bg-[#F3ECF9]">
+
+    {driverPhoto ? (
+      <img
+        src={driverPhoto}
+        alt={driverName}
+        className="object-cover w-full h-full"
+      />
+    ) : driverLoading && !driverForCard ? (
+      <LoaderCircle
+        size={25}
+        className="animate-spin text-[#7442AD]"
+      />
+    ) : (
+      <span className="text-[23px] font-semibold text-[#7442AD]">
+        {driverInitials}
+      </span>
+    )}
+
+  </div>
+
+  <h2 className="mt-3 text-[17px] font-semibold text-[#302B34]">
+    {driverLoading && !driverForCard
+      ? "Loading driver details..."
+      : driverName}
+  </h2>
+
+  <p className="mt-1 max-w-full truncate text-[12px] text-[#777080]">
+    {vehicleSubtitle}
+  </p>
+
+  {driverError && !driverForCard && (
+    <p className="mt-2 text-[11px] text-[#B9862C]">
+      Driver information is temporarily unavailable.
+    </p>
+  )}
+
+</div>
 
         {/* =========================================
             CONNECTION NOTICE

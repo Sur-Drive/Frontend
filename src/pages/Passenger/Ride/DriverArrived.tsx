@@ -10,6 +10,7 @@ import {
   RefreshCw,
   UserRound,
   CarFront,
+  LoaderCircle,
 } from "lucide-react";
 
 import { motion } from "framer-motion";
@@ -50,6 +51,9 @@ import {
 import type { RideDriver } from "../../../types/passengerRide";
 
 import { useRideSocket } from "../../../hooks/passenger/useRideSocket";
+import {
+  useRideDriverDetails,
+} from "../../../hooks/passenger/useRideDriverDetails";
 
 /* =========================================================
    CONSTANTS
@@ -502,63 +506,89 @@ export default function DriverArrived() {
      Restore from backend when context is empty.
   ======================================================= */
 
-  const backendDriver = backendRide?.driver;
+  const {
+  driver: driverForCard,
+  loading: driverLoading,
+  error: driverError,
+} = useRideDriverDetails(
+  rideId,
+  backendRide,
+  ride.driver,
+);
 
-  const vehicle = backendRide?.vehicle;
+const vehicle = backendRide?.vehicle;
 
-  const driverName =
-    backendDriver?.fullName?.trim() ||
-    [
-      backendDriver?.firstName,
-      backendDriver?.lastName,
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    "";
+const vehicleName =
+  [
+    vehicle?.make,
+    vehicle?.model,
+  ]
+    .filter(Boolean)
+    .join(" ") ||
+  vehicle?.category?.toUpperCase() ||
+  "Vehicle details updating";
 
-  const backendDriverForCard: RideDriver | null =
-    backendDriver && driverName && vehicle
-      ? {
-          id:
-            backendDriver.id ??
-            backendRide?.driverId ??
-            "",
+const plateNumber =
+  vehicle?.plateNumber ??
+  "Plate number unavailable";
 
-          firstName: driverName,
+  // const backendDriver = backendRide?.driver;
 
-          photo:
-            backendDriver.profilePicture ?? "",
+  // const vehicle = backendRide?.vehicle;
 
-          rating:
-            backendDriver.rating ?? 0,
+  // const driverName =
+  //   backendDriver?.fullName?.trim() ||
+  //   [
+  //     backendDriver?.firstName,
+  //     backendDriver?.lastName,
+  //   ]
+  //     .filter(Boolean)
+  //     .join(" ") ||
+  //   "";
 
-          totalTrips:
-            backendDriver.totalCompletedRides ?? 0,
+  // const backendDriverForCard: RideDriver | null =
+  //   backendDriver && driverName && vehicle
+  //     ? {
+  //         id:
+  //           backendDriver.id ??
+  //           backendRide?.driverId ??
+  //           "",
 
-          vehicle: {
-            make: vehicle.make ?? "",
-            model: vehicle.model ?? "",
-            color: vehicle.color ?? "",
-            plateNumber:
-              vehicle.plateNumber ??
-              vehicle.registrationNumber ??
-              "",
-          },
-        }
-      : null;
+  //         firstName: driverName,
 
-  const driverForCard =
-    backendDriverForCard ??
-    ride.driver;
+  //         photo:
+  //           backendDriver.profilePicture ?? "",
 
-  const vehicleName =
-    [
-      vehicle?.make,
-      vehicle?.model,
-    ]
-      .filter(Boolean)
-      .join(" ") ||
-    "Vehicle details updating";
+  //         rating:
+  //           backendDriver.rating ?? 0,
+
+  //         totalTrips:
+  //           backendDriver.totalCompletedRides ?? 0,
+
+  //         vehicle: {
+  //           make: vehicle.make ?? "",
+  //           model: vehicle.model ?? "",
+  //           color: vehicle.color ?? "",
+  //           plateNumber:
+  //             vehicle.plateNumber ??
+  //             vehicle.registrationNumber ??
+  //             "",
+  //         },
+  //       }
+  //     : null;
+
+  // const driverForCard =
+  //   backendDriverForCard ??
+  //   ride.driver;
+
+  // const vehicleName =
+  //   [
+  //     vehicle?.make,
+  //     vehicle?.model,
+  //   ]
+  //     .filter(Boolean)
+  //     .join(" ") ||
+  //   "Vehicle details updating";
 
   const vehiclePlate =
     vehicle?.plateNumber ??
@@ -717,39 +747,175 @@ export default function DriverArrived() {
         {/* =========================================
             DRIVER CARD
         ========================================= */}
+        {/* <div className="mt-5">
+  {driverForCard ? (
+    <DriverCard
+      driver={driverForCard}
+      showActions={false}
+    />
+  ) : (
+    <div className="flex items-center gap-3 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
+        <UserRound size={23} />
+      </div>
 
-        {driverForCard ? (
-          <div className="mt-5">
-            <DriverCard
-              driver={driverForCard}
-              showActions={false}
-            />
-          </div>
-        ) : (
-          <div className="mt-5 flex items-center gap-3 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
+      <div className="flex-1">
+        <p className="text-[14px] font-semibold text-[#302B34]">
+          Your driver has arrived
+        </p>
 
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
-              <UserRound size={23} />
-            </div>
+        <p className="mt-1 text-[12px] text-[#918B95]">
+          {driverLoading
+            ? "Loading driver information..."
+            : driverError
+              ? "Unable to load driver information"
+              : "Driver information updating..."}
+        </p>
+      </div>
 
-            <div>
-              <p className="text-[15px] font-semibold text-[#302B34]">
-                Your driver
-              </p>
+      {driverLoading && (
+        <LoaderCircle
+          size={18}
+          className="animate-spin text-[#7442AD]"
+        />
+      )}
+    </div>
+  )}
+</div> */}
 
-              <p className="mt-1 text-[12px] text-[#918B95]">
-                Driver details are updating...
-              </p>
-            </div>
+{/* =========================================
+    DRIVER & VEHICLE INFORMATION
+========================================= */}
 
-          </div>
+<div className="mt-5 space-y-3">
+
+  {/* =======================================
+      DRIVER DETAILS AVAILABLE
+  ======================================= */}
+
+  {driverForCard ? (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 10,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      transition={{
+        duration: 0.3,
+      }}
+    >
+      <DriverCard
+        driver={driverForCard}
+        showActions={false}
+      />
+    </motion.div>
+  ) : (
+    <>
+      {/* =====================================
+          DRIVER LOADING STATE
+      ===================================== */}
+
+      <div className="flex items-center gap-3 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
+
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F0E8F8] text-[#7442AD]">
+          <UserRound size={23} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] font-semibold text-[#302B34]">
+            Your driver has arrived
+          </p>
+
+          <p className="mt-1 text-[12px] text-[#918B95]">
+            {driverLoading
+              ? "Loading driver information..."
+              : driverError
+                ? "Driver details are temporarily unavailable"
+                : "Getting your driver details..."}
+          </p>
+        </div>
+
+        {driverLoading && (
+          <LoaderCircle
+            size={18}
+            className="shrink-0 animate-spin text-[#7442AD]"
+          />
         )}
+
+      </div>
+
+      {/* =====================================
+          VEHICLE DETAILS
+
+          Show while driver information
+          is unavailable.
+      ===================================== */}
+
+      {vehicle && (
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 8,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.3,
+          }}
+          className="rounded-[16px] border border-[#EEEAF1] bg-white p-4"
+        >
+
+          <p className="text-[12px] font-semibold uppercase tracking-wider text-[#918B95]">
+            Assigned vehicle
+          </p>
+
+          <div className="flex items-center justify-between gap-3 mt-3">
+
+            <div className="flex items-center min-w-0 gap-2">
+
+              <CarFront
+                size={19}
+                className="shrink-0 text-[#7442AD]"
+              />
+
+              <p className="truncate text-[15px] font-semibold text-[#302B34]">
+                {vehicleName}
+              </p>
+
+            </div>
+
+            {vehiclePlate && (
+              <span className="shrink-0 rounded-lg bg-[#F3ECF9] px-3 py-2 text-[12px] font-bold text-[#7442AD]">
+                {vehiclePlate}
+              </span>
+            )}
+
+          </div>
+
+          {vehicle.category && (
+            <p className="mt-2 text-[12px] text-[#918B95]">
+              {vehicle.category}
+            </p>
+          )}
+
+        </motion.div>
+      )}
+
+    </>
+  )}
+
+</div>
 
         {/* =========================================
             ASSIGNED VEHICLE
         ========================================= */}
 
-        {vehicle && (
+        {/* {vehicle && (
           <div className="mt-4 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
 
             <p className="text-[12px] font-semibold uppercase tracking-wider text-[#918B95]">
@@ -786,7 +952,7 @@ export default function DriverArrived() {
             )}
 
           </div>
-        )}
+        )} */}
 
         {/* =========================================
             PICKUP POINT

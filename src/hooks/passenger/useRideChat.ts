@@ -110,6 +110,9 @@ export function useRideChat({
   const conversationRef =
     useRef<ConversationView | null>(null);
 
+    const [socketError, setSocketError] =
+  useState<string | null>(null);
+
   const typingTimer =
     useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -189,34 +192,77 @@ export function useRideChat({
           );
         }
 
+        // socket = io(`${API_BASE_URL}/chat`, {
+        //   auth: (callback) => {
+        //     callback({
+        //       token: passengerSession.getAccessToken(),
+        //     });
+        //   },
+        //   autoConnect: false,
+        //   reconnection: true,
+        // });
         socket = io(`${API_BASE_URL}/chat`, {
-          auth: (callback) => {
-            callback({
-              token: passengerSession.getAccessToken(),
-            });
-          },
-          autoConnect: false,
-          reconnection: true,
-        });
+  path: "/socket.io",
+
+  transports: ["polling", "websocket"],
+
+  auth: (callback) => {
+    callback({
+      token: passengerSession.getAccessToken(),
+    });
+  },
+
+  autoConnect: false,
+
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+
+  timeout: 20000,
+});
 
         socketRef.current = socket;
 
+        // socket.on("connect", () => {
+        //   if (cancelled) return;
+
+        //   setConnected(true);
+        //   setError(null);
+
+        //   void refresh().catch((err) => {
+        //     if (!cancelled) {
+        //       setError(getErrorMessage(err));
+        //     }
+        //   });
+
+        //   void rideChatApi
+        //     .getUnreadCount()
+        //     .catch(() => undefined);
+        // });
+
         socket.on("connect", () => {
-          if (cancelled) return;
+  if (cancelled) return;
 
-          setConnected(true);
-          setError(null);
+  console.log("[RideChat Socket] Connected", {
+    socketId: socket?.id,
+    namespace: "/chat",
+  });
 
-          void refresh().catch((err) => {
-            if (!cancelled) {
-              setError(getErrorMessage(err));
-            }
-          });
+  setConnected(true);
+  setSocketError(null);
+  setError(null);
 
-          void rideChatApi
-            .getUnreadCount()
-            .catch(() => undefined);
-        });
+  void refresh().catch((err) => {
+    if (!cancelled) {
+      setError(getErrorMessage(err));
+    }
+  });
+
+  void rideChatApi
+    .getUnreadCount()
+    .catch(() => undefined);
+});
 
         socket.on("disconnect", () => {
           if (cancelled) return;
@@ -225,12 +271,37 @@ export function useRideChat({
           setOtherTyping(false);
         });
 
-        socket.on("connect_error", (err: Error) => {
-          if (cancelled) return;
+        // socket.on("connect_error", (err: Error) => {
+        //   if (cancelled) return;
 
-          setConnected(false);
-          setError(err.message);
-        });
+        //   setConnected(false);
+        //   setError(err.message);
+        // });
+
+        socket.on("connect_error", (err: Error) => {
+  if (cancelled) return;
+
+  console.error("[RideChat Socket] Connection failed", {
+    message: err.message,
+    cause: err.cause,
+    description:
+      "description" in err
+        ? err.description
+        : undefined,
+    context:
+      "context" in err
+        ? err.context
+        : undefined,
+    namespace: "/chat",
+    connected: socket?.connected,
+  });
+
+  setConnected(false);
+
+  setSocketError(
+    "Real-time connection unavailable. Messages can still be sent.",
+  );
+});
 
         socket.on(
           "new_message",
@@ -669,6 +740,36 @@ export function useRideChat({
     }
   }, [hasMore, page]);
 
+  useEffect(() => {
+  if (
+    connected ||
+    !conversation?.id
+  ) {
+    return;
+  }
+
+  const interval = window.setInterval(() => {
+    if (
+      document.visibilityState === "visible"
+    ) {
+      void refresh().catch((error) => {
+        console.warn(
+          "[RideChat] Message refresh failed:",
+          error,
+        );
+      });
+    }
+  }, 5000);
+
+  return () => {
+    window.clearInterval(interval);
+  };
+}, [
+  connected,
+  conversation?.id,
+  refresh,
+]);
+
   return {
     conversation,
     messages,
@@ -687,5 +788,6 @@ export function useRideChat({
     notifyTyping,
     stopTyping,
     refresh,
+  socketError,
   };
 }

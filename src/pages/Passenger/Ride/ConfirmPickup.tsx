@@ -1,4 +1,5 @@
 import {
+  Banknote,
   Building2,
   ChevronRight,
   Clock3,
@@ -81,7 +82,7 @@ const ESTIMATE_STALE_TIME = 30_000;
  * Bank transfer should be enabled once the backend
  * confirms how to request the Paystack transfer channel.
  */
-const SUPPORTED_PAYMENT_ID = "paystack-card";
+// const SUPPORTED_PAYMENT_ID = "paystack-card";
 
 /* =========================================================
    HELPERS
@@ -261,16 +262,29 @@ export default function ConfirmPickup() {
      PAYMENT VALIDATION
   ======================================================= */
 
+  // const paymentMethod = ride.paymentMethod;
+
+  // const isCardPayment =
+  //   paymentMethod?.id === SUPPORTED_PAYMENT_ID &&
+  //   paymentMethod.type === "card";
+
+  // const isTransferPayment =
+  //   paymentMethod?.id === "paystack-transfer";
+
+  // const isSupportedPayment = isCardPayment;
+
   const paymentMethod = ride.paymentMethod;
 
-  const isCardPayment =
-    paymentMethod?.id === SUPPORTED_PAYMENT_ID &&
-    paymentMethod.type === "card";
+const isCashPayment =
+  paymentMethod?.id === "cash" &&
+  paymentMethod.type === "cash";
 
-  const isTransferPayment =
-    paymentMethod?.id === "paystack-transfer";
+const isCardPayment =
+  paymentMethod?.id === "paystack-card" &&
+  paymentMethod.type === "card";
 
-  const isSupportedPayment = isCardPayment;
+const isSupportedPayment =
+  isCashPayment || isCardPayment;
 
   /* =======================================================
      ESTIMATE QUERY KEY
@@ -439,14 +453,12 @@ export default function ConfirmPickup() {
     }
 
     if (!isSupportedPayment) {
-      toast.error(
-        isTransferPayment
-          ? "Bank transfer checkout is not available yet. Please select Card to continue."
-          : "Please select a supported online payment method.",
-      );
+  toast.error(
+    "Please select Cash or Card as your payment method.",
+  );
 
-      return;
-    }
+  return;
+}
 
     if (
       !hasQuote ||
@@ -477,10 +489,15 @@ export default function ConfirmPickup() {
        *
        * The documented API expects "card".
        */
-      const payload: BookRideRequest = {
-        ...estimatePayload,
-        paymentMethod: "card",
-      };
+      const selectedBackendPaymentMethod:
+  "cash" | "card" = isCashPayment
+    ? "cash"
+    : "card";
+
+const payload: BookRideRequest = {
+  ...estimatePayload,
+  paymentMethod: selectedBackendPaymentMethod,
+};
 
       const response =
         await booking.mutateAsync(payload);
@@ -861,11 +878,11 @@ export default function ConfirmPickup() {
 
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F2ECF8] text-[#7442AD]">
-              {isTransferPayment ? (
-                <Building2 size={19} />
-              ) : (
-                <CreditCard size={19} />
-              )}
+              {isCashPayment ? (
+              <Banknote size={19} />
+            ) : (
+              <CreditCard size={19} />
+            )}
             </span>
 
             <div className="flex-1 min-w-0">
@@ -878,8 +895,10 @@ export default function ConfirmPickup() {
                   "Not selected"}
               </p>
 
-              <p className="mt-1 text-[11px] text-[#96909A]">
-                Secure online payment via Paystack
+             <p className="mt-1 text-[11px] text-[#96909A]">
+                {isCashPayment
+                  ? "Pay your driver when the trip ends"
+                  : "Secure card payment via Paystack"}
               </p>
             </div>
 
@@ -895,17 +914,6 @@ export default function ConfirmPickup() {
             </button>
           </div>
 
-          {/* UNSUPPORTED TRANSFER */}
-
-          {isTransferPayment && (
-            <div className="mt-4 rounded-[12px] border border-[#F4DFC2] bg-[#FFF9F0] p-3">
-              <p className="text-[12px] leading-5 text-[#9B6A29]">
-                Bank transfer checkout is awaiting
-                backend integration. Please select
-                Card to complete your booking.
-              </p>
-            </div>
-          )}
         </motion.div>
 
         {/* ===============================================
@@ -920,11 +928,10 @@ export default function ConfirmPickup() {
             />
 
             <p className="text-[12px] leading-5 text-[#756F79]">
-              This is an estimated fare. Your final
-              fare will be calculated after your trip
-              and payment will be processed securely
-              through Paystack.
-            </p>
+        {isCashPayment
+          ? "This is an estimated fare. Your final fare will be calculated after your trip. Please pay the final amount directly to your driver."
+          : "This is an estimated fare. Your final fare will be calculated after your trip. You will then complete your payment securely through Paystack."}
+      </p>
           </div>
         </div>
 
