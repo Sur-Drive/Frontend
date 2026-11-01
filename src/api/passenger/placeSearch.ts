@@ -75,9 +75,10 @@ export function searchPlaces(
       {
         input: trimmedQuery,
 
-        // Keep ride search primarily within Nigeria.
+        // Supported countries: Nigeria, UK, China and Turkey
+        // (Google allows up to 5 country codes per request).
         componentRestrictions: {
-          country: "ng",
+          country: ["ng", "gb", "cn", "tr"],
         },
       },
       (predictions, status) => {
