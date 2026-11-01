@@ -41,18 +41,39 @@ export function loadGoogleMaps(): Promise<void> {
         );
       }
 
-      await new Promise<void>((resolve, reject) => {
-        window[CALLBACK_NAME] = () => resolve();
+      // maps.googleapis.com is frequently unreachable from mainland China, so
+      // if it fails we retry once from Google's China-facing host.
+      const hosts = ["maps.googleapis.com", "maps.googleapis.cn"];
 
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=${LIBRARIES}&loading=async&callback=${CALLBACK_NAME}`;
-        script.async = true;
-        script.onerror = () => {
-          loadPromise = null; // allow a retry on the next call
-          reject(new Error("Failed to load the Google Maps script"));
-        };
-        document.head.appendChild(script);
-      });
+      const loadFrom = (host: string) =>
+        new Promise<void>((resolve, reject) => {
+          window[CALLBACK_NAME] = () => resolve();
+
+          const script = document.createElement("script");
+          script.src = `https://${host}/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=${LIBRARIES}&loading=async&callback=${CALLBACK_NAME}`;
+          script.async = true;
+          script.onerror = () => {
+            script.remove();
+            reject(new Error(`Failed to load the Google Maps script from ${host}`));
+          };
+          document.head.appendChild(script);
+        });
+
+      let lastError: Error | null = null;
+      for (const host of hosts) {
+        try {
+          await loadFrom(host);
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err as Error;
+        }
+      }
+
+      if (lastError) {
+        loadPromise = null; // allow a retry on the next call
+        throw new Error("Failed to load the Google Maps script");
+      }
     }
 
     await ensureCoreLibraryLoaded();

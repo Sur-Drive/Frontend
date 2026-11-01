@@ -19,7 +19,7 @@ interface AddressAutocompleteInputProps {
   placeholder?: string
   className?: string
   inputClassName?: string
-  /** ISO 3166-1 alpha-2 country code(s) to restrict results to. Defaults to Nigeria + United Kingdom. */
+  /** ISO 3166-1 alpha-2 country code(s) to restrict results to. Defaults to Nigeria, United Kingdom, China + Turkey. */
   countryRestriction?: string | string[]
   /** Show the tap-to-speak mic button (auto-hidden if the browser doesn't support voice input). Defaults to true. */
   enableVoice?: boolean
@@ -58,7 +58,7 @@ export default function AddressAutocompleteInput({
   placeholder = 'Search a place or address',
   className = '',
   inputClassName = '',
-  countryRestriction = ['ng', 'gb'],
+  countryRestriction = ['ng', 'gb', 'cn', 'tr'],
   enableVoice = true,
   biasLocation,
   biasRadiusMeters = 50000,

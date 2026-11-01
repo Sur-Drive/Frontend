@@ -37,6 +37,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [failedPic, setFailedPic] = useState<string | null>(null);
   const isLoggedIn =
     typeof window !== "undefined" && !!localStorage.getItem("token");
 
@@ -217,11 +218,20 @@ export default function Profile() {
 
               <div className="flex items-center gap-3 sm:gap-4">
                 <div
-                  className={`flex items-center justify-center text-sm sm:text-base font-bold text-white bg-purple-700 rounded-full w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 lg:text-lg shrink-0 ${
+                  className={`flex items-center justify-center overflow-hidden text-sm sm:text-base font-bold text-white bg-purple-700 rounded-full w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 lg:text-lg shrink-0 ${
                     isLoading ? "animate-pulse" : ""
                   }`}
                 >
-                  {initials}
+                  {user?.profilePicture && failedPic !== user.profilePicture ? (
+                    <img
+                      src={user.profilePicture}
+                      alt={displayName}
+                      className="object-cover w-full h-full"
+                      onError={() => setFailedPic(user.profilePicture ?? null)}
+                    />
+                  ) : (
+                    initials
+                  )}
                 </div>
                 <div className="min-w-0 pr-14">
                   <p
