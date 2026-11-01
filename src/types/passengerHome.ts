@@ -87,8 +87,11 @@ export interface PassengerRecentDestination {
   name?: string | null;
   address: string;
 
-  lat?: number | null;
-  lng?: number | null;
+  lat: number;
+  lng: number;
+
+  visitCount: number;
+  lastVisitedAt: string;
 
   createdAt?: string | null;
 }
