@@ -55,11 +55,33 @@ import {
   getUserProfile,
   updateUserProfile,
   deleteUserAccount,
+  uploadProfilePicture,
   type UserProfileResponse,
   type UpdateProfileInput,
 } from '../api/profile'
 
 export const profileQueryKey = ['userProfile'] as const
+
+export function useUploadProfilePicture() {
+  const queryClient = useQueryClient()
+
+  return useMutation<UserProfileResponse, Error, Blob>({
+    mutationFn: (file) => uploadProfilePicture(file),
+    onSuccess: (res) => {
+      // Show the new photo immediately instead of waiting for the refetch.
+      // Handles the API returning the full user, a { data } wrapper, or just a URL.
+      const r = res as any
+      const url: string | undefined =
+        r?.profilePicture ?? r?.data?.profilePicture ?? r?.url ?? r?.data?.url
+      if (url) {
+        queryClient.setQueryData<UserProfileResponse>(profileQueryKey, (prev) =>
+          prev ? { ...prev, profilePicture: url } : prev,
+        )
+      }
+      queryClient.invalidateQueries({ queryKey: profileQueryKey })
+    },
+  })
+}
 
 export function useProfile() {
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
