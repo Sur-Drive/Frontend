@@ -5,7 +5,9 @@ import {
 type Props = {
   status?:
     | "completed"
-    | "cancelled";
+    | "cancelled"
+    | "no_drivers_found"
+    | "unknown";
 
   className?: string;
 };
@@ -29,11 +31,7 @@ export default function TripRoutePreview({
       {/* MAP GRID */}
 
       <div
-        className="
-          absolute
-          inset-0
-          opacity-80
-        "
+        className="absolute inset-0 opacity-80"
         style={{
           backgroundImage: `
             linear-gradient(
@@ -67,7 +65,7 @@ export default function TripRoutePreview({
       <svg
         viewBox="0 0 300 150"
         preserveAspectRatio="none"
-        className="absolute inset-0 h-full w-full"
+        className="absolute inset-0 w-full h-full"
       >
         <motion.path
           d="
@@ -114,33 +112,68 @@ export default function TripRoutePreview({
         />
       </svg>
 
-      {status && (
+      {/* {status && (
         <div className="absolute left-3 top-3">
-          <span
-            className={`
-              inline-flex
-              rounded-full
-              px-4
-              py-2
-              text-[13px]
-              font-semibold
-              text-white
-
-              ${
-                status ===
-                "completed"
-                  ? "bg-[#3FC76A]"
-                  : "bg-[#FF624B]"
-              }
-            `}
-          >
-            {status ===
-            "completed"
-              ? "Completed"
-              : "Cancelled"}
-          </span>
+          {status && status !== "unknown" && (
+  <div className="absolute left-3 top-3">
+    <span
+      className={`
+        inline-flex rounded-full px-4 py-2
+        text-[13px] font-semibold text-white
+        ${
+          status === "completed"
+            ? "bg-[#3FC76A]"
+            : status === "cancelled"
+              ? "bg-[#FF624B]"
+              : "bg-[#E5A23B]"
+        }
+      `}
+    >
+      {status === "completed"
+        ? "Completed"
+        : status === "cancelled"
+          ? "Cancelled"
+          : "No driver found"}
+    </span>
+  </div>
+)}
         </div>
-      )}
+      )} */}
+      {status && status !== "unknown" && (
+  <div className="absolute z-10 left-3 top-3">
+    <span
+      className={`
+        inline-flex
+        w-max
+        max-w-[calc(100vw-48px)]
+        items-center
+        justify-center
+        whitespace-nowrap
+        rounded-full
+        px-3.5
+        py-2
+        text-[11px]
+        font-semibold
+        leading-none
+        text-white
+        shadow-sm
+        ${
+          status === "completed"
+            ? "bg-[#3FC76A]"
+            : status === "cancelled"
+              ? "bg-[#FF624B]"
+              : "bg-[#E5A23B]"
+        }
+      `}
+    >
+      {status === "completed"
+        ? "Completed"
+        : status === "cancelled"
+          ? "Cancelled"
+          : "No driver found"}
+    </span>
+  </div>
+)}
     </div>
   );
 }

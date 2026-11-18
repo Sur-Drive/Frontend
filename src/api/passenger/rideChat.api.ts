@@ -34,12 +34,19 @@ export interface ChatMessage {
 
 export interface ChatCounterpart {
   id?: string;
+
   firstName?: string;
   lastName?: string;
   name?: string;
+
+  role?: string;
+
+  profilePicture?: string | null;
   photo?: string | null;
   avatarUrl?: string | null;
+
   rating?: number;
+
   [key: string]: unknown;
 }
 

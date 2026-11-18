@@ -30,7 +30,18 @@ self.addEventListener("push", (event: PushEvent) => {
         data: { url: payload.url ?? "/" },
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    // Let any open page refetch money state (wallet, withdrawals) right away.
+    const notifyClients = self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((list) => {
+            for (const c of list) {
+                c.postMessage({ type: "push-received", url: payload.url, title });
+            }
+        });
+
+    event.waitUntil(
+        Promise.all([self.registration.showNotification(title, options), notifyClients]),
+    );
 });
 
 // Clicking the notification focuses an existing tab if one is open,

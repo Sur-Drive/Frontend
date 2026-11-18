@@ -17,6 +17,8 @@ import DriverCard from "../../../components/passenger/ride/DriverCard";
 
 import { usePassengerRide } from "../../../context/PassengerRideContext";
 import { mockAssignedDriver } from "../../../data/passengerRide";
+import { getStoredActiveRide, getStoredActiveRideId } from "../../../utils/passengerActiveRide";
+import type { PassengerRideResponse } from "../../../api/passenger/rides";
 
 export default function ActiveTrip() {
   const navigate = useNavigate();
@@ -36,6 +38,14 @@ const [
   shareOpen,
   setShareOpen,
 ] = useState(false);
+
+ const [backendRide, setBackendRide] =
+    useState<PassengerRideResponse | null>(
+      () => getStoredActiveRide(),
+    );
+
+ const rideId =
+    backendRide?.id ?? getStoredActiveRideId();
 
   if (!ride.destination) {
     return <Navigate to="/passenger/home" replace />;
@@ -86,7 +96,7 @@ const [
           HEADING TO
         </p>
 
-        <div className="mt-1 flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-1">
           <MapPin
             size={18}
             className="shrink-0 text-[#7442AD]"
@@ -130,7 +140,7 @@ const [
           />
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 mt-4">
           <motion.button
   type="button"
   whileTap={{
@@ -197,11 +207,13 @@ const [
   }}
 />
 
+{rideId && (
 <ShareRideSheet
   open={shareOpen}
   onClose={() =>
     setShareOpen(false)
   }
+  rideId={rideId}
   driver={driver}
   pickup={ride.pickup}
   destination={
@@ -209,6 +221,7 @@ const [
   }
   eta="18 min"
 />
+)}
     </div>
   );
 }

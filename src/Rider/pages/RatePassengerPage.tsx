@@ -29,7 +29,7 @@ export default function RatePassengerPage() {
     initials: ride?.passengerInitials ?? "P",
     id: ride?.id ?? rideId ?? "",
     dropoff: ride?.dropoffAddress && ride.dropoffAddress !== "—" ? ride.dropoffAddress : "—",
-    distance: ride?.tripDistance ?? ride?.tripDuration ?? "—",
+    distance: ride?.tripDistance ?? "—",
   };
   const cannotRate = (canRate.data as any)?.canRate === false || (canRate.data as any)?.data?.canRate === false;
   const reason = (canRate.data as any)?.reason ?? (canRate.data as any)?.data?.reason;

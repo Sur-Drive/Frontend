@@ -2,9 +2,11 @@ import {
   Banknote,
   Check,
   CreditCard,
-  Plus,
-  WalletCards,
+  LockKeyhole,
+  ShieldCheck,
+  Wallet,
 } from "lucide-react";
+
 import { motion } from "framer-motion";
 
 import RideModalSheet from "./RideModalSheet";
@@ -13,150 +15,670 @@ import type {
   PaymentMethod,
 } from "../../../types/passengerRide";
 
+/* =========================================================
+   TYPES
+========================================================= */
+
 interface PaymentMethodSheetProps {
   open: boolean;
   onClose: () => void;
-  selected: PaymentMethod;
+  selected: PaymentMethod | null;
   methods?: PaymentMethod[];
-  onSelect: (
-    method: PaymentMethod,
-  ) => void;
+  onSelect: (method: PaymentMethod) => void;
 }
 
-const getPaymentIcon = (
-  method: PaymentMethod,
-) => {
-  const text =
-    `${method.id} ${method.label}`.toLowerCase();
+type SupportedPaymentChannel = "cash" | "card";
 
-  if (text.includes("cash")) {
-    return Banknote;
+/* =========================================================
+   PAYMENT METHODS
+========================================================= */
+
+export const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+  {
+    id: "cash",
+    type: "cash",
+    label: "Pay with Cash",
+  },
+  {
+    id: "paystack-card",
+    type: "card",
+    label: "Pay with Card",
+  },
+];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getPaymentChannel(
+  method: PaymentMethod,
+): SupportedPaymentChannel | null {
+  if (
+    method.id === "cash" &&
+    method.type === "cash"
+  ) {
+    return "cash";
   }
 
   if (
-    text.includes("wallet")
+    method.id === "paystack-card" &&
+    method.type === "card"
   ) {
-    return WalletCards;
+    return "card";
   }
 
-  return CreditCard;
-};
+  return null;
+}
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export default function PaymentMethodSheet({
   open,
   onClose,
   selected,
-  methods = [],
+  methods = DEFAULT_PAYMENT_METHODS,
   onSelect,
 }: PaymentMethodSheetProps) {
+  const supportedMethods = methods.filter(
+    (method) => getPaymentChannel(method) !== null,
+  );
+
+  const selectedChannel = selected
+    ? getPaymentChannel(selected)
+    : null;
+
+  const handleSelect = (method: PaymentMethod) => {
+    onSelect(method);
+    onClose();
+  };
+
   return (
     <RideModalSheet
       open={open}
       onClose={onClose}
-      title="Payment method"
-      description="Choose how you want to pay for this ride."
+      title="Payment Method"
+      description="Choose how you would like to pay for your ride."
     >
-      <div className="space-y-3">
-        {methods.map((method) => {
-          const Icon =
-            getPaymentIcon(method);
+      {/* ===============================================
+          PAYMENT OPTIONS
+      =============================================== */}
 
-          const active =
-            selected.id === method.id;
+      <div className="space-y-3">
+        {supportedMethods.map((method, index) => {
+          const channel = getPaymentChannel(method);
+
+          if (!channel) return null;
+
+          const isCash = channel === "cash";
+
+          const Icon = isCash ? Banknote : CreditCard;
+
+          const active = selected?.id === method.id;
+
+          const description = isCash
+            ? "Pay your driver directly when your trip ends."
+            : "Pay securely with your debit or credit card after your trip.";
 
           return (
             <motion.button
               key={method.id}
               type="button"
+              initial={{
+                opacity: 0,
+                y: 8,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                delay: index * 0.05,
+                duration: 0.25,
+              }}
               whileTap={{
                 scale: 0.985,
               }}
-              onClick={() => {
-                onSelect(method);
-                onClose();
-              }}
+              onClick={() => handleSelect(method)}
               className={`
-                flex min-h-[68px] w-full
+                flex min-h-[90px] w-full
                 items-center gap-3
                 rounded-[16px] border
                 p-4 text-left
+                transition-all duration-200
                 ${
                   active
-                    ? `
-                      border-[#7442AD]
-                      bg-[#FBF8FE]
-                    `
-                    : `
-                      border-[#ECE8EF]
-                      bg-white
-                    `
+                    ? "border-[#7442AD] bg-[#FBF8FE] shadow-[0_4px_16px_rgba(116,66,173,0.08)]"
+                    : "border-[#ECE8EF] bg-white hover:border-[#D5C3E7]"
                 }
               `}
             >
+              {/* ICON */}
+
               <span
-                className="
-                  flex h-11 w-11
+                className={`
+                  flex h-12 w-12
                   shrink-0 items-center
-                  justify-center rounded-full
-                  bg-[#F1EAF7]
-                  text-[#7442AD]
-                "
+                  justify-center rounded-[14px]
+                  ${
+                    active
+                      ? "bg-[#7442AD] text-white"
+                      : "bg-[#F1EAF7] text-[#7442AD]"
+                  }
+                `}
               >
-                <Icon size={20} />
+                <Icon size={22} strokeWidth={1.8} />
               </span>
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-semibold text-[#302B34]">
+              {/* CONTENT */}
+
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-[#302B34]">
                   {method.label}
                 </p>
 
-                {"description" in method &&
-                  typeof method.description ===
-                    "string" && (
-                    <p className="mt-1 truncate text-[12px] text-[#96909A]">
-                      {method.description}
-                    </p>
-                  )}
+                <p className="mt-1 text-[12px] leading-5 text-[#96909A]">
+                  {description}
+                </p>
+
+                {/* PAYMENT LABEL */}
+
+                {isCash ? (
+                  <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#7442AD]">
+                    <Wallet size={12} />
+                    Pay after your ride
+                  </span>
+                ) : (
+                  <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#7442AD]">
+                    <LockKeyhole size={12} />
+                    Secure Paystack checkout
+                  </span>
+                )}
               </div>
 
-              {active && (
-                <span
-                  className="
-                    flex h-6 w-6
-                    items-center justify-center
-                    rounded-full bg-[#7442AD]
-                    text-white
-                  "
-                >
-                  <Check
-                    size={14}
-                    strokeWidth={3}
-                  />
-                </span>
-              )}
+              {/* SELECTED INDICATOR */}
+
+              <span
+                className={`
+                  flex h-6 w-6
+                  shrink-0 items-center
+                  justify-center rounded-full
+                  border transition-colors
+                  ${
+                    active
+                      ? "border-[#7442AD] bg-[#7442AD] text-white"
+                      : "border-[#DAD4DF] bg-white"
+                  }
+                `}
+              >
+                {active && (
+                  <Check size={14} strokeWidth={3} />
+                )}
+              </span>
             </motion.button>
           );
         })}
       </div>
 
-      <motion.button
-        type="button"
-        whileTap={{
-          scale: 0.98,
+      {/* ===============================================
+          EMPTY STATE
+      =============================================== */}
+
+      {supportedMethods.length === 0 && (
+        <div className="rounded-[14px] bg-[#FFF7F2] p-4 text-[13px] text-[#A15B36]">
+          No supported payment method is currently available.
+        </div>
+      )}
+
+      {/* ===============================================
+          PAYMENT INFORMATION
+      =============================================== */}
+
+      <motion.div
+        key={selectedChannel ?? "default"}
+        initial={{
+          opacity: 0,
+          y: 6,
         }}
-        className="
-          mt-4 flex h-[52px]
-          w-full items-center
-          justify-center gap-2
-          rounded-[14px]
-          bg-[#F2ECF8]
-          text-[15px] font-semibold
-          text-[#7442AD]
-        "
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          duration: 0.25,
+        }}
+        className="mt-5 rounded-[15px] border border-[#EDE5F4] bg-[#FAF7FD] p-4"
       >
-        <Plus size={18} />
-        Add payment method
-      </motion.button>
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEE4F7] text-[#7442AD]">
+            {selectedChannel === "cash" ? (
+              <Banknote size={19} />
+            ) : (
+              <ShieldCheck size={19} />
+            )}
+          </span>
+
+          <div>
+            <p className="text-[13px] font-semibold text-[#44354F]">
+              {selectedChannel === "cash"
+                ? "Cash payment"
+                : selectedChannel === "card"
+                  ? "Secure card payment"
+                  : "Flexible payment options"}
+            </p>
+
+            <p className="mt-1 text-[12px] leading-[19px] text-[#82788A]">
+              {selectedChannel === "cash"
+                ? "Your final fare will be calculated when your trip ends. Please pay the displayed amount directly to your driver."
+                : selectedChannel === "card"
+                  ? "Your final fare will be calculated when your trip ends. You will then complete your payment securely through Paystack."
+                  : "Your final fare will be calculated when your trip ends. Choose cash to pay your driver or card to pay securely online."}
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ===============================================
+          FOOTER
+      =============================================== */}
+
+      <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-[#96909A]">
+        {selectedChannel === "cash" ? (
+          <>
+            <Banknote size={14} />
+            <span>Pay your driver after your trip</span>
+          </>
+        ) : selectedChannel === "card" ? (
+          <>
+            <LockKeyhole size={13} />
+            <span>Secure payment powered by Paystack</span>
+          </>
+        ) : (
+          <>
+            <ShieldCheck size={14} />
+            <span>Choose the payment method that suits you</span>
+          </>
+        )}
+      </div>
     </RideModalSheet>
   );
 }
+
+// import {
+//   Building2,
+//   Check,
+//   CreditCard,
+//   LockKeyhole,
+//   ShieldCheck,
+// } from "lucide-react";
+
+// import { motion } from "framer-motion";
+
+// import RideModalSheet from "./RideModalSheet";
+
+// import type {
+//   PaymentMethod,
+// } from "../../../types/passengerRide";
+
+// interface PaymentMethodSheetProps {
+//   open: boolean;
+//   onClose: () => void;
+//   selected: PaymentMethod | null;
+//   methods?: PaymentMethod[];
+//   onSelect: (method: PaymentMethod) => void;
+// }
+
+// type OnlinePaymentChannel = "card" | "transfer";
+
+// function getPaymentChannel(
+//   method: PaymentMethod,
+// ): OnlinePaymentChannel | null {
+//   const value = `${method.id} ${method.type}`.toLowerCase();
+
+//   if (value.includes("transfer")) {
+//     return "transfer";
+//   }
+
+//   if (value.includes("card")) {
+//     return "card";
+//   }
+
+//   return null;
+// }
+
+// const DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+//   {
+//     id: "paystack-card",
+//     type: "card",
+//     label: "Pay with Card",
+//   },
+//   {
+//     id: "paystack-transfer",
+//     type: "card",
+//     label: "Bank Transfer",
+//   },
+// ];
+
+// export default function PaymentMethodSheet({
+//   open,
+//   onClose,
+//   selected,
+//   methods = DEFAULT_PAYMENT_METHODS,
+//   onSelect,
+// }: PaymentMethodSheetProps) {
+//   const onlineMethods = methods.filter(
+//     (method) => getPaymentChannel(method) !== null,
+//   );
+
+//   return (
+//     <RideModalSheet
+//       open={open}
+//       onClose={onClose}
+//       title="Payment Method"
+//       description="Choose how you would like to pay for your ride."
+//     >
+//       <div className="space-y-3">
+//         {onlineMethods.map((method, index) => {
+//           const channel = getPaymentChannel(method);
+
+//           if (!channel) return null;
+
+//           const Icon =
+//             channel === "transfer"
+//               ? Building2
+//               : CreditCard;
+
+//           const active = selected?.id === method.id;
+
+//           const description =
+//             channel === "transfer"
+//               ? "Pay securely via bank transfer"
+//               : "Pay securely with your debit or credit card";
+
+//           return (
+//             <motion.button
+//               key={method.id}
+//               type="button"
+//               initial={{
+//                 opacity: 0,
+//                 y: 8,
+//               }}
+//               animate={{
+//                 opacity: 1,
+//                 y: 0,
+//               }}
+//               transition={{
+//                 delay: index * 0.05,
+//               }}
+//               whileTap={{
+//                 scale: 0.985,
+//               }}
+//               onClick={() => {
+//                 onSelect(method);
+//                 onClose();
+//               }}
+//               className={`
+//                 flex min-h-[78px] w-full
+//                 items-center gap-3
+//                 rounded-[16px] border
+//                 p-4 text-left
+//                 transition-all duration-200
+//                 ${
+//                   active
+//                     ? "border-[#7442AD] bg-[#FBF8FE] shadow-[0_4px_16px_rgba(116,66,173,0.08)]"
+//                     : "border-[#ECE8EF] bg-white hover:border-[#D5C3E7]"
+//                 }
+//               `}
+//             >
+//               <span
+//                 className={`
+//                   flex h-12 w-12
+//                   shrink-0 items-center
+//                   justify-center rounded-[14px]
+//                   ${
+//                     active
+//                       ? "bg-[#7442AD] text-white"
+//                       : "bg-[#F1EAF7] text-[#7442AD]"
+//                   }
+//                 `}
+//               >
+//                 <Icon size={22} strokeWidth={1.8} />
+//               </span>
+
+//               <div className="flex-1 min-w-0">
+//                 <p className="text-[15px] font-semibold text-[#302B34]">
+//                   {method.label}
+//                 </p>
+
+//                 <p className="mt-1 text-[12px] leading-5 text-[#96909A]">
+//                   {description}
+//                 </p>
+
+//                 {channel === "card" && (
+//                   <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#7442AD]">
+//                     <LockKeyhole size={11} />
+//                     Secure checkout
+//                   </span>
+//                 )}
+//               </div>
+
+//               <span
+//                 className={`
+//                   flex h-6 w-6
+//                   shrink-0 items-center
+//                   justify-center rounded-full
+//                   border transition-colors
+//                   ${
+//                     active
+//                       ? "border-[#7442AD] bg-[#7442AD] text-white"
+//                       : "border-[#DAD4DF] bg-white"
+//                   }
+//                 `}
+//               >
+//                 {active && (
+//                   <Check size={14} strokeWidth={3} />
+//                 )}
+//               </span>
+//             </motion.button>
+//           );
+//         })}
+//       </div>
+
+//       {onlineMethods.length === 0 && (
+//         <div className="rounded-[14px] bg-[#FFF7F2] p-4 text-[13px] text-[#A15B36]">
+//           No supported online payment method is available.
+//         </div>
+//       )}
+
+//       <div className="mt-5 rounded-[15px] border border-[#EDE5F4] bg-[#FAF7FD] p-4">
+//         <div className="flex items-start gap-3">
+//           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEE4F7] text-[#7442AD]">
+//             <ShieldCheck size={19} />
+//           </span>
+
+//           <div>
+//             <p className="text-[13px] font-semibold text-[#44354F]">
+//               Secure online payment
+//             </p>
+
+//             <p className="mt-1 text-[12px] leading-[19px] text-[#82788A]">
+//               Your final fare will be calculated when
+//               your trip ends. Payment will be processed
+//               securely through Paystack.
+//             </p>
+//           </div>
+//         </div>
+//       </div>
+
+//       <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-[#96909A]">
+//         <LockKeyhole size={13} />
+//         <span>Secure payment powered by Paystack</span>
+//       </div>
+//     </RideModalSheet>
+//   );
+// }
+
+
+// import {
+//   Banknote,
+//   Check,
+//   CreditCard,
+//   Plus,
+//   WalletCards,
+// } from "lucide-react";
+// import { motion } from "framer-motion";
+
+// import RideModalSheet from "./RideModalSheet";
+
+// import type {
+//   PaymentMethod,
+// } from "../../../types/passengerRide";
+
+// interface PaymentMethodSheetProps {
+//   open: boolean;
+//   onClose: () => void;
+//   selected: PaymentMethod;
+//   methods?: PaymentMethod[];
+//   onSelect: (
+//     method: PaymentMethod,
+//   ) => void;
+// }
+
+// const getPaymentIcon = (
+//   method: PaymentMethod,
+// ) => {
+//   const text =
+//     `${method.id} ${method.label}`.toLowerCase();
+
+//   if (text.includes("cash")) {
+//     return Banknote;
+//   }
+
+//   if (
+//     text.includes("wallet")
+//   ) {
+//     return WalletCards;
+//   }
+
+//   return CreditCard;
+// };
+
+// export default function PaymentMethodSheet({
+//   open,
+//   onClose,
+//   selected,
+//   methods = [],
+//   onSelect,
+// }: PaymentMethodSheetProps) {
+//   return (
+//     <RideModalSheet
+//       open={open}
+//       onClose={onClose}
+//       title="Payment method"
+//       description="Choose how you want to pay for this ride."
+//     >
+//       <div className="space-y-3">
+//         {methods.map((method) => {
+//           const Icon =
+//             getPaymentIcon(method);
+
+//           const active =
+//             selected.id === method.id;
+
+//           return (
+//             <motion.button
+//               key={method.id}
+//               type="button"
+//               whileTap={{
+//                 scale: 0.985,
+//               }}
+//               onClick={() => {
+//                 onSelect(method);
+//                 onClose();
+//               }}
+//               className={`
+//                 flex min-h-[68px] w-full
+//                 items-center gap-3
+//                 rounded-[16px] border
+//                 p-4 text-left
+//                 ${
+//                   active
+//                     ? `
+//                       border-[#7442AD]
+//                       bg-[#FBF8FE]
+//                     `
+//                     : `
+//                       border-[#ECE8EF]
+//                       bg-white
+//                     `
+//                 }
+//               `}
+//             >
+//               <span
+//                 className="
+//                   flex h-11 w-11
+//                   shrink-0 items-center
+//                   justify-center rounded-full
+//                   bg-[#F1EAF7]
+//                   text-[#7442AD]
+//                 "
+//               >
+//                 <Icon size={20} />
+//               </span>
+
+//               <div className="flex-1 min-w-0">
+//                 <p className="truncate text-[15px] font-semibold text-[#302B34]">
+//                   {method.label}
+//                 </p>
+
+//                 {"description" in method &&
+//                   typeof method.description ===
+//                     "string" && (
+//                     <p className="mt-1 truncate text-[12px] text-[#96909A]">
+//                       {method.description}
+//                     </p>
+//                   )}
+//               </div>
+
+//               {active && (
+//                 <span
+//                   className="
+//                     flex h-6 w-6
+//                     items-center justify-center
+//                     rounded-full bg-[#7442AD]
+//                     text-white
+//                   "
+//                 >
+//                   <Check
+//                     size={14}
+//                     strokeWidth={3}
+//                   />
+//                 </span>
+//               )}
+//             </motion.button>
+//           );
+//         })}
+//       </div>
+
+//       <motion.button
+//         type="button"
+//         whileTap={{
+//           scale: 0.98,
+//         }}
+//         className="
+//           mt-4 flex h-[52px]
+//           w-full items-center
+//           justify-center gap-2
+//           rounded-[14px]
+//           bg-[#F2ECF8]
+//           text-[15px] font-semibold
+//           text-[#7442AD]
+//         "
+//       >
+//         <Plus size={18} />
+//         Add payment method
+//       </motion.button>
+//     </RideModalSheet>
+//   );
+// }
