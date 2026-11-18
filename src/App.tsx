@@ -519,6 +519,8 @@ function AppRoutes() {
 
             <Route path="/passenger/ride/receipt" element={<TripReceipt />} />
 
+            <Route path="/passenger/activity/:rideId/receipt" element={<TripReceipt />} />
+
             <Route path="/passenger/ride/safety" element={<RideSafety />} />
 
             <Route path="/passenger/ride/rate" element={<RateDriver />} />

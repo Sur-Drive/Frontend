@@ -23,7 +23,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import {
@@ -134,10 +134,26 @@ function getLocationLabel(
 export default function TripReceipt() {
   const navigate = useNavigate();
 
+   const { rideId: routeRideId } =
+  useParams<{ rideId: string }>();
+  
+  // const [backendRide, setBackendRide] =
+  //   useState<PassengerRideResponse | null>(
+  //     () => getStoredActiveRide(),
+  //   );
   const [backendRide, setBackendRide] =
-    useState<PassengerRideResponse | null>(
-      () => getStoredActiveRide(),
-    );
+  useState<PassengerRideResponse | null>(() => {
+    const stored = getStoredActiveRide();
+
+    if (
+      routeRideId &&
+      stored?.id !== routeRideId
+    ) {
+      return null;
+    }
+
+    return stored;
+  });
 
   const [payment, setPayment] =
     useState<RidePaymentState | null>(null);
@@ -156,8 +172,14 @@ export default function TripReceipt() {
   const mountedRef = useRef(true);
   const fetchingRef = useRef(false);
 
+  // const rideId =
+  //   backendRide?.id ?? getStoredActiveRideId();
   const rideId =
-    backendRide?.id ?? getStoredActiveRideId();
+  routeRideId ??
+  backendRide?.id ??
+  getStoredActiveRideId();
+
+
 
   /* =====================================================
      TOKEN
@@ -183,32 +205,41 @@ export default function TripReceipt() {
   ===================================================== */
 
   const handleRideUpdate = useCallback(
-    (response: PassengerRideResponse) => {
-      if (!mountedRef.current || !response?.id) {
-        return;
-      }
+  (response: PassengerRideResponse) => {
+    if (!mountedRef.current || !response?.id) {
+      return;
+    }
 
-      if (rideId && response.id !== rideId) {
-        return;
-      }
+    if (rideId && response.id !== rideId) {
+      return;
+    }
 
-      setBackendRide(response);
+    setBackendRide(response);
+
+    // Do not overwrite the current active ride
+    // when viewing a historical receipt.
+    if (!routeRideId) {
       storeActiveRide(response);
-      setRequestError(false);
-    },
-    [rideId],
-  );
+    }
+
+    setRequestError(false);
+  },
+  [rideId, routeRideId],
+);
 
   /* =====================================================
      SOCKET
   ===================================================== */
 
   const { connected } = useRideSocket({
-    rideId,
-    token,
-    enabled: Boolean(rideId && token),
-    onRideUpdate: handleRideUpdate,
-  });
+  rideId,
+  token,
+  enabled: Boolean(rideId && token),
+  onRideUpdate: handleRideUpdate,
+  onPaymentUpdate: () => {
+    void refreshReceipt();
+  },
+});
 
   /* =====================================================
      REFRESH RIDE + PAYMENT
@@ -247,7 +278,8 @@ export default function TripReceipt() {
           "RECEIPT PAYMENT ERROR:",
           paymentResult.reason,
         );
-
+        
+        setPayment(null);
         setPaymentChecked(false);
       }
 
@@ -390,8 +422,9 @@ export default function TripReceipt() {
     null;
 
   const receiptDate =
-    receiptRide?.completedAt ??
-    receiptRide?.createdAt;
+  receiptRide?.timestamps?.rideCompletedAt ??
+  receiptRide?.completedAt ??
+  receiptRide?.createdAt;
 
   const breakdown = receiptRide?.fareBreakdown;
 
@@ -574,7 +607,13 @@ export default function TripReceipt() {
         <header className="flex h-[76px] items-center justify-between border-b border-[#F1EDF3] px-5 print:hidden">
           <button
             type="button"
-            onClick={() => navigate(PAYMENT_ROUTE)}
+            onClick={() => {
+              if (routeRideId) {
+                navigate(`/passenger/activity/${routeRideId}`);
+              } else {
+                navigate(PAYMENT_ROUTE);
+              }
+            }}
             aria-label="Back to payment"
             className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F7F5F8]"
           >
@@ -919,36 +958,46 @@ export default function TripReceipt() {
 
             </div>
 
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.98 }}
-              onClick={() => void handleContinue()}
-              disabled={!paid || continuing}
-              className="flex h-[56px] w-full items-center justify-center gap-2 rounded-[15px] bg-[#7442AD] text-[16px] font-semibold text-white disabled:opacity-50"
-            >
-              {continuing ? (
-                <>
-                  <LoaderCircle
-                    size={19}
-                    className="animate-spin"
-                  />
-                  Confirming Payment...
-                </>
-              ) : (
-                <>
-                  Rate Your Driver
-                  <ArrowRight size={19} />
-                </>
-              )}
-            </motion.button>
+            {!routeRideId && (
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => void handleContinue()}
+            disabled={!paid || continuing}
+            className="flex h-[56px] w-full items-center justify-center gap-2 rounded-[15px] bg-[#7442AD] text-[16px] font-semibold text-white disabled:opacity-50"
+          >
+            {continuing ? (
+              <>
+                <LoaderCircle
+                  size={19}
+                  className="animate-spin"
+                />
+                Confirming Payment...
+              </>
+            ) : (
+              <>
+                Rate Your Driver
+                <ArrowRight size={19} />
+              </>
+            )}
+          </motion.button>
+        )}
 
             {!paid && (
               <button
                 type="button"
-                onClick={() => navigate(PAYMENT_ROUTE)}
+                onClick={() => {
+                  if (routeRideId) {
+                    navigate(`/passenger/activity/${routeRideId}`);
+                  } else {
+                    navigate(PAYMENT_ROUTE);
+                  }
+                }}
                 className="flex h-[48px] w-full items-center justify-center text-[14px] font-semibold text-[#7442AD]"
               >
-                Return to Payment
+                {routeRideId
+                  ? "Back to Ride Details"
+                  : "Return to Payment"}
               </button>
             )}
 
