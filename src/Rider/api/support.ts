@@ -666,9 +666,11 @@ export interface NewTicketInput {
 }
 
 /**
- * POST /support/tickets { rideId, subject, description, priority }.
- * The API doc spells the field "priotity"; if the server rejects "priority"
- * for that reason we retry once with the other spelling.
+ * POST /support/tickets { rideId, subject, description, priotity }.
+ * The API doc spells the field "priotity" (typo). If the server ignores the
+ * unknown "priority" key, the ticket would silently get the DEFAULT priority,
+ * so we send both spellings, and if the server rejects unknown keys we retry
+ * with the documented "priotity" only, then with "priority" only.
  */
 export async function createTicket(input: NewTicketInput): Promise<Ticket> {
   const base: Record<string, unknown> = {
@@ -677,18 +679,28 @@ export async function createTicket(input: NewTicketInput): Promise<Ticket> {
   };
   if (input.rideId) base.rideId = input.rideId;
 
-  const post = (field: "priority" | "priotity") =>
+  const post = (fields: Record<string, string>) =>
     driverFetch("/support/tickets", "POST", "Failed to create ticket", {
       ...base,
-      [field]: input.priority,
+      ...fields,
     });
 
-  let res: any;
-  try {
-    res = await post("priority");
-  } catch (e: any) {
-    if (!/priotity|priority/i.test(e?.message ?? "")) throw e;
-    res = await post("priotity");
+  const attempts: Record<string, string>[] = [
+    { priotity: input.priority, priority: input.priority },
+    { priotity: input.priority },
+    { priority: input.priority },
+  ];
+
+  let lastErr: any;
+  for (const fields of attempts) {
+    try {
+      const res = await post(fields);
+      return mapTicket(unwrapOne(res, "ticket"));
+    } catch (e: any) {
+      lastErr = e;
+      // Only retry when the server is complaining about the priority field.
+      if (!/priotity|priority/i.test(e?.message ?? "")) throw e;
+    }
   }
-  return mapTicket(unwrapOne(res, "ticket"));
+  throw lastErr;
 }

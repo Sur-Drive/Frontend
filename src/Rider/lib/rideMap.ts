@@ -217,10 +217,29 @@ const num = (v: any): number | undefined => {
 };
 
 const km = (v: any) => {
-  const n = num(v);
+  // Some backends send { value, text } / { meters } instead of a bare number.
+  const raw =
+    v && typeof v === "object" ? pick(v.value, v.meters, v.metres, v.km) : v;
+  const n = num(raw);
   if (n === undefined) return undefined;
   // metres vs km: backends usually send metres for big numbers
   return n > 100 ? `${(n / 1000).toFixed(1)} km` : `${n.toFixed(1)} km`;
+};
+
+/** Straight-line distance between two points (fallback when the API has none). */
+const straightLineKm = (
+  a?: { lat: number; lng: number },
+  b?: { lat: number; lng: number },
+) => {
+  if (!a || !b) return undefined;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  const d = 2 * 6371 * Math.asin(Math.sqrt(h));
+  return Number.isFinite(d) ? `≈ ${d.toFixed(1)} km` : undefined;
 };
 const mins = (v: any) => {
   const n = num(v);
@@ -422,9 +441,33 @@ export function mapRide(raw: any): DriverRideView {
     durationToPickup: mins(
       pick(r.pickupEta, r.etaToPickup, r.driverEta, r.etaMinutes),
     ),
-    tripDistance: km(
-      pick(r.distance, r.distanceKm, r.estimatedDistance, r.tripDistance),
-    ),
+    tripDistance:
+      km(
+        pick(
+          r.distance,
+          r.distanceKm,
+          r.estimatedDistance,
+          r.tripDistance,
+          r.actualDistance,
+          r.finalDistance,
+          r.totalDistance,
+          r.distanceMeters,
+          r.distanceInMeters,
+          r.estimatedDistanceKm,
+          r.estimatedDistanceMeters,
+          r.actualDistanceKm,
+          r.route?.distance,
+          r.route?.distanceMeters,
+          r.route?.distanceKm,
+          r.pricing?.distance,
+          r.pricing?.distanceKm,
+          r.estimate?.distance,
+          r.estimate?.distanceKm,
+          r.fareEstimate?.distanceKm,
+          r.metrics?.distance,
+          r.trip?.distance,
+        ),
+      ) ?? straightLineKm(pickupCoords, dropoffCoords),
     tripDuration: mins(
       pick(r.duration, r.durationMinutes, r.estimatedDuration, r.tripDuration),
     ),
