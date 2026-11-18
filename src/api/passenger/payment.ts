@@ -7,7 +7,7 @@ import { passengerApi } from "./passengerClient";
 export type RidePaymentMethod = "CARD" | "CASH";
 
 export interface RidePaymentOption {
-  method: "CARD" | "WALLET";
+  method: "CARD";
   available: boolean;
   balance?: number;
   reason?: string;

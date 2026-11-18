@@ -46,7 +46,7 @@ type VerificationStage =
   | "pending"
   | "error";
 
-  const MAX_PAYMENT_CHECKS = 8;
+  const MAX_PAYMENT_CHECKS = 11;
 const RETRY_DELAY_MS = 3000;
 
 /* =========================================================
@@ -212,13 +212,20 @@ const verifyPayment = useCallback(async () => {
     mountedRef.current &&
     verificationRunRef.current === runId;
 
+  // const wait = (milliseconds: number) =>
+  //   new Promise<void>((resolve) => {
+  //     retryTimerRef.current = setTimeout(() => {
+  //       retryTimerRef.current = null;
+  //       resolve();
+  //     }, milliseconds);
+  //   });
   const wait = (milliseconds: number) =>
-    new Promise<void>((resolve) => {
-      retryTimerRef.current = setTimeout(() => {
-        retryTimerRef.current = null;
-        resolve();
-      }, milliseconds);
-    });
+  new Promise<void>((resolve) => {
+    retryTimerRef.current = setTimeout(() => {
+      retryTimerRef.current = null;
+      resolve();
+    }, milliseconds);
+  });
 
   setChecking(true);
   setStage("verifying");
@@ -369,17 +376,40 @@ const verifyPayment = useCallback(async () => {
    INITIALIZE CALLBACK
 ========================================================= */
 
+// useEffect(() => {
+//   mountedRef.current = true;
+
+//   if (!initializedRef.current) {
+//     initializedRef.current = true;
+//     void verifyPayment();
+//   }
+
+//   return () => {
+//     mountedRef.current = false;
+//     verificationRunRef.current += 1;
+
+//     if (retryTimerRef.current) {
+//       clearTimeout(retryTimerRef.current);
+//       retryTimerRef.current = null;
+//     }
+
+//     if (redirectTimerRef.current) {
+//       clearTimeout(redirectTimerRef.current);
+//       redirectTimerRef.current = null;
+//     }
+//   };
+// }, [verifyPayment]);
+
 useEffect(() => {
   mountedRef.current = true;
 
-  if (!initializedRef.current) {
-    initializedRef.current = true;
-    void verifyPayment();
-  }
+  void verifyPayment();
 
   return () => {
     mountedRef.current = false;
     verificationRunRef.current += 1;
+
+    verifyingRef.current = false;
 
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
@@ -392,6 +422,7 @@ useEffect(() => {
     }
   };
 }, [verifyPayment]);
+
 
   /* =======================================================
      CLEANUP

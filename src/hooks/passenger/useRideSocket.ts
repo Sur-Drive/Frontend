@@ -21,6 +21,7 @@ interface UseRideSocketOptions {
   rideId: string | null;
   token: string | null;
   onRideUpdate: (ride: PassengerRideResponse) => void;
+  onPaymentUpdate?: () => void;
   enabled?: boolean;
 }
 
@@ -32,6 +33,13 @@ const RIDE_EVENTS = [
   "ride.completed",
   "ride.cancelled",
   "ride.no_drivers_found",
+  // "ride.paid",
+  // "ride.payment_pending",
+  // "ride.payment_action_required",
+  // "ride.payment_failed",
+] as const;
+
+const PAYMENT_EVENTS = [
   "ride.paid",
   "ride.payment_pending",
   "ride.payment_action_required",
@@ -42,12 +50,19 @@ export function useRideSocket({
   rideId,
   token,
   onRideUpdate,
+  onPaymentUpdate,
   enabled = true,
 }: UseRideSocketOptions) {
   const [connected, setConnected] = useState(false);
   const [socketError, setSocketError] = useState<string | null>(null);
 
   const onRideUpdateRef = useRef(onRideUpdate);
+
+  const onPaymentUpdateRef = useRef(onPaymentUpdate);
+
+useEffect(() => {
+  onPaymentUpdateRef.current = onPaymentUpdate;
+}, [onPaymentUpdate]);
 
   useEffect(() => {
     onRideUpdateRef.current = onRideUpdate;
@@ -133,6 +148,20 @@ export function useRideSocket({
       void refreshRide();
     };
 
+    const onPaymentEvent = (payload: RideEventPayload) => {
+  if (!active) return;
+
+  const eventRideId = payload?.rideId ?? payload?.id;
+
+  if (eventRideId !== rideId) return;
+
+  // Refresh ride status.
+  void refreshRide();
+
+  // Let the payment page refresh authoritative payment data.
+  onPaymentUpdateRef.current?.();
+};
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
@@ -140,6 +169,10 @@ export function useRideSocket({
     RIDE_EVENTS.forEach((event) => {
       socket.on(event, onRideEvent);
     });
+
+    PAYMENT_EVENTS.forEach((event) => {
+  socket.on(event, onPaymentEvent);
+});
 
     if (socket.connected) {
       onConnect();
@@ -160,6 +193,10 @@ export function useRideSocket({
       RIDE_EVENTS.forEach((event) => {
         socket.off(event, onRideEvent);
       });
+
+      PAYMENT_EVENTS.forEach((event) => {
+  socket.off(event, onPaymentEvent);
+});
     };
   }, [rideId, token, enabled]);
 

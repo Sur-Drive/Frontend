@@ -528,9 +528,7 @@ export default function SelectRide() {
     }
 
     if (!selectedPaymentSupported) {
-      toast.error(
-        "Please select an online payment method.",
-      );
+        toast.error("Please select Cash or Card as your payment method.");
 
       return;
     }

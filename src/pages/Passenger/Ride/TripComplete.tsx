@@ -56,6 +56,10 @@ import {
 import {
   useRideSocket,
 } from "../../../hooks/passenger/useRideSocket";
+import {
+  passengerPaymentApi,
+  type RidePaymentState,
+} from "../../../api/passenger/payment";
 
 /* =========================================================
    CONFIGURATION
@@ -138,27 +142,50 @@ function markSuccessSeen(rideId: string) {
   );
 }
 
+// function getPaymentDisplayState(
+//   response: PassengerRideResponse | null,
+// ): PaymentDisplayState {
+//   if (!response) {
+//     return "unknown";
+//   }
+
+//   switch (response.status) {
+//     case "paid":
+//     case "closed":
+//       return "paid";
+
+//     case "payment_pending":
+//       return "pending";
+
+//     case "ride_completed":
+//       return "required";
+
+//     default:
+//       return "unknown";
+//   }
+// }
+
 function getPaymentDisplayState(
-  response: PassengerRideResponse | null,
+  payment: RidePaymentState | null,
 ): PaymentDisplayState {
-  if (!response) {
-    return "unknown";
+  if (!payment) return "unknown";
+
+  if (payment.paid === true) {
+    return "paid";
   }
 
-  switch (response.status) {
-    case "paid":
-    case "closed":
-      return "paid";
-
-    case "payment_pending":
-      return "pending";
-
-    case "ride_completed":
-      return "required";
-
-    default:
-      return "unknown";
+  if (payment.bookedMethod === "cash") {
+    return "pending";
   }
+
+  if (
+    payment.bookedMethod === "card" &&
+    payment.payable === true
+  ) {
+    return "required";
+  }
+
+  return "pending";
 }
 
 /* =========================================================
@@ -181,6 +208,9 @@ export default function TripComplete() {
     useState<PassengerRideResponse | null>(
       () => getStoredActiveRide(),
     );
+
+    const [payment, setPayment] =
+  useState<RidePaymentState | null>(null);
 
   const [token, setToken] =
     useState<string | null>(getPassengerToken);
@@ -219,6 +249,25 @@ export default function TripComplete() {
   const rideId =
     backendRide?.id ??
     getStoredActiveRideId();
+
+    const refreshPayment = useCallback(async () => {
+  if (!rideId) return;
+
+  try {
+    const response =
+      await passengerPaymentApi.getPayment(rideId);
+
+    if (mountedRef.current) {
+      setPayment(response);
+    }
+  } catch (error) {
+    console.error("TRIP PAYMENT STATUS ERROR:", error);
+  }
+}, [rideId]);
+
+useEffect(() => {
+  void refreshPayment();
+}, [refreshPayment]);
 
   /* =======================================================
      TOKEN SYNCHRONIZATION
@@ -436,15 +485,22 @@ export default function TripComplete() {
      Ride and payment updates.
   ======================================================= */
 
-  const {
-    connected,
-    socketError,
-  } = useRideSocket({
-    rideId,
-    token,
-    onRideUpdate: handleRideStatus,
-    enabled: Boolean(rideId && token),
-  });
+  // const {
+  //   connected,
+  //   socketError,
+  // } = useRideSocket({
+  //   rideId,
+  //   token,
+  //   onRideUpdate: handleRideStatus,
+  //   enabled: Boolean(rideId && token),
+  // });
+  const { connected, socketError } = useRideSocket({
+  rideId,
+  token,
+  onRideUpdate: handleRideStatus,
+  onPaymentUpdate: refreshPayment,
+  enabled: Boolean(rideId && token),
+});
 
   /* =======================================================
      INITIAL BACKEND LOAD
@@ -766,8 +822,11 @@ export default function TripComplete() {
   const paymentMethod =
     backendRide?.paymentMethod;
 
+  // const paymentState =
+  //   getPaymentDisplayState(backendRide);
+
   const paymentState =
-    getPaymentDisplayState(backendRide);
+  getPaymentDisplayState(payment);
 
   const connectionLabel = connected
     ? "Live ride updates connected"
@@ -791,13 +850,23 @@ export default function TripComplete() {
           icon: CheckCircle2,
         };
 
+      // case "pending":
+      //   return {
+      //     label: "Payment pending",
+      //     bg: "bg-[#FFF6E4]",
+      //     text: "text-[#B9862C]",
+      //     icon: Clock3,
+      //   };
       case "pending":
-        return {
-          label: "Payment pending",
-          bg: "bg-[#FFF6E4]",
-          text: "text-[#B9862C]",
-          icon: Clock3,
-        };
+  return {
+    label:
+      payment?.bookedMethod === "cash"
+        ? "Cash payment awaiting confirmation"
+        : "Payment pending",
+    bg: "bg-[#FFF6E4]",
+    text: "text-[#B9862C]",
+    icon: Clock3,
+  };
 
       case "required":
         return {
