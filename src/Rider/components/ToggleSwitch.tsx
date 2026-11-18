@@ -19,15 +19,25 @@ export default function ToggleSwitch({
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
-        checked ? "bg-[#6E43A3]" : "bg-[#E4E6F5]"
-      } ${disabled ? "opacity-50" : ""}`}
+      // extra padding makes the touch area bigger without changing the look
+      className="relative inline-flex shrink-0 items-center p-2 -m-2 rounded-full
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6E43A3]/40
+                 disabled:cursor-not-allowed"
     >
       <span
-        className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-          checked ? "translate-x-[26px]" : "translate-x-1"
-        }`}
-      />
+        className={`relative block h-8 w-14 rounded-full border transition-colors duration-200 ${
+          checked
+            ? "bg-[#6E43A3] border-[#6E43A3]"
+            : "bg-[#C9CCE3] border-[#B3B7D4]"
+        } ${disabled ? "opacity-40" : ""}`}
+      >
+        <span
+          className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow-md
+                      transition-transform duration-200 ease-out ${
+                        checked ? "translate-x-6" : "translate-x-0"
+                      }`}
+        />
+      </span>
     </button>
   );
 }
