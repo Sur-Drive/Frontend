@@ -12,6 +12,7 @@ export async function driverFetch(
   method: "GET" | "POST" | "PATCH" | "DELETE",
   fallbackMessage: string,
   body?: unknown,
+  extraHeaders?: Record<string, string>,
 ): Promise<any> {
   const token = localStorage.getItem("token");
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
@@ -29,6 +30,7 @@ export async function driverFetch(
         ? { "Content-Type": "application/json" }
         : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(extraHeaders ?? {}),
     },
     ...(body !== undefined
       ? { body: isForm ? (body as FormData) : JSON.stringify(body) }

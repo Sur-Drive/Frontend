@@ -129,21 +129,32 @@ type RideHistoryResponse = {
    FILTER STATUS
 ====================================================== */
 
+// function getBackendStatus(
+//   status: TripFilters["status"],
+// ): BackendRideStatus | undefined {
+//   if (status === "all") {
+//     return undefined;
+//   }
+
+//   if (status === "completed") {
+//     return "ride_completed";
+//   }
+
+//   if (status === "cancelled") {
+//     return "cancelled";
+//   }
+
+//   return undefined;
+// }
 function getBackendStatus(
   status: TripFilters["status"],
 ): BackendRideStatus | undefined {
-  if (status === "all") {
-    return undefined;
-  }
-
-  if (status === "completed") {
-    return "ride_completed";
-  }
-
   if (status === "cancelled") {
     return "cancelled";
   }
 
+  // Fetch all statuses for Completed and All,
+  // then apply the UI status filter locally.
   return undefined;
 }
 
@@ -308,11 +319,32 @@ function getPaymentMethod(
    Never treat an unknown backend status as completed.
 ====================================================== */
 
+// function getTripStatus(
+//   status: string,
+// ): PassengerTrip["status"] {
+//   switch (status) {
+//     case "ride_completed":
+//       return "completed";
+
+//     case "cancelled":
+//       return "cancelled";
+
+//     case "no_drivers_found":
+//       return "no_drivers_found";
+
+//     default:
+//       return "unknown";
+//   }
+// }
+
 function getTripStatus(
   status: string,
 ): PassengerTrip["status"] {
-  switch (status) {
+  switch (status.toLowerCase()) {
     case "ride_completed":
+    case "payment_pending":
+    case "paid":
+    case "closed":
       return "completed";
 
     case "cancelled":
@@ -338,18 +370,29 @@ function mapBackendRideToTrip(
     time,
   } = getRideDate(ride);
 
+  // const completed =
+  //   ride.status === "ride_completed";
   const completed =
-    ride.status === "ride_completed";
+  getTripStatus(ride.status) === "completed";
 
+  // const fare =
+  //   ride.finalFare ??
+  //   ride.estimatedFare ??
+  //   ride.fareBreakdown?.total ??
+  //   0;
+
+  // const total =
+  //   ride.fareBreakdown?.total ??
+  //   fare;
   const fare =
-    ride.finalFare ??
-    ride.estimatedFare ??
-    ride.fareBreakdown?.total ??
-    0;
+  ride.finalFare ??
+  ride.fareBreakdown?.total ??
+  ride.estimatedFare ??
+  0;
 
-  const total =
-    ride.fareBreakdown?.total ??
-    fare;
+const total = completed
+  ? fare
+  : ride.fareBreakdown?.total ?? fare;
 
   const distanceKm =
     ride.actualDistanceKm ??
@@ -929,16 +972,15 @@ export default function PassengerActivity() {
                   {monthTrips.map(
                     (trip) => (
                       <TripCard
-                        key={
-                          trip.id
-                        }
-                        trip={
-                          trip
-                        }
-                        onRebook={
-                          rebook
-                        }
-                      />
+                      key={trip.id}
+                      trip={trip}
+                      onRebook={rebook}
+                      onViewDetails={(selectedTrip) => {
+                        navigate(
+                          `/passenger/activity/${selectedTrip.id}`,
+                        );
+                      }}
+                    />
                     ),
                   )}
                 </div>
