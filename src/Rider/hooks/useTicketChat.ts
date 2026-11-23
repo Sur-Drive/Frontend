@@ -195,14 +195,21 @@ export function useTicketChat(ticketId: string) {
 
   /* ------------------------------- typing ------------------------------- */
 
-  const stopTyping = useCallback(() => {
-    clearTimeout(typingIdle.current);
-    if (typingSentAt.current) {
-      typingSentAt.current = 0;
-      socketRef.current?.connected &&
-        socketRef.current.emit("typing_stop", { ticketId });
+ 
+const stopTyping = useCallback(() => {
+  clearTimeout(typingIdle.current);
+
+  if (typingSentAt.current) {
+    typingSentAt.current = 0;
+
+    const socket = socketRef.current;
+
+    if (socket?.connected) {
+      socket.emit("typing_stop", { ticketId });
     }
-  }, [ticketId]);
+  }
+}, [ticketId]);
+
 
   /** Call from the input's onChange. Throttled: start at most every 2.5s, stop after ~2s idle. */
   const notifyTyping = useCallback(() => {
