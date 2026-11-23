@@ -23,6 +23,7 @@ import {
 } from "react";
 
 import {
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 
@@ -65,6 +66,22 @@ type ActiveLocationField =
   | "destination"
   | null;
 
+  
+
+type PrefilledDestination = {
+  id?: string;
+  name?: string;
+  address: string;
+  lat: number;
+  lng: number;
+  savedPlaceId?: string;
+  type?: "home" | "work";
+};
+
+type BookingNavigationState = {
+  destination?: PrefilledDestination;
+};
+
 export default function BookRide() {
   const navigate = useNavigate();
 
@@ -87,6 +104,7 @@ export default function BookRide() {
 
     const pickupEditedRef = useRef(false);
 const pickupHydratedRef = useRef(false);
+
 
   const [
     activeField,
@@ -111,6 +129,109 @@ const pickupHydratedRef = useRef(false);
   ] = useState(
     ride.destination?.label ?? "",
   );
+
+  // Inside BookRide, after destinationQuery state:
+const location = useLocation();
+
+const consumedNavigationKeyRef = useRef<string | null>(
+  null,
+);
+
+useEffect(() => {
+  const state = location.state as
+    | BookingNavigationState
+    | null;
+
+  const destination = state?.destination;
+
+  if (!destination) return;
+
+  // Consume this navigation entry only once.
+  if (
+    consumedNavigationKeyRef.current ===
+    location.key
+  ) {
+    return;
+  }
+
+  consumedNavigationKeyRef.current =
+    location.key;
+
+  const validCoordinates =
+    Number.isFinite(destination.lat) &&
+    Number.isFinite(destination.lng) &&
+    destination.lat >= -90 &&
+    destination.lat <= 90 &&
+    destination.lng >= -180 &&
+    destination.lng <= 180;
+
+  if (
+    !destination.address?.trim() ||
+    !validCoordinates
+  ) {
+    toast.error(
+      "The selected destination has invalid location details.",
+    );
+
+    navigate(
+      `${location.pathname}${location.search}`,
+      {
+        replace: true,
+        state: null,
+      },
+    );
+
+    return;
+  }
+
+  const destinationLocation: RideLocation = {
+    label:
+      destination.name?.trim() ||
+      destination.address,
+    address: destination.address,
+    coordinates: {
+      lat: destination.lat,
+      lng: destination.lng,
+    },
+    ...(destination.savedPlaceId
+      ? {
+          savedPlaceId:
+            destination.savedPlaceId,
+        }
+      : {}),
+  };
+
+  // Update the actual booking context.
+  setDestination(destinationLocation);
+
+  // Update the visible destination input.
+  setDestinationQuery(
+    destinationLocation.label,
+  );
+
+  // Stop searching for a destination
+  // that has already been selected.
+  setSuggestions([]);
+  setActiveField(null);
+
+  // Remove the one-time prefill payload
+  // so returning from the map selector or
+  // another screen doesn't overwrite edits.
+  navigate(
+    `${location.pathname}${location.search}`,
+    {
+      replace: true,
+      state: null,
+    },
+  );
+}, [
+  location.key,
+  location.pathname,
+  location.search,
+  location.state,
+  navigate,
+  setDestination,
+]);
 
   const [
     suggestions,

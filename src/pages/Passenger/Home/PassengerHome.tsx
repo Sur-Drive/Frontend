@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useState,
 } from "react";
 
 import {
@@ -44,13 +45,8 @@ import type {
   PassengerRecentDestination,
   PassengerSavedPlace,
 } from "../../../types/passengerHome";
+import HomeStatusCarousel from "./HomeStatusCarousel";
 
-/* =====================================
-   TYPES
-===================================== */
-
-type HomeBanner =
-  | "emergency";
 
 /* =====================================
    HOME
@@ -81,6 +77,12 @@ export default function PassengerHome() {
 
   const recentDestinations =
     recentDestinationsQuery.data ?? [];
+
+    const [isRefreshingLocation, setIsRefreshingLocation] =
+  useState(false);
+
+const [locationUpdated, setLocationUpdated] =
+  useState(false);
 
   /* -------------------------------------
      DERIVED DATA
@@ -114,18 +116,6 @@ export default function PassengerHome() {
         }
       : null;
 
-  /*
-   * We currently only have a real backend
-   * condition for the emergency-contact
-   * banner.
-   *
-   * Do not display fake promotions.
-   */
-  const banner: HomeBanner | null =
-    profile &&
-    profile.emergencyContactsCount === 0
-      ? "emergency"
-      : null;
 
   const isInitialLoading =
     profileQuery.isLoading ||
@@ -209,29 +199,38 @@ export default function PassengerHome() {
   );
 };
 
-  const handleRecentDestination = (
-    destination:
-      PassengerRecentDestination,
-  ) => {
-    navigate(
-      "/passenger/book-ride",
-      {
-        state: {
-          destination,
-        },
-      },
-    );
-  };
+  // const handleRecentDestination = (
+  //   destination:
+  //     PassengerRecentDestination,
+  // ) => {
+  //   navigate(
+  //     "/passenger/book-ride",
+  //     {
+  //       state: {
+  //         destination,
+  //       },
+  //     },
+  //   );
+  // };
 
-  const handleBannerClick = () => {
-    if (
-      banner === "emergency"
-    ) {
-      navigate(
-        "/passenger/account/safety/emergency-contacts/add",
-      );
-    }
-  };
+const handleRecentDestination = (
+  destination: PassengerRecentDestination,
+) => {
+  navigate("/passenger/book-ride", {
+    state: {
+      destination: {
+        id: destination.id,
+        name:
+          destination.name?.trim() ||
+          destination.address,
+        address: destination.address,
+        lat: destination.lat,
+        lng: destination.lng,
+      },
+    },
+  });
+};
+
 
   /* -------------------------------------
      MANUAL LOCATION REFRESH
@@ -299,6 +298,8 @@ export default function PassengerHome() {
            * authoritative location summary.
            */
           await profileQuery.refetch();
+
+          setLocationUpdated(true);
 
           toast.success(
             "Location updated",
@@ -454,13 +455,19 @@ export default function PassengerHome() {
           lg:h-[100dvh]
         "
       >
-        <PassengerMap
+        {/* <PassengerMap
           center={userLocation}
           userLocation={
             userLocation
           }
           zoom={15}
-        />
+        /> */}
+        <PassengerMap
+  center={userLocation}
+  userLocation={userLocation}
+  zoom={15}
+  locationMarkerVariant="cinematic"
+/>
 
         {/* Location refresh */}
 
@@ -519,7 +526,7 @@ export default function PassengerHome() {
 
         {/* Current location marker overlay */}
 
-        <motion.div
+        {/* <motion.div
           initial={{
             opacity: 0,
             scale: 0.5,
@@ -578,7 +585,7 @@ export default function PassengerHome() {
               drop-shadow-[0_6px_12px_rgba(116,66,173,0.28)]
             "
           />
-        </motion.div>
+        </motion.div> */}
       </section>
 
       {/* =================================
@@ -603,37 +610,62 @@ export default function PassengerHome() {
             1,
           ],
         }}
+        // className="
+        //   absolute
+        //   left-0 right-0
+        //   top-[34dvh]
+        //   z-20
+
+        //   min-h-[66dvh]
+
+        //   rounded-t-[32px]
+        //   bg-white
+
+        //   px-5
+        //   pb-[110px]
+        //   pt-3
+
+        //   sm:px-7
+
+        //   lg:fixed
+        //   lg:left-8
+        //   lg:right-auto
+        //   lg:top-1/2
+        //   lg:min-h-0
+        //   lg:max-h-[calc(100dvh-64px)]
+        //   lg:w-[480px]
+        //   lg:-translate-y-1/2
+        //   lg:overflow-y-auto
+        //   lg:rounded-[28px]
+        //   lg:px-6
+        //   lg:pb-[100px]
+        //   lg:shadow-[0_20px_70px_rgba(25,15,40,0.18)]
+        // "
         className="
-          absolute
-          left-0 right-0
-          top-[34dvh]
-          z-20
+  relative z-20
+  mt-[34dvh]
+  min-h-[66dvh]
+  rounded-t-[32px]
+  bg-white
+  px-5 pt-3 pb-[110px]
 
-          min-h-[66dvh]
+  sm:px-7
 
-          rounded-t-[32px]
-          bg-white
-
-          px-5
-          pb-[110px]
-          pt-3
-
-          sm:px-7
-
-          lg:fixed
-          lg:left-8
-          lg:right-auto
-          lg:top-1/2
-          lg:min-h-0
-          lg:max-h-[calc(100dvh-64px)]
-          lg:w-[480px]
-          lg:-translate-y-1/2
-          lg:overflow-y-auto
-          lg:rounded-[28px]
-          lg:px-6
-          lg:pb-[100px]
-          lg:shadow-[0_20px_70px_rgba(25,15,40,0.18)]
-        "
+  lg:fixed
+  lg:left-8
+  lg:right-auto
+  lg:top-1/2
+  lg:mt-0
+  lg:min-h-0
+  lg:max-h-[calc(100dvh-64px)]
+  lg:w-[480px]
+  lg:-translate-y-1/2
+  lg:overflow-y-auto
+  lg:rounded-[28px]
+  lg:px-6
+  lg:pb-[100px]
+  lg:shadow-[0_20px_70px_rgba(25,15,40,0.18)]
+"
       >
         {/* Sheet handle */}
 
@@ -648,16 +680,27 @@ export default function PassengerHome() {
           "
         />
 
-        {/* Status banner */}
 
-        {banner && (
-          <HomeStatusBanner
-            type={banner}
-            onClick={
-              handleBannerClick
-            }
-          />
-        )}
+        <HomeStatusCarousel
+  emergencyContactsCount={
+    profile.emergencyContactsCount ?? 0
+  }
+  verificationStatus="unknown"
+  promotions={[]}
+  onVerifyIdentity={() => {
+    // Connect to your confirmed identity-verification route.
+  }}
+  onEmergencyContact={() =>
+    navigate(
+      "/passenger/account/safety/emergency-contacts/add"
+    )
+  }
+  onSafetySettings={() =>
+    navigate(
+      "/passenger/account/safety/emergency-contacts"
+    )
+  }
+/>
 
         {/* Search */}
 
@@ -673,28 +716,15 @@ export default function PassengerHome() {
           whileTap={{
             scale: 0.99,
           }}
-          className={`
-            ${
-              banner
-                ? "mt-5"
-                : "mt-1"
-            }
-
-            flex h-[54px]
-            w-full
-            items-center
-            gap-3
-
-            rounded-[12px]
-            border
-            border-transparent
-            bg-[#F5F5F6]
-
-            px-4
-            text-left
-
-            transition-colors
-          `}
+         className="
+  mt-5 flex h-[54px] w-full
+  items-center gap-3
+  rounded-[12px]
+  border border-transparent
+  bg-[#F5F5F6]
+  px-4 text-left
+  transition-colors
+"
         >
           <Search
             size={21}
@@ -814,121 +844,6 @@ export default function PassengerHome() {
   );
 }
 
-/* =====================================
-   STATUS BANNER
-===================================== */
-
-function HomeStatusBanner({
-  type,
-  onClick,
-}: {
-  type: HomeBanner;
-  onClick?: () => void;
-}) {
-  const content = {
-    emergency: {
-      icon: Siren,
-
-      title:
-        "Emergency Contact",
-
-      description:
-        "Set an emergency contact we can call in case of emergency",
-
-      wrapper:
-        "bg-[#FCE8E3] text-[#413337]",
-
-      iconBackground:
-        "bg-[#FFD7CE]",
-
-      iconColor:
-        "text-[#FF654D]",
-    },
-  }[type];
-
-  const Icon =
-    content.icon;
-
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      initial={{
-        opacity: 0,
-        x: 25,
-      }}
-      animate={{
-        opacity: 1,
-        x: 0,
-      }}
-      whileHover={{
-        y: -1,
-      }}
-      whileTap={{
-        scale: 0.99,
-      }}
-      className={`
-        flex
-        min-h-[62px]
-        w-full
-        items-center
-        gap-3
-
-        rounded-[12px]
-
-        px-3.5
-        py-3
-
-        text-left
-
-        ${content.wrapper}
-      `}
-    >
-      <span
-        className={`
-          flex
-          h-9 w-9
-          shrink-0
-          items-center
-          justify-center
-          rounded-full
-
-          ${content.iconBackground}
-          ${content.iconColor}
-        `}
-      >
-        <Icon
-          size={19}
-          strokeWidth={2}
-        />
-      </span>
-
-      <span className="min-w-0">
-        <span
-          className="
-            block
-            text-[16px]
-            font-semibold
-          "
-        >
-          {content.title}
-        </span>
-
-        <span
-          className="
-            mt-0.5
-            block
-            text-[13px]
-            leading-[1.35]
-            opacity-70
-          "
-        >
-          {content.description}
-        </span>
-      </span>
-    </motion.button>
-  );
-}
 
 /* =====================================
    SAVED PLACE BUTTON
@@ -1454,5 +1369,6 @@ function HomeErrorState({
     </div>
   );
 }
+
 
 

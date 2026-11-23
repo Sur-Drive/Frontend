@@ -361,6 +361,7 @@ import {
   createHtmlMapOverlay,
   type HtmlMapOverlayInstance,
 } from '../../lib/htmlMapOverlay'
+import type { TrackingPoint } from '../../lib/passenger/rideTracking'
 
 export interface MapMarkerSpec {
   id: string
@@ -369,13 +370,25 @@ export interface MapMarkerSpec {
   html: string
   anchor?: [number, number]
   onClick?: () => void
+  heading?: number;
 }
 
-interface GoogleMapViewProps {
+export type MapRouteSpec = {
+  id: string;
+  points: TrackingPoint[];
+  color?: string;
+  weight?: number;
+  opacity?: number;
+};
+
+export interface GoogleMapViewProps {
   center: {
     lat: number
     lng: number
   }
+  routes?: MapRouteSpec[];
+fitRoute?: boolean;
+animateRoute?: boolean;
   zoom: number
   markers?: MapMarkerSpec[]
   /**
@@ -436,11 +449,18 @@ interface GoogleMapViewProps {
    * this keeps the original look.
    */
   puckMode?: 'driving' | 'walking' | 'cycling' | 'motorcycle'
+  trackPosition?: {
+    lat: number;
+    lng: number;
+  } | null;
 }
 
 export default function GoogleMapView({
   center,
   zoom,
+  routes = [],
+fitRoute = false,
+animateRoute = false,
   markers = [],
   onMapClick,
   onReady,
@@ -454,12 +474,20 @@ export default function GoogleMapView({
   showTraffic = false,
   puckSize = 32,
   puckMode = 'walking',
+  trackPosition = null,
 }: GoogleMapViewProps) {
   const { isLoaded, error } = useGoogleMaps()
 
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const overlaysRef = useRef<Map<string, HtmlMapOverlayInstance>>(new Map())
+  const routeLinesRef = useRef<
+  Map<string, google.maps.Polyline>
+>(new Map());
+
+const markerHtmlCacheRef = useRef<
+  Map<string, string>
+>(new Map());
   const hasCenteredRef = useRef(false)
   const onMapClickRef = useRef(onMapClick)
 
@@ -508,7 +536,7 @@ export default function GoogleMapView({
           e.stop()
         }
 
-        onMapClickRef.current?.(e.latLng.lat(), e.latLng.lng(), placeId)
+        onMapClickRef.current?.(e.latLng.lat(), e.latLng.lng(), placeId ?? undefined)
       },
     )
 
@@ -547,21 +575,87 @@ export default function GoogleMapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center.lat, center.lng, followMode])
 
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-    if (!hasCenteredRef.current) return
+  // useEffect(() => {
+  //   const map = mapRef.current
+  //   if (!map) return
+  //   if (!hasCenteredRef.current) return
 
-    if (map.getZoom() !== zoom) {
-      map.setZoom(zoom)
-    }
-  }, [zoom])
+  //   if (map.getZoom() !== zoom) {
+  //     map.setZoom(zoom)
+  //   }
+  // }, [zoom])
+
+  useEffect(() => {
+  const map = mapRef.current;
+
+  if (!map || fitRoute) return;
+
+  if (map.getZoom() !== zoom) {
+    map.setZoom(zoom);
+  }
+}, [zoom, fitRoute, isLoaded]);
 
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
     map.setMapTypeId(mapTypeId)
   }, [mapTypeId])
+
+  useEffect(() => {
+  const map = mapRef.current;
+
+  if (!map || !trackPosition) {
+    return;
+  }
+
+  if (
+    !Number.isFinite(trackPosition.lat) ||
+    !Number.isFinite(trackPosition.lng)
+  ) {
+    return;
+  }
+
+  const bounds = map.getBounds();
+
+  // Avoid moving the camera for every GPS frame.
+  // Only pan when the car approaches the edge
+  // or moves outside the visible map.
+  if (!bounds) {
+    map.panTo(trackPosition);
+    return;
+  }
+
+  const northEast = bounds.getNorthEast();
+  const southWest = bounds.getSouthWest();
+
+  const latMargin =
+    (northEast.lat() - southWest.lat()) * 0.2;
+
+  const lngSpan =
+    (northEast.lng() - southWest.lng() + 360) %
+    360;
+
+  const lngMargin = lngSpan * 0.2;
+
+  const safeBounds = new google.maps.LatLngBounds(
+    {
+      lat: southWest.lat() + latMargin,
+      lng: southWest.lng() + lngMargin,
+    },
+    {
+      lat: northEast.lat() - latMargin,
+      lng: northEast.lng() - lngMargin,
+    },
+  );
+
+  if (!safeBounds.contains(trackPosition)) {
+    map.panTo(trackPosition);
+  }
+}, [
+  trackPosition?.lat,
+  trackPosition?.lng,
+  isLoaded,
+]);
 
   // Live traffic layer — a plain google.maps.TrafficLayer bound/unbound
   // to the map. Google owns the tile refresh cadence entirely, so this
@@ -603,39 +697,204 @@ export default function GoogleMapView({
     }
   }, [tilt])
 
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+  // useEffect(() => {
+  //   const map = mapRef.current
+  //   if (!map) return
 
-    const existing = overlaysRef.current
-    const nextIds = new Set(markers.map((m) => m.id))
+  //   const existing = overlaysRef.current
+  //   const nextIds = new Set(markers.map((m) => m.id))
 
-    existing.forEach((overlay, id) => {
-      if (!nextIds.has(id)) {
-        overlay.setMap(null)
-        existing.delete(id)
+  //   existing.forEach((overlay, id) => {
+  //     if (!nextIds.has(id)) {
+  //       overlay.setMap(null)
+  //       existing.delete(id)
+  //     }
+  //   })
+
+  //   markers.forEach((marker) => {
+  //     const overlay = existing.get(marker.id)
+
+  //     if (!overlay) {
+  //       const next = createHtmlMapOverlay(
+  //         { lat: marker.lat, lng: marker.lng },
+  //         marker.html,
+  //         marker.anchor ?? [18, 18],
+  //         marker.onClick
+  //       )
+  //       next.setMap(map)
+  //       existing.set(marker.id, next)
+  //       return
+  //     }
+
+  //     overlay.updatePosition({ lat: marker.lat, lng: marker.lng })
+  //     overlay.updateHtml(marker.html)
+  //   })
+  // }, [markers])
+
+useEffect(() => {
+  const map = mapRef.current;
+  if (!map) return;
+
+  const existing = overlaysRef.current;
+  const cache = markerHtmlCacheRef.current;
+
+  const nextIds = new Set(
+    markers.map((marker) => marker.id),
+  );
+
+  existing.forEach((overlay, id) => {
+    if (!nextIds.has(id)) {
+      overlay.setMap(null);
+      existing.delete(id);
+      cache.delete(id);
+    }
+  });
+
+  markers.forEach((marker) => {
+    let overlay = existing.get(marker.id);
+
+    if (!overlay) {
+      overlay = createHtmlMapOverlay(
+        {
+          lat: marker.lat,
+          lng: marker.lng,
+        },
+        marker.html,
+        marker.anchor ?? [18, 18],
+        marker.onClick,
+      );
+
+      overlay.setMap(map);
+      existing.set(marker.id, overlay);
+      cache.set(marker.id, marker.html);
+    } else {
+      overlay.updatePosition({
+        lat: marker.lat,
+        lng: marker.lng,
+      });
+
+      if (cache.get(marker.id) !== marker.html) {
+        overlay.updateHtml(marker.html);
+        cache.set(marker.id, marker.html);
       }
-    })
+    }
 
-    markers.forEach((marker) => {
-      const overlay = existing.get(marker.id)
+    overlay.updateAnchor(
+      marker.anchor ?? [18, 18],
+    );
 
-      if (!overlay) {
-        const next = createHtmlMapOverlay(
-          { lat: marker.lat, lng: marker.lng },
-          marker.html,
-          marker.anchor ?? [18, 18],
-          marker.onClick
-        )
-        next.setMap(map)
-        existing.set(marker.id, next)
-        return
-      }
+    if (typeof marker.heading === "number") {
+      overlay.updateHeading(marker.heading);
+    }
+  });
+}, [markers, isLoaded]);
 
-      overlay.updatePosition({ lat: marker.lat, lng: marker.lng })
-      overlay.updateHtml(marker.html)
-    })
-  }, [markers])
+useEffect(() => {
+  const map = mapRef.current;
+  if (!map) return;
+
+  const lines = routeLinesRef.current;
+
+  const activeIds = new Set(
+    routes
+      .filter((route) => route.points.length >= 2)
+      .map((route) => route.id),
+  );
+
+  lines.forEach((line, id) => {
+    if (!activeIds.has(id)) {
+      line.setMap(null);
+      lines.delete(id);
+    }
+  });
+
+  routes.forEach((route) => {
+    if (route.points.length < 2) return;
+
+    const options: google.maps.PolylineOptions = {
+      path: route.points,
+      strokeColor: route.color ?? "#7442AD",
+      strokeOpacity: route.opacity ?? 0.95,
+      strokeWeight: route.weight ?? 6,
+      geodesic: false,
+      clickable: false,
+      zIndex: 10,
+    };
+
+    const existing = lines.get(route.id);
+
+    if (existing) {
+      existing.setOptions(options);
+    } else {
+      const line = new google.maps.Polyline({
+        ...options,
+        map,
+      });
+
+      lines.set(route.id, line);
+    }
+  });
+}, [routes, isLoaded]);
+
+useEffect(() => {
+  if (!animateRoute || !isLoaded) return;
+
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  );
+
+  if (reducedMotion.matches) return;
+
+  let frame = 0;
+  let lastTime = 0;
+  let offset = 0;
+
+  const animate = (timestamp: number) => {
+    if (timestamp - lastTime >= 40) {
+      offset = (offset + 0.2) % 100;
+
+      routes.forEach((route) => {
+        const line = routeLinesRef.current.get(
+          route.id,
+        );
+
+        if (!line) return;
+
+        line.setOptions({
+          icons: [
+            {
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 3.5,
+                fillColor: "#FFFFFF",
+                fillOpacity: 1,
+                strokeColor: "#7442AD",
+                strokeWeight: 2,
+              },
+              offset: `${offset}%`,
+            },
+          ],
+        });
+      });
+
+      lastTime = timestamp;
+    }
+
+    frame = requestAnimationFrame(animate);
+  };
+
+  frame = requestAnimationFrame(animate);
+
+  return () => {
+    cancelAnimationFrame(frame);
+
+    routes.forEach((route) => {
+      routeLinesRef.current
+        .get(route.id)
+        ?.setOptions({ icons: [] });
+    });
+  };
+}, [animateRoute, routes, isLoaded]);
 
   useEffect(() => {
     return () => {
@@ -646,6 +905,52 @@ export default function GoogleMapView({
       mapRef.current = null
     }
   }, [])
+
+  const routeFitKey = routes
+  .map((route) => {
+    const first = route.points[0];
+    const last = route.points[route.points.length - 1];
+
+    return [
+      route.id,
+      first?.lat,
+      first?.lng,
+      last?.lat,
+      last?.lng,
+    ].join(":");
+  })
+  .join("|");
+
+useEffect(() => {
+  const map = mapRef.current;
+
+  if (!map || !fitRoute || !routeFitKey) {
+    return;
+  }
+
+  const bounds = new google.maps.LatLngBounds();
+
+  let hasPoints = false;
+
+  routes.forEach((route) => {
+    route.points.forEach((point) => {
+      bounds.extend(point);
+      hasPoints = true;
+    });
+  });
+
+  if (!hasPoints) return;
+
+  map.fitBounds(bounds, {
+    top: 100,
+    right: 45,
+    bottom: 180,
+    left: 45,
+  });
+  // Fit when the route changes, not on every
+  // animated marker position update.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [fitRoute, routeFitKey, isLoaded]);
 
   return (
     <div

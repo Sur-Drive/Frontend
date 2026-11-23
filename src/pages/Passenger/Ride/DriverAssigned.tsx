@@ -56,6 +56,7 @@ import { useRideSocket } from "../../../hooks/passenger/useRideSocket";
 import {
   useRideDriverDetails,
 } from "../../../hooks/passenger/useRideDriverDetails";
+import { useDriverJourney } from "../../../hooks/passenger/useDriverJourney";
 
 /* =========================================================
    CONSTANTS
@@ -168,6 +169,21 @@ export default function DriverAssigned() {
   const rideId =
     backendRide?.id ??
     getStoredActiveRideId();
+
+    const pickupPoint = backendRide?.pickup
+  ? {
+      lat: backendRide.pickup.lat,
+      lng: backendRide.pickup.lng,
+    }
+  : null;
+
+const journey = useDriverJourney({
+  rideId,
+  driverId: backendRide?.driverId,
+  token,
+  destination: pickupPoint,
+  phase: "to-pickup",
+});
 
   /* =======================================================
      TOKEN SYNC
@@ -803,12 +819,23 @@ export default function DriverAssigned() {
           MAP
       =============================================== */}
 
-      <PassengerMap
+      {/* <PassengerMap
         center={center}
         pickup={pickup}
         destination={destination}
         zoom={15}
-      />
+      /> */}
+      <PassengerMap
+  center={journey.car ?? pickupPoint!}
+  pickup={pickup}
+  destination={destination}
+  driverCar={journey.car}
+  routePoints={journey.route?.points ?? []}
+  fitRoute={Boolean(journey.route)}
+  trackDriver
+  interactive
+  showTraffic
+/>
 
       {/* ===============================================
           HEADER
@@ -851,6 +878,19 @@ export default function DriverAssigned() {
             />
           )}
         </div>
+
+                {journey.etaMinutes != null && (
+  <div className="rounded-2xl bg-white p-4 shadow-sm">
+    <p className="text-sm text-gray-500">
+      Your driver is on the way
+    </p>
+
+    <p className="mt-1 text-xl font-semibold text-[#7442AD]">
+      {Math.max(1, Math.ceil(journey.etaMinutes))} min away
+    </p>
+  </div>
+)}
+
 
         {/* =========================================
             CONNECTION STATUS
@@ -947,6 +987,7 @@ export default function DriverAssigned() {
         {/* =========================================
             DRIVER AND VEHICLE
         ========================================= */}
+
 
         {/* <div className="mt-4">
 

@@ -60,6 +60,7 @@ import {
 import {
   storeActiveRide,
 } from "../../../utils/passengerActiveRide";
+import { getPlannedRoute } from "../../../api/passenger/routeTracking";
 
 /* =========================================================
    CONSTANTS
@@ -257,6 +258,58 @@ export default function ConfirmPickup() {
   const center =
     pickupCoordinates ??
     destinationCoordinates;
+
+    /* =======================================================
+   ANIMATED MAP ROUTE PREVIEW
+======================================================= */
+
+const token =
+  typeof window !== "undefined"
+    ? localStorage.getItem("passenger_access_token")
+    : null;
+
+const routePreviewQuery = useQuery({
+  queryKey: [
+    "passenger",
+    "route-preview",
+    pickupCoordinates?.lat,
+    pickupCoordinates?.lng,
+    destinationCoordinates?.lat,
+    destinationCoordinates?.lng,
+  ],
+
+  queryFn: ({ signal }) => {
+    if (
+      !pickupCoordinates ||
+      !destinationCoordinates ||
+      !token
+    ) {
+      throw new Error(
+        "Missing coordinates or authentication token.",
+      );
+    }
+
+    return getPlannedRoute(
+      pickupCoordinates,
+      destinationCoordinates,
+      token,
+      signal,
+    );
+  },
+
+  enabled: Boolean(
+    pickupCoordinates &&
+    destinationCoordinates &&
+    token,
+  ),
+
+  staleTime: 60_000,
+  retry: 1,
+  refetchOnWindowFocus: false,
+});
+
+const previewRoute =
+  routePreviewQuery.data?.points ?? [];
 
   /* =======================================================
      PAYMENT VALIDATION
@@ -625,12 +678,24 @@ const payload: BookRideRequest = {
           MAP
       ================================================= */}
 
-      <PassengerMap
+      {/* <PassengerMap
         center={center}
         pickup={pickup}
         destination={destination}
         zoom={16}
-      />
+      /> */}
+      <PassengerMap
+  center={center}
+  userLocation={pickupCoordinates}
+  pickup={pickup}
+  destination={destination}
+  zoom={15}
+  interactive
+  locationMarkerVariant="cinematic"
+  routePoints={previewRoute}
+  animateRoute
+  fitRoute
+/>
 
       <RideMapHeader title="Confirm ride" />
 

@@ -248,6 +248,11 @@ export interface PassengerRideResponse {
   createdAt: string;
 
   updatedAt: string;
+pickupCode?: string | null;
+pickupCodeRequired?: boolean;
+pickupCodeVerified?: boolean;
+pickupCodeLocked?: boolean;
+pickupCodeAttempts?: number;
 }
 
 /* =========================================================
@@ -296,8 +301,21 @@ export type GetRideResponse =
  * Keep it unknown/permissive rather than inventing
  * a pickup-code property.
  */
-export type PickupDetailsResponse =
-  Record<string, unknown>;
+// export type PickupDetailsResponse =
+//   Record<string, unknown>;
+export interface PickupDetailsResponse {
+  rideId: string;
+  status: BackendRideStatus;
+
+  pickupCode: string | null;
+  pickupCodeRequired: boolean;
+  pickupCodeVerified: boolean;
+  pickupCodeLocked: boolean;
+  pickupCodeAttempts: number;
+
+  driver?: BackendDriver | null;
+  vehicle?: BackendVehicle | null;
+}
 
 /* =========================================================
    RIDE HISTORY

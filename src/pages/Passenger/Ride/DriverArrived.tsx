@@ -39,6 +39,7 @@ import { usePassengerRide } from "../../../context/PassengerRideContext";
 import {
   passengerRideApi,
   type PassengerRideResponse,
+  type PickupDetailsResponse,
 } from "../../../api/passenger/rides";
 
 import {
@@ -54,6 +55,7 @@ import { useRideSocket } from "../../../hooks/passenger/useRideSocket";
 import {
   useRideDriverDetails,
 } from "../../../hooks/passenger/useRideDriverDetails";
+import { useDriverJourney } from "../../../hooks/passenger/useDriverJourney";
 
 /* =========================================================
    CONSTANTS
@@ -108,6 +110,15 @@ export default function DriverArrived() {
     () => !getStoredActiveRide(),
   );
 
+  const [pickupDetails, setPickupDetails] =
+  useState<PickupDetailsResponse | null>(null);
+
+const [pickupDetailsLoading, setPickupDetailsLoading] =
+  useState(true);
+
+const [pickupDetailsError, setPickupDetailsError] =
+  useState(false);
+
   /* =======================================================
      REFS
   ======================================================= */
@@ -125,6 +136,21 @@ export default function DriverArrived() {
   const rideId =
     backendRide?.id ??
     getStoredActiveRideId();
+
+    const pickupPoint = backendRide?.pickup
+  ? {
+      lat: backendRide.pickup.lat,
+      lng: backendRide.pickup.lng,
+    }
+  : null;
+
+    const journey = useDriverJourney({
+  rideId,
+  driverId: backendRide?.driverId,
+  token,
+  destination: pickupPoint,
+  phase: "arrived",
+});
 
   /* =======================================================
      TOKEN SYNC
@@ -147,6 +173,58 @@ export default function DriverArrived() {
       window.removeEventListener("storage", syncToken);
     };
   }, []);
+
+  useEffect(() => {
+  if (!rideId) {
+    setPickupDetails(null);
+    setPickupDetailsLoading(false);
+    return;
+  }
+
+  let active = true;
+
+  setPickupDetails(null);
+  setPickupDetailsLoading(true);
+  setPickupDetailsError(false);
+
+  const loadPickupDetails = async () => {
+    try {
+      const response =
+        await passengerRideApi.getPickupDetails(rideId);
+
+      if (!active) return;
+
+      if (
+        response.rideId !== rideId ||
+        typeof response.pickupCodeRequired !== "boolean"
+      ) {
+        throw new Error("Invalid pickup details response");
+      }
+
+      setPickupDetails(response);
+      setPickupDetailsError(false);
+    } catch (error) {
+      if (!active) return;
+
+      console.error(
+        "FAILED TO FETCH PICKUP DETAILS:",
+        error
+      );
+
+      setPickupDetailsError(true);
+    } finally {
+      if (active) {
+        setPickupDetailsLoading(false);
+      }
+    }
+  };
+
+  void loadPickupDetails();
+
+  return () => {
+    active = false;
+  };
+}, [rideId]);
 
   /* =======================================================
      HANDLE RIDE STATUS
@@ -468,6 +546,7 @@ export default function DriverArrived() {
       );
     }
 
+    
     return (
       <div className="flex h-[100dvh] items-center justify-center bg-[#F4F4F4] px-6">
         <div className="w-full max-w-[360px] text-center">
@@ -603,6 +682,12 @@ const plateNumber =
         ? "Using backup connection"
         : "Connecting to live updates...";
 
+        const requiresPickupCode =
+  pickupDetails?.pickupCodeRequired === true;
+
+const noPickupCodeRequired =
+  pickupDetails?.pickupCodeRequired === false;
+
   /* =======================================================
      RENDER
   ======================================================= */
@@ -614,12 +699,21 @@ const plateNumber =
           MAP
       =============================================== */}
 
-      <PassengerMap
+      {/* <PassengerMap
         center={pickup.coordinates}
         pickup={pickup}
         destination={destination}
         zoom={17}
-      />
+      /> */}
+      <PassengerMap
+  center={journey.car ?? pickupPoint!}
+  pickup={pickup}
+  destination={destination}
+  driverCar={journey.car}
+  trackDriver
+  interactive
+  showTraffic
+/>
 
       {/* ===============================================
           HEADER
@@ -911,49 +1005,7 @@ const plateNumber =
 
 </div>
 
-        {/* =========================================
-            ASSIGNED VEHICLE
-        ========================================= */}
-
-        {/* {vehicle && (
-          <div className="mt-4 rounded-[16px] border border-[#EEEAF1] bg-white p-4">
-
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-[#918B95]">
-              Assigned vehicle
-            </p>
-
-            <div className="flex items-center justify-between gap-3 mt-2">
-
-              <div className="flex items-center min-w-0 gap-2">
-
-                <CarFront
-                  size={19}
-                  className="shrink-0 text-[#7442AD]"
-                />
-
-                <p className="truncate text-[15px] font-semibold text-[#302B34]">
-                  {vehicleName}
-                </p>
-
-              </div>
-
-              {vehiclePlate && (
-                <span className="shrink-0 rounded-lg bg-[#F3ECF9] px-3 py-2 text-[13px] font-bold text-[#7442AD]">
-                  {vehiclePlate}
-                </span>
-              )}
-
-            </div>
-
-            {vehicle.category && (
-              <p className="mt-2 text-[12px] text-[#918B95]">
-                {vehicle.category}
-              </p>
-            )}
-
-          </div>
-        )} */}
-
+        
         {/* =========================================
             PICKUP POINT
         ========================================= */}
@@ -983,11 +1035,130 @@ const plateNumber =
 
         </div>
 
+
+{/* =========================================
+    PICKUP CODE / WAITING FOR DRIVER
+========================================= */}
+
+{pickupDetailsLoading ? (
+  <div className="mt-5 flex items-center gap-3 rounded-[16px] bg-[#F8F6FA] p-4">
+    <LoaderCircle
+      size={21}
+      className="shrink-0 animate-spin text-[#7442AD]"
+    />
+
+    <div>
+      <p className="text-[14px] font-semibold text-[#302B34]">
+        Checking pickup requirements
+      </p>
+
+      <p className="mt-1 text-[12px] text-[#918B95]">
+        Please wait a moment...
+      </p>
+    </div>
+  </div>
+) : pickupDetailsError ? (
+  <div className="mt-5 rounded-[16px] bg-[#FFF6ED] p-4">
+    <p className="text-[14px] font-semibold text-[#87571F]">
+      Unable to check pickup requirements
+    </p>
+
+    <p className="mt-1 text-[13px] leading-5 text-[#9B744A]">
+      Please try refreshing the page to confirm
+      whether a pickup code is required.
+    </p>
+  </div>
+) : requiresPickupCode ? (
+  <>
+    {/* PICKUP CODE REQUIRED */}
+
+    <div className="mt-4 flex gap-3 rounded-[15px] bg-[#EFF8F2] p-4 text-[#397052]">
+      <ShieldCheck
+        size={21}
+        className="shrink-0"
+      />
+
+      <p className="text-[13px] leading-5">
+        Your driver must verify the pickup code
+        before starting the trip.
+      </p>
+    </div>
+
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.98 }}
+      onClick={() =>
+        navigate("/passenger/ride/verify")
+      }
+      className="mt-5 flex h-[54px] w-full items-center justify-center gap-2 rounded-[14px] bg-[#7442AD] text-[16px] font-semibold text-white shadow-[0_8px_25px_rgba(116,66,173,0.20)]"
+    >
+      View Pickup Code
+
+      <ChevronRight size={19} />
+    </motion.button>
+  </>
+) : noPickupCodeRequired ? (
+  <>
+    {/* NO PICKUP CODE REQUIRED */}
+
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="mt-5 rounded-[18px] border border-[#E9E1F0] bg-[#F8F5FC] p-5"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#EEE4F8]">
+          <CarFront
+            size={24}
+            className="text-[#7442AD]"
+          />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-semibold text-[#302B34]">
+            Waiting for driver to start trip
+          </p>
+
+          <p className="mt-1 text-[12px] leading-5 text-[#918B95]">
+            Your driver will start the trip once
+            you're ready to go.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2 border-t border-[#E9E1F0] pt-4">
+        <LoaderCircle
+          size={17}
+          className="animate-spin text-[#7442AD]"
+        />
+
+        <p className="text-[13px] font-medium text-[#7442AD]">
+          Waiting for trip confirmation...
+        </p>
+      </div>
+    </motion.div>
+
+    <div className="mt-3 flex items-start gap-2 px-1 text-[#918B95]">
+      <ShieldCheck
+        size={16}
+        className="mt-0.5 shrink-0"
+      />
+
+      <p className="text-[12px] leading-5">
+        No pickup code is required for this ride.
+        You'll be redirected automatically once
+        your driver starts the trip.
+      </p>
+    </div>
+  </>
+) : null}
+
         {/* =========================================
             SAFETY NOTICE
         ========================================= */}
 
-        <div className="mt-4 flex gap-3 rounded-[15px] bg-[#EFF8F2] p-4 text-[#397052]">
+        {/* <div className="mt-4 flex gap-3 rounded-[15px] bg-[#EFF8F2] p-4 text-[#397052]">
 
           <ShieldCheck
             size={21}
@@ -999,13 +1170,13 @@ const plateNumber =
             before starting the trip.
           </p>
 
-        </div>
+        </div> */}
 
         {/* =========================================
             VIEW PICKUP CODE
         ========================================= */}
 
-        <motion.button
+        {/* <motion.button
           type="button"
           whileTap={{ scale: 0.98 }}
           onClick={() =>
@@ -1016,7 +1187,7 @@ const plateNumber =
           View Pickup Code
 
           <ChevronRight size={19} />
-        </motion.button>
+        </motion.button> */}
 
       </RideBottomSheet>
 

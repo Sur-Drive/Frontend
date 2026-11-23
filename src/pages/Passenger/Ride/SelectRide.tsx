@@ -29,6 +29,7 @@ import {
 
 import {
   useQueries,
+  useQuery,
 } from "@tanstack/react-query";
 
 import { toast } from "sonner";
@@ -58,6 +59,7 @@ import {
 import type {
   PaymentMethod,
 } from "../../../types/passengerRide";
+import { getPlannedRoute } from "../../../api/passenger/routeTracking";
 
 /* =========================================================
    CONSTANTS
@@ -229,6 +231,52 @@ export default function SelectRide() {
   const mapCenter =
     pickupCoordinates ??
     destinationCoordinates;
+
+const token =
+  localStorage.getItem("passenger_access_token");
+
+const routePreviewQuery = useQuery({
+  queryKey: [
+    "passenger",
+    "route-preview",
+    pickupCoordinates?.lat,
+    pickupCoordinates?.lng,
+    destinationCoordinates?.lat,
+    destinationCoordinates?.lng,
+  ],
+
+  queryFn: ({ signal }) => {
+    if (
+      !pickupCoordinates ||
+      !destinationCoordinates ||
+      !token
+    ) {
+      throw new Error(
+        "Missing route coordinates or authentication token",
+      );
+    }
+
+    return getPlannedRoute(
+      pickupCoordinates,
+      destinationCoordinates,
+      token,
+      signal,
+    );
+  },
+
+  enabled: Boolean(
+    pickupCoordinates &&
+    destinationCoordinates &&
+    token,
+  ),
+
+  staleTime: 60_000,
+  retry: 1,
+  refetchOnWindowFocus: false,
+});
+
+const previewRoute =
+  routePreviewQuery.data?.points ?? [];
 
   /* =======================================================
      ESTIMATE PAYLOAD
@@ -564,6 +612,7 @@ export default function SelectRide() {
     destination?.label ||
     destination?.address ||
     "Destination";
+    
 
   /* =======================================================
      RENDER
@@ -575,12 +624,24 @@ export default function SelectRide() {
           MAP
       ================================================= */}
 
-      <PassengerMap
+      {/* <PassengerMap
         center={mapCenter}
         pickup={pickup}
         destination={destination}
         zoom={14}
-      />
+      /> */}
+      <PassengerMap
+  center={mapCenter}
+  userLocation={pickupCoordinates}
+  pickup={pickup}
+  destination={destination}
+  zoom={14}
+  interactive
+  locationMarkerVariant="cinematic"
+  routePoints={previewRoute}
+  animateRoute
+  fitRoute
+/>
 
       <RideMapHeader title="Choose a ride" />
 
