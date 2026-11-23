@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type RefCallback } from 'react'
 import { CATEGORY_LABEL, type TrackedObject, type WarningSeverity } from '../../lib/collisionDetection'
 import type { UseCollisionGuardResult } from '../../hooks/useCollisionGuard'
 
@@ -25,7 +25,9 @@ export default function CollisionGuardView({
 }: CollisionGuardViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { videoRef, isStarting, isActive, error, frameSize, trackedObjects, activeWarning } = guard
-
+const attachVideoRef: RefCallback<HTMLVideoElement> = (node) => {
+  videoRef.current = node;
+};
   // Redraw bounding boxes onto the canvas every time detections update.
   useEffect(() => {
     const canvas = canvasRef.current
@@ -63,7 +65,13 @@ export default function CollisionGuardView({
       className={`absolute z-[450] overflow-hidden bg-black shadow-2xl ${sizeClasses} border-2 transition-all`}
       style={{ borderColor: activeWarning ? SEVERITY_COLOR[activeWarning.severity] : 'rgba(255,255,255,0.25)' }}
     >
-      <video ref={videoRef} muted playsInline className="absolute inset-0 object-cover w-full h-full" />
+      {/* <video ref={videoRef} muted playsInline className="absolute inset-0 object-cover w-full h-full" /> */}
+      <video
+  ref={attachVideoRef}
+  muted
+  playsInline
+  className="absolute inset-0 object-cover w-full h-full"
+/>
       <canvas
         ref={canvasRef}
         className="absolute inset-0 object-cover w-full h-full"
@@ -80,7 +88,7 @@ export default function CollisionGuardView({
             <button
               onClick={onToggleExpanded}
               aria-label={expanded ? 'Shrink' : 'Expand'}
-              className="flex items-center justify-center text-white rounded-full w-5 h-5 bg-white/20"
+              className="flex items-center justify-center w-5 h-5 text-white rounded-full bg-white/20"
             >
               <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                 {expanded ? <path d="M4 4l6 6M20 4l-6 6M4 20l6-6M20 20l-6-6" /> : <path d="M4 4h6M4 4v6M20 4h-6M20 4v6M4 20h6M4 20v-6M20 20h-6M20 20v-6" />}
@@ -91,7 +99,7 @@ export default function CollisionGuardView({
             <button
               onClick={onClose}
               aria-label="Turn off Collision Guard"
-              className="flex items-center justify-center text-white rounded-full w-5 h-5 bg-white/20"
+              className="flex items-center justify-center w-5 h-5 text-white rounded-full bg-white/20"
             >
               <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                 <path d="M5 5l14 14M19 5L5 19" />

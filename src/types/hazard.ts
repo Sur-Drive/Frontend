@@ -1,15 +1,15 @@
 
 
 export type BackendHazardType =
-  | 'POTHOLE'
-  | 'FLOOD'
-  | 'ACCIDENT'
-  | 'DEBRIS'
-  | 'ROAD_WORKS'
-  | 'CHECKPOINT'
-  | 'DANGER'
-  | 'SOS'
-  | 'OTHER'
+  | "POTHOLE"
+  | "FLOOD"
+  | "ACCIDENT"
+  | "DEBRIS"
+  | "ROAD_WORKS"
+  | "CHECKPOINT"
+  | "DANGER"
+  | "SOS"
+  | "OTHER";
 
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH'
 

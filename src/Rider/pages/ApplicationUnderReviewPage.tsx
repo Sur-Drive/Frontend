@@ -6,12 +6,19 @@ import {
   Contact,
   IdCard,
   ScanFace,
+  type LucideIcon,
 } from "lucide-react";
 
 type Status = "Verified" | "Pending";
 
+// interface ReviewItem {
+//   icon: React.ComponentType<{ size?: number; className?: string }>;
+//   title: string;
+//   subtitle: string;
+//   status: Status;
+// }
 interface ReviewItem {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   title: string;
   subtitle: string;
   status: Status;

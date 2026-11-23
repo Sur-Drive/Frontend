@@ -256,10 +256,18 @@ export default function ShareRideSheet({
             <p className="text-[15px] font-semibold text-[#302B34]">
               {driver.firstName}
             </p>
-            <p className="mt-1 truncate text-[12px] text-[#918B95]">
-              {driver.vehicle.make} {driver.vehicle.model} •{" "}
-              {driver.vehicle.plateNumber}
-            </p>
+            {driver.vehicle && (
+          <p className="mt-1 truncate text-[12px] text-[#918B95]">
+            {[
+              [driver.vehicle.make, driver.vehicle.model]
+                .filter(Boolean)
+                .join(" "),
+              driver.vehicle.plateNumber,
+            ]
+              .filter(Boolean)
+              .join(" • ")}
+          </p>
+        )}
           </div>
 
           {eta && (

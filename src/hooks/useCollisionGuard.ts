@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { RefObject } from 'react'
+// import type { RefObject } from 'react'
 import {
   classifyLabel,
   boxAreaFraction,
@@ -42,7 +42,8 @@ interface TrackState {
 }
 
 export interface UseCollisionGuardResult {
-  videoRef: RefObject<HTMLVideoElement | null>
+  // videoRef: RefObject<HTMLVideoElement | null>
+  videoRef: React.MutableRefObject<HTMLVideoElement | null>;
   isSupported: boolean
   isStarting: boolean
   isActive: boolean
@@ -61,7 +62,8 @@ const STALE_TRACK_MS = 1000
 const GROWTH_WINDOW_MS = 900
 
 export function useCollisionGuard(enabled: boolean): UseCollisionGuardResult {
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const detectFnRef = useRef<DetectFn | null>(null)
   const tracksRef = useRef<Map<string, TrackState>>(new Map())

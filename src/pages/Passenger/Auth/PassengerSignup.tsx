@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Apple,
   Mail,
   Phone,
 } from "lucide-react";
@@ -18,7 +17,7 @@ import LegalModal, {
 
 import PassengerAuthShell from "../../../components/passenger/auth/PassengerAuthShell";
 import { usePassengerGoogleAuth, useSendPassengerOtp } from "../../../hooks/passenger/usePassengerAuth";
-import { passengerSession } from "../../../api/passenger/passengerSession";
+
 
 type SignupMode = "phone" | "email";
 
@@ -28,20 +27,6 @@ const spring = {
   damping: 28,
 };
 
-function FacebookIcon() {
-  return (
-    <div
-      className="
-        flex h-[18px] w-[18px]
-        items-center justify-center
-        rounded-full bg-[#1877F2]
-        text-[14px] font-bold leading-none text-white
-      "
-    >
-      f
-    </div>
-  );
-}
 
 function normalizeNigeriaPhone(
   value: string,

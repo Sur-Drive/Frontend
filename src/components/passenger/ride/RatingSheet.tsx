@@ -120,7 +120,7 @@ export default function RatingSheet({
               <img
                 src={driver.photo}
                 alt={driver.firstName}
-                className="h-full w-full object-cover"
+                className="object-cover w-full h-full"
               />
             ) : (
               driver.firstName.charAt(0)
@@ -132,15 +132,18 @@ export default function RatingSheet({
               {driver.firstName}
             </p>
 
-            <p className="mt-1 text-[12px] text-[#918B95]">
-              {driver.vehicle.make}{" "}
-              {driver.vehicle.model}
-            </p>
+            {driver.vehicle && (
+  <p className="mt-1 text-[12px] text-[#918B95]">
+    {[driver.vehicle.make, driver.vehicle.model]
+      .filter(Boolean)
+      .join(" ")}
+  </p>
+)}
           </div>
         </div>
       )}
 
-      <div className="mt-6 flex justify-center gap-2">
+      <div className="flex justify-center gap-2 mt-6">
         {[1, 2, 3, 4, 5].map(
           (star) => (
             <motion.button
@@ -181,7 +184,7 @@ export default function RatingSheet({
           What went well?
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-3">
           {feedbackOptions.map(
             (item) => {
               const active =
