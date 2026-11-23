@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Themed design tokens ───────────────────────────────────────────────
+   Single source of truth for colour values that need a light and a dark
+   value. Light values live on :root; the dark overrides are applied when a
+   `.dark` class is present on any ancestor element (see `darkMode: 'class'`
+   in tailwind.config.ts).
+
+   Consumed in Tailwind as surface-*, ink-*, line-*, brand-*, status-*
+   and sos-* utilities, e.g. `bg-surface-card`, `text-ink-secondary`,
+   `border-line-pill`, `text-status-danger-text`, `bg-sos`.
+   Values are space-separated RGB channels so Tailwind's opacity modifier
+   works (e.g. `ring-brand-accent/15` → `rgb(var(--color-brand-accent) / 0.15)`). */
+/* .force-light re-asserts the light values on any subtree it's applied to
+   (e.g. the sign-in page), so it stays light even under <html class="dark">. */
+:root,
+.force-light {
+  --color-surface-page: 255 255 255; /* #FFFFFF */
+  --color-surface-hover: 246 244 249; /* #F6F4F9 */
+  --color-surface-toggle-track: 231 233 236; /* #E7E9EC */
+  --color-toggle-active: 45 212 191; /* #2DD4BF */
+  --color-surface-subtle: 250 250 252; /* #FAFAFC */
+  --color-surface-chip: 238 240 244; /* #EEF0F4 */
+  --color-chip-teal-bg: 230 247 244; /* #E6F7F4 */
+  --color-chip-teal-text: 20 184 166; /* #14B8A6 */
+  --color-chip-amber-text: 240 180 41; /* #F0B429 */
+  --color-chip-violet-text: 139 92 246; /* #8B5CF6 */
+  --color-surface-card: 255 255 255; /* #FFFFFF */
+  --color-text-primary: 20 16 43; /* #14102B */
+  --color-text-secondary: 75 85 99; /* #4B5563 */
+  --color-text-tertiary: 107 114 128; /* #6B7280 */
+  --color-text-placeholder: 156 163 175; /* #9CA3AF */
+  --color-border-card: 238 240 244; /* #EEF0F4 */
+  --color-border-pill: 231 233 236; /* #E7E9EC */
+  --color-border-hover: 214 217 222; /* #D6D9DE */
+  --color-border-divider: 244 245 247; /* #F4F5F7 */
+  --color-border-line-input: 229 231 235; /* #E5E7EB */
+  --color-brand-primary: 91 33 182; /* #5B21B6 */
+  --color-brand-primary-hover: 76 29 149; /* #4C1D95 */
+  --color-brand-accent: 124 58 237; /* #7C3AED */
+  --color-brand-accent-hover: 109 40 217; /* #6D28D9 */
+  --color-brand-tint-bg: 243 235 254; /* #F3EBFE */
+  --color-status-success-text: 23 162 119; /* #17A277 */
+  --color-status-success-bg: 233 249 241; /* #E9F9F1 */
+  --color-status-danger-text: 240 68 56; /* #F04438 */
+  --color-status-danger-bg: 254 236 235; /* #FEECEB */
+  --color-status-warning-text: 220 138 14; /* #DC8A0E */
+  --color-status-warning-bg: 254 243 226; /* #FEF3E2 */
+  --color-status-danger-text-strong: 180 35 24; /* #B42318 */
+  --color-status-danger-text-vivid: 217 45 32; /* #D92D20 */
+  --color-status-info-text: 79 70 229; /* #4F46E5 */
+  --color-status-info-bg: 238 242 255; /* #EEF2FF */
+  --color-status-neutral-text: 107 114 128; /* #6B7280 */
+  --color-status-neutral-bg: 243 244 246; /* #F3F4F6 */
+  --color-sos-marker: 240 68 56; /* #F04438 */
+  --color-action-danger-bg: 217 45 32; /* #D92D20 */
+  --color-action-danger-hover: 180 35 24; /* #B42318 */
+  --color-action-success-bg: 23 162 119; /* #17A277 */
+  --color-action-success-hover: 18 133 96; /* #128560 — canonical */
+  --color-action-warning-bg: 245 166 35; /* #F5A623 */
+  --color-action-warning-hover: 224 142 11; /* #E08E0B — canonical */
+}
+
+.dark {
+  --color-surface-page: 20 16 43; /* #14102B */
+  --color-surface-hover: 36 31 59; /* #241F3B */
+  --color-surface-toggle-track: 51 45 77; /* #332D4D (proposal — review when rendered) */
+  --color-toggle-active: 45 212 191; /* #2DD4BF — deliberately identical to light; teal reads fine on dark */
+  --color-surface-subtle: 26 21 48; /* #1A1530 */
+  --color-surface-chip: 42 37 64; /* #2A2540 */
+  --color-chip-teal-bg: 15 46 46; /* #0F2E2E (proposal — review when rendered) */
+  --color-chip-teal-text: 45 212 191; /* #2DD4BF (proposal — review when rendered) */
+  --color-chip-green-text: 74 222 128; /* #4ADE80 */
+  --color-chip-amber-text: 251 191 36; /* #FBBF24 (proposal — review when rendered) */
+  --color-chip-violet-text: 167 139 250; /* #A78BFA (reuses brand-accent-hover's dark value) */
+  --color-surface-card: 28 23 48; /* #1C1730 */
+  --color-text-primary: 245 243 250; /* #F5F3FA */
+  --color-text-secondary: 184 188 200; /* #B8BCC8 */
+  --color-text-tertiary: 139 146 163; /* #8B92A3 */
+  --color-text-placeholder: 107 114 128; /* #6B7280 */
+  --color-border-card: 42 37 64; /* #2A2540 */
+  --color-border-pill: 51 45 77; /* #332D4D */
+  --color-border-hover: 66 60 94; /* #423C5E */
+  --color-border-divider: 34 29 56; /* #221D38 */
+  --color-border-line-input: 74 68 94; /* #4A445E (proposal — review when rendered) */
+  --color-brand-primary: 91 33 182; /* #5B21B6 */
+  --color-brand-primary-hover: 124 58 237; /* #7C3AED */
+  --color-brand-accent: 139 92 246; /* #8B5CF6 */
+  --color-brand-accent-hover: 167 139 250; /* #A78BFA */
+  --color-brand-tint-bg: 43 30 74; /* #2B1E4A (proposal — review when rendered) */
+  --color-status-success-text: 34 197 94; /* #22C55E */
+  --color-status-success-bg: 15 43 33; /* #0F2B21 */
+  --color-status-danger-text: 249 112 102; /* #F97066 */
+  --color-status-danger-bg: 58 18 16; /* #3A1210 */
+  --color-status-warning-text: 245 166 35; /* #F5A623 */
+  --color-status-warning-bg: 61 42 14; /* #3D2A0E */
+  --color-status-danger-text-strong: 255 138 128; /* #FF8A80 (proposal — review when rendered) */
+  --color-status-info-text: 129 140 248; /* #818CF8 */
+  --color-status-info-bg: 30 33 80; /* #1E2150 */
+  --color-status-neutral-text: 156 163 175; /* #9CA3AF */
+  --color-status-neutral-bg: 42 42 53; /* #2A2A35 */
+  --color-sos-marker: 240 68 56; /* #F04438 */
+  --color-action-danger-bg: 239 68 68; /* #EF4444 */
+  --color-action-danger-hover: 220 38 38; /* #DC2626 */
+  --color-action-success-bg: 34 197 94; /* #22C55E */
+  --color-action-success-hover: 22 163 74; /* #16A34A */
+  --color-action-warning-bg: 251 191 36; /* #FBBF24 */
+  --color-action-warning-hover: 217 119 6; /* #D97706 */
+}
+
+/* Global slim scrollbar — applies to every scrollable element (webkit + Firefox).
+   No class needed; tables, tab strips, modals, and future scroll areas all inherit it. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #e7e9ec transparent;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #e7e9ec;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #d6d9de;
+}
+
