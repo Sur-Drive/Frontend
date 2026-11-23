@@ -1,0 +1,302 @@
+@import "tailwindcss";
+
+/* Class-based dark mode strategy (toggle lives on <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* PROVISIONAL semantic tokens (no design source was available). */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --ink: #14102b;
+  --ink-muted: #5b5570;
+  --ink-subtle: #8a8397;
+  --brand: #6b45a6;
+  --brand-hover: #5a3791;
+  --brand-soft: #f0eaf8;
+  --accent: #f2c14e;
+  --accent-soft: #fbf0d4;
+  --danger: #dc2626;
+  --danger-soft: #fdeaea;
+  --auth-panel: #15121f;
+  --page: #f6f5fa;
+  --surface-muted: #f2f1f7;
+  --success: #16a34a;
+  --success-soft: #e6f6ec;
+  --warning: #d97706;
+  --warning-soft: #fbeedb;
+  --orange: #ea580c;
+  --orange-soft: #fdeee2;
+  --info: #2563eb;
+  --info-soft: #e7effc;
+  --paper: #f7f2e7;
+  --paper-ink: #1e3b31;
+  /* Avatar-solid tiles (initials on white text). Darker than the accent tokens
+     so white initials clear WCAG AA 4.5:1; hue family kept from the accents. */
+  --brand-avatar: #5b3a8f; /* 8.58:1 */
+  --success-avatar: #15803d; /* 5.02:1 */
+  --warning-avatar: #b45309; /* 5.02:1 */
+  --info-avatar: #1d4ed8; /* 6.70:1 */
+}
+
+/* PROVISIONAL dark tokens. */
+.dark {
+  --bg: #0e0c16;
+  --surface: #17131f;
+  --border: #2c2740;
+  --ink: #f5f3fa;
+  --ink-muted: #b3adc4;
+  --ink-subtle: #7c7590;
+  --brand: #8a63c7;
+  --brand-hover: #9b78d6;
+  --brand-soft: #2a2140;
+  --accent: #f2c14e;
+  --accent-soft: #2a2214;
+  --danger: #f26d6d;
+  --danger-soft: #2a1618;
+  --auth-panel: #15121f;
+  --page: #0a0810;
+  --surface-muted: #221d2e;
+  --success: #34d399;
+  --success-soft: #12291f;
+  --warning: #fbbf24;
+  --warning-soft: #2a2113;
+  --orange: #fb923c;
+  --orange-soft: #2a1a10;
+  --info: #60a5fa;
+  --info-soft: #14233b;
+  --paper: #17150f;
+  --paper-ink: #ece7d6;
+  /* Avatar-solid tiles for dark mode: deeper than the lighter dark accents so
+     white initials still clear WCAG AA 4.5:1. */
+  --brand-avatar: #7c55b8; /* 5.46:1 */
+  --success-avatar: #15803d; /* 5.02:1 */
+  --warning-avatar: #9a4a08; /* 6.26:1 */
+  --info-avatar: #2f6fe0; /* 4.70:1 */
+}
+
+@theme inline {
+  --font-sans: var(--font-plus-jakarta);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-auth-panel: var(--auth-panel);
+  --color-page: var(--page);
+  --color-surface-muted: var(--surface-muted);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-orange: var(--orange);
+  --color-orange-soft: var(--orange-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --color-brand-avatar: var(--brand-avatar);
+  --color-success-avatar: var(--success-avatar);
+  --color-warning-avatar: var(--warning-avatar);
+  --color-info-avatar: var(--info-avatar);
+}
+
+/* Range slider (Pricing Configuration fare preview): light grey track,
+   purple thumb, brand focus halo — tokens only, no hex in components. */
+@layer components {
+  .range-brand {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--surface-muted);
+    outline: none;
+    cursor: pointer;
+  }
+  .range-brand::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 9999px;
+    background: var(--brand);
+    cursor: pointer;
+  }
+  .range-brand::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border: none;
+    border-radius: 9999px;
+    background: var(--brand);
+    cursor: pointer;
+  }
+  .range-brand::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--surface-muted);
+  }
+  .range-brand:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px var(--brand-soft);
+  }
+  .range-brand:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 4px var(--brand-soft);
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-bg font-sans text-ink antialiased;
+  }
+
+  /* Page-level guard: only table wrappers may scroll sideways, never the page.
+     `clip` on a non-scrollable inner wrapper (not html/body or the flex shell)
+     keeps `position: sticky` (topbar, sidebar) working. `position: relative` is
+     required: absolutely positioned descendants (e.g. `sr-only` spans inside
+     wide tables) would otherwise use the initial containing block, escape this
+     clip, and stretch documentElement.scrollWidth past the viewport. */
+  .admin-main {
+    position: relative;
+    overflow-x: clip;
+  }
+}
+
+/* Hide scrollbars while keeping scroll (used by the sidebar nav). */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Fade the top/bottom edges of the sidebar nav scroll area so a partially
+   clipped nav item (e.g. when the active item is scrolled into view) never
+   peeks out as a stray dot just under the header. */
+@utility nav-scroll-fade {
+  --nav-fade: 10px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--nav-fade),
+    #000 calc(100% - var(--nav-fade)),
+    transparent 100%
+  );
+}
+
+/* Confirm dialog entrance (fade + scale-in). */
+@keyframes dialog-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.dialog-anim {
+  animation-duration: 150ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-anim {
+    animation: none;
+  }
+}
+
+/* Side sheet entrance (fade + slide in from the right). */
+@keyframes sheet-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sheet-anim {
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-anim {
+    animation: none;
+  }
+}
+
+/* Toast entrance (fade + rise). */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-anim {
+  animation: toast-in 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-anim {
+    animation: none;
+  }
+}
+
+/* Disable default browser focus outlines on chart SVGs, Recharts containers,
+   and all chart wrapper elements. Clicking a chart must not show a thick
+   black outline box. These are decorative images (role="img") whose data is
+   also exposed in sr-only tables, so they never need keyboard focus. */
+svg:focus,
+svg *:focus,
+.recharts-wrapper:focus,
+.recharts-wrapper *:focus,
+.recharts-surface:focus,
+.recharts-layer:focus,
+[role="img"]:focus {
+  outline: none !important;
+}
+
+/* Buttons must never show the default black browser outline on click/focus.
+   Keyboard focus is preserved via focus-visible:ring in the shared Button component. */
+button:focus {
+  outline: none !important;
+}
+
+
