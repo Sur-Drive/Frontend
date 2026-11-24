@@ -1,0 +1,18 @@
+# Netlify configuration for the e-hailing admin portal (Next.js app).
+#
+# IMPORTANT (Netlify UI): Site configuration → Build & deploy → Build settings
+# must have Base directory = `ehailing-admin`. Without it, Netlify builds the
+# repo-root Vite app instead (the root has its own netlify.toml with an SPA
+# catch-all redirect to /index.html, which must never apply to this app).
+#
+# The Next.js runtime (OpenNext adapter) is auto-detected by Netlify, so no
+# [[plugins]] block is needed. Do not add an SPA redirect here — Next.js
+# handles its own routing.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next.js 16 requires Node >= 20.9; pin the major version used locally.
+  NODE_VERSION = "22"
